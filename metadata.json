@@ -1,0 +1,8 @@
+{
+  "name": "Treservi - Barbershop Dashboard",
+  "description": "A high-end, bento-grid style dashboard for barbershop management featuring AI-driven insights and style analysis.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
