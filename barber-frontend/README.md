@@ -17,6 +17,8 @@ barber/
 │   │   ├── supabaseClient.ts
 │   │   ├── staffService.ts
 │   │   └── geminiService.ts
+│   ├── utils/            # Utility functions and helpers
+│   │   └── format.ts     # Centralized currency and number formatting (e.g. `0.000 TND`)
 │   ├── App.tsx
 │   ├── index.tsx
 │   ├── index.css         # Tailwind imports

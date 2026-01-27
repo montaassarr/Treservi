@@ -56,12 +56,15 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const dir: 'ltr' | 'rtl' = 'ltr'; 
 
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat(language === 'fr' ? 'fr-TN' : 'en-TN', {
+  const formatCurrency = (amount: number | string): string => {
+    const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(numericAmount)) return '0.000 TND';
+    
+    return new Intl.NumberFormat('fr-TN', {
       style: 'decimal',
       minimumFractionDigits: 3, 
       maximumFractionDigits: 3,
-    }).format(amount) + ' TND';
+    }).format(numericAmount) + ' TND';
   };
 
   const formatDate = (date: Date | string): string => {

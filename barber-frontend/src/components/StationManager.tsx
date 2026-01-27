@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Armchair, Monitor, HeartPulse, Plus, X, Trash2, User as UserIcon, Move } from 'lucide-react';
+import { Armchair, Sparkles, HeartPulse, Plus, X, Trash2, User as UserIcon, Move, Sofa, DoorOpen, Bath } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -8,10 +8,11 @@ interface Station {
   id: string;
   salon_id: string;
   name: string;
-  type: 'chair' | 'desk' | 'table';
+  type: 'chair' | 'desk' | 'table' | 'sofa';
   current_staff_id?: string;
   position_x: number;
   position_y: number;
+  width?: number;
   is_active: boolean;
 }
 
@@ -27,8 +28,9 @@ interface StationManagerProps {
 
 const STATION_TYPES = [
   { type: 'chair', icon: Armchair, label: 'Barber Chair', color: 'bg-blue-100 text-blue-600' },
-  { type: 'desk', icon: Monitor, label: 'Nail Desk', color: 'bg-purple-100 text-purple-600' },
+  { type: 'desk', icon: Sparkles, label: 'Nail Desk', color: 'bg-purple-100 text-purple-600' },
   { type: 'table', icon: HeartPulse, label: 'Massage Table', color: 'bg-green-100 text-green-600' },
+  { type: 'sofa', icon: Sofa, label: 'Waiting Bench', color: 'bg-orange-100 text-orange-600' },
 ] as const;
 
 export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRole = 'owner' }) => {
@@ -38,6 +40,10 @@ export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRol
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Resizing State
+  const [resizingId, setResizingId] = useState<string | null>(null);
+  const [resizeStart, setResizeStart] = useState<{ x: number, width: number } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -45,11 +51,50 @@ export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRol
     const channel = supabase
       .channel('stations_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stations', filter: `salon_id=eq.${salonId}` }, 
-        () => fetchData())
+        (payload) => {
+            // If we are currently resizing/dragging, ignore updates to avoid jitter
+            if (!resizingId) fetchData();
+        })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [salonId]);
+  }, [salonId, resizingId]); // Add resizingId dependency
+
+  // Global Resize Handlers
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizingId || !resizeStart) return;
+      
+      const deltaX = e.clientX - resizeStart.x;
+      const newWidth = Math.max(100, resizeStart.width + deltaX); // Min width 100px
+
+      setStations(prev => prev.map(s => 
+        s.id === resizingId ? { ...s, width: newWidth } : s
+      ));
+    };
+
+    const handleMouseUp = async () => {
+      if (!resizingId) return;
+      
+      const station = stations.find(s => s.id === resizingId);
+      if (station) {
+        await supabase.from('stations').update({ width: station.width }).eq('id', station.id);
+      }
+      
+      setResizingId(null);
+      setResizeStart(null);
+    };
+
+    if (resizingId) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingId, resizeStart, stations]);
 
   const fetchData = async () => {
     try {
@@ -89,15 +134,16 @@ export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRol
     }
   };
 
-  const handleAddStation = async (type: 'chair' | 'desk' | 'table') => {
+  const handleAddStation = async (type: 'chair' | 'desk' | 'table' | 'sofa') => {
     if (userRole !== 'owner') return;
     const count = stations.filter(s => s.type === type).length;
     await supabase.from('stations').insert({
       salon_id: salonId,
       name: `${type.charAt(0).toUpperCase() + type.slice(1)} ${count + 1}`,
       type,
-      position_x: 50 + (stations.length * 20),
-      position_y: 50,
+      position_x: 100 + (stations.length * 20), // Start a bit further in
+      position_y: 100,
+      width: type === 'sofa' ? 192 : null // Default width for sofa
     });
     fetchData();
   };
@@ -194,74 +240,167 @@ export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRol
                 </div>
               </div>
 
-              {/* Canvas */}
-              <div className="flex-1 bg-gray-50 dark:bg-[#1a1b1e] relative overflow-hidden p-8"
-                   style={{ 
-                     backgroundImage: 'radial-gradient(circle, #ddd 1px, transparent 1px)', 
-                     backgroundSize: '24px 24px' 
-                   }}>
+              {/* Canvas - The Room */}
+              <div className="flex-1 bg-neutral-100 dark:bg-[#0F0F0F] relative overflow-hidden flex items-center justify-center p-8">
                 
-                {stations.map(station => {
-                   const typeInfo = STATION_TYPES.find(t => t.type === station.type);
-                   const assignedStaff = staff.find(s => s.id === station.current_staff_id);
-                   const Icon = typeInfo?.icon || Armchair;
+                {/* The Floor Plan Container */}
+                <div className="relative w-full h-full max-w-5xl bg-white dark:bg-[#1E1E1E] rounded-[40px] shadow-2xl border-[8px] border-gray-200 dark:border-gray-800 overflow-hidden group/room">
+                   
+                   {/* Floor Texture (Subtle Grid) */}
+                   <div className="absolute inset-0 opacity-20 pointer-events-none" 
+                        style={{ backgroundImage: 'radial-gradient(circle, #888 1px, transparent 1px)', backgroundSize: '32px 32px' }} 
+                   />
 
-                   return (
-                     <motion.div
-                       key={station.id}
-                       drag={userRole === 'owner'}
-                       dragMomentum={false}
-                       initial={{ x: station.position_x, y: station.position_y }}
-                       onDragEnd={(_, info) => {
-                         const newX = station.position_x + info.offset.x;
-                         const newY = station.position_y + info.offset.y;
-                         handleUpdatePosition(station.id, newX, newY);
-                       }}
-                       whileHover={{ scale: 1.05, boxShadow: "0px 10px 25px rgba(0,0,0,0.1)" }}
-                       className={`
-                         absolute w-40 p-4 rounded-3xl bg-white dark:bg-gray-800 border-2
-                         flex flex-col items-center gap-2 cursor-grab active:cursor-grabbing shadow-lg group
-                         ${assignedStaff ? 'border-red-400 shadow-red-100 dark:shadow-red-900/10' : 'border-green-400 shadow-green-100 dark:shadow-green-900/10'}
-                       `}
-                       // Simplified positioning for demo - normally use absolute refs
-                     >
-                       {userRole === 'owner' && (
-                         <button 
-                           onClick={(e) => { e.stopPropagation(); handleDeleteStation(station.id); }}
-                           className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-600"
-                         >
-                           <Trash2 size={12} />
-                         </button>
-                       )}
+                   {/* --- Architectural Elements --- */}
 
-                       <div className={`p-3 rounded-2xl ${typeInfo?.color}`}>
-                         <Icon size={24} />
-                       </div>
-                       
-                       <div className="text-center w-full">
-                         <div className="font-bold text-gray-800 dark:text-gray-200">{station.name}</div>
-                         
-                         {userRole === 'owner' ? (
-                            <select 
-                              className="mt-2 w-full text-xs p-2 rounded-xl bg-gray-100 dark:bg-gray-900 border-none outline-none"
-                              value={station.current_staff_id || ''}
-                              onChange={(e) => handleAssignStaff(station.id, e.target.value || null)}
-                            >
-                              <option value="">-- Available --</option>
-                              {staff.map(s => (
-                                <option key={s.id} value={s.id}>{s.full_name}</option>
-                              ))}
-                            </select>
-                         ) : (
-                           <div className={`mt-2 text-xs font-bold px-3 py-1 rounded-full ${assignedStaff ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-                             {assignedStaff ? assignedStaff.full_name : 'Available'}
-                           </div>
+                   {/* 1. Mirror Wall (Top Center) */}
+                   <motion.div 
+                     initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
+                     className="absolute top-0 left-[15%] right-[15%] h-24 bg-gradient-to-b from-blue-50/50 to-white/5 backdrop-blur-sm border-b border-l border-r border-blue-200/30 dark:border-blue-900/30 rounded-b-[32px] flex flex-col items-center pt-2 z-0 shadow-lg"
+                   >
+                     <div className="w-[90%] h-1 bg-blue-400/30 shadow-[0_0_15px_rgba(59,130,246,0.4)] mb-1 rounded-full" />
+                     <span className="text-[10px] font-bold text-blue-400/50 tracking-[0.2em] uppercase mt-1">Mirror Zone</span>
+                   </motion.div>
+
+                   {/* 2. Entrance (Left Wall) */}
+                   <div className="absolute bottom-32 -left-[4px] w-8 h-32 bg-gray-100 dark:bg-gray-800 flex flex-col justify-center items-center rounded-r-2xl border border-gray-200 dark:border-gray-700 shadow-inner gap-2 z-0">
+                      <div className="w-1 h-12 bg-gray-300 dark:bg-gray-600 rounded-full" />
+                      <DoorOpen size={20} className="text-gray-400 dark:text-gray-600" />
+                   </div>
+
+                   {/* 3. Restroom (Bottom Right Corner) */}
+                   <div className="absolute bottom-0 right-0 w-48 h-48 pointer-events-none">
+                      <div className="absolute bottom-0 right-0 w-full h-full bg-gray-50/80 dark:bg-gray-800/50 rounded-tl-[60px] border-t border-l border-gray-200 dark:border-gray-700 flex items-center justify-center p-8 backdrop-blur-sm">
+                         <div className="flex flex-col items-center text-gray-400/70 pt-8 pl-8">
+                           <Bath size={28} className="mb-2" />
+                           <span className="text-[10px] font-bold uppercase tracking-widest">W.C.</span>
+                         </div>
+                      </div>
+                   </div>
+
+                   {/* 4. Waiting Area (Left Side) */}
+                   <div className="absolute top-1/3 left-12 w-48 h-64 border-2 border-dashed border-gray-200 dark:border-gray-700/50 rounded-[32px] flex items-center justify-center pointer-events-none user-select-none">
+                      <span className="text-gray-300 dark:text-gray-700 font-bold uppercase -rotate-90 tracking-widest text-sm">Waiting Area</span>
+                   </div>
+
+
+                   {/* --- Draggable Items --- */}
+                   {stations.map(station => {
+                     const typeInfo = STATION_TYPES.find(t => t.type === station.type);
+                     const assignedStaff = staff.find(s => s.id === station.current_staff_id);
+                     const Icon = typeInfo?.icon || Armchair;
+                     const isSofa = station.type === 'sofa';
+                     // Calculate sizing
+                     const width = station.width || (isSofa ? 192 : 96); // Default 192px (w-48) or 96px (w-24)
+                     const height = isSofa ? 80 : 96; // 80px (h-20) or 96px (h-24)
+
+                     return (
+                       <motion.div
+                         key={station.id}
+                         drag={userRole === 'owner' && !resizingId} // Disable drag when resizing
+                         dragConstraints={{ left: 0, right: 800, top: 0, bottom: 600 }}
+                         dragMomentum={false}
+                         initial={{ x: station.position_x, y: station.position_y }}
+                         animate={{ 
+                             x: station.position_x, 
+                             y: station.position_y,
+                             width: width,
+                             height: height
+                         }}
+                         onDragEnd={(_, info) => {
+                           // Simple delta update
+                           const newX = station.position_x + info.offset.x;
+                           const newY = station.position_y + info.offset.y;
+                           handleUpdatePosition(station.id, newX, newY);
+                         }}
+                         whileHover={{ zIndex: 50 }}
+                         whileDrag={{ scale: 1.02, zIndex: 60, cursor: 'grabbing' }}
+                         className={`
+                           absolute flex flex-col items-center justify-center group z-10
+                         `}
+                         style={{ width, height }}
+                       >
+                         {/* The 3D Object Shape */}
+                         <div className={`
+                            relative w-full h-full rounded-2xl border-b-4 transition-all duration-200
+                            ${assignedStaff 
+                                ? 'bg-white dark:bg-gray-800 border-red-100 dark:border-red-900/30 shadow-[0_8px_16px_rgba(239,68,68,0.15)]' 
+                                : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-[0_8px_16px_rgba(0,0,0,0.05)] hover:shadow-lg'
+                            }
+                         `}>
+                             {/* Resize Handle (Available for all draggable items) */}
+                             {userRole === 'owner' && (
+                               <div
+                                 className="absolute bottom-1 -right-3 w-6 h-12 flex items-center justify-center cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity z-50"
+                                 onMouseDown={(e) => {
+                                   e.stopPropagation(); // Prevent drag start
+                                   setResizingId(station.id);
+                                   setResizeStart({ x: e.clientX, width });
+                                 }}
+                               >
+                                 <div className="w-1.5 h-6 bg-gray-300 dark:bg-gray-600 rounded-full hover:bg-blue-500 transition-colors shadow-sm" />
+                               </div>
+                             )}
+
+                             {/* Delete Button */}
+                             {userRole === 'owner' && (
+                               <button 
+                                 onClick={(e) => { e.stopPropagation(); handleDeleteStation(station.id); }}
+                                 className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-red-600 shadow-sm scale-75"
+                               >
+                                 <Trash2 size={14} />
+                               </button>
+                             )}
+
+                             {/* Icon & Label Container */}
+                             <div className="flex flex-col items-center justify-center h-full pb-1">
+                                <div className={`p-2 rounded-xl mb-1 ${typeInfo?.color} bg-opacity-10`}>
+                                  <Icon size={isSofa ? 24 : 18} className="stroke-[2px]" />
+                                </div>
+                                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate w-[90%] text-center">
+                                  {station.name}
+                                </span>
+                             </div>
+
+                             {/* Floating Staff Avatar Bubble (Small indicator) */}
+                             {assignedStaff && !isSofa && (
+                               <motion.div 
+                                 initial={{ scale: 0 }} 
+                                 animate={{ scale: 1 }}
+                                 className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-white dark:bg-gray-800 p-0.5 shadow-md z-30 ring-2 ring-red-100 dark:ring-red-900/30"
+                               >
+                                 <div className="w-full h-full rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-[10px] text-white font-bold">
+                                    {assignedStaff.full_name.charAt(0)}
+                                 </div>
+                               </motion.div>
+                             )}
+
+                             {/* Hidden Select for Assignment (Not for Sofas) */}
+                             {userRole === 'owner' && !assignedStaff && !isSofa && (
+                                <select 
+                                  className="absolute inset-0 opacity-0 cursor-pointer"
+                                  value={station.current_staff_id || ''}
+                                  onChange={(e) => handleAssignStaff(station.id, e.target.value || null)}
+                                >
+                                  <option value="">Assign</option>
+                                  {staff.map(s => (
+                                    <option key={s.id} value={s.id}>{s.full_name}</option>
+                                  ))}
+                                </select>
+                             )}
+                         </div>
+
+                         {/* Staff Name Label (Underneath) */}
+                         {assignedStaff && !isSofa && (
+                             <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-[10px] font-bold px-3 py-1 rounded-full shadow-sm border border-gray-100 dark:border-gray-700 whitespace-nowrap z-40 text-gray-700 dark:text-gray-200">
+                                 {assignedStaff.full_name}
+                             </div>
                          )}
-                       </div>
-                     </motion.div>
-                   );
-                })}
+                       </motion.div>
+                     );
+                  })}
 
+                </div>
               </div>
             </motion.div>
           </motion.div>

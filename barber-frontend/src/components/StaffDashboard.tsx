@@ -414,7 +414,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
                       {apt.status}
                     </span>
                   </td>
-                  <td className="py-4 text-right font-bold whitespace-nowrap">{apt.amount}</td>
+                  <td className="py-4 text-right font-bold whitespace-nowrap">{formatCurrency(apt.amount)}</td>
                   <td className="py-4 pr-4 text-right rounded-r-2xl">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button

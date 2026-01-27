@@ -12,6 +12,8 @@ import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../services/supabaseClient';
 import { StationManager } from './StationManager';
 import { Barber, Appointment, Comment, ChartData } from '../types';
+import { formatPrice } from '../utils/format';
+import { DashboardSkeleton } from './SkeletonLoader';
 
 // Default/placeholder data while loading
 const defaultChartData: ChartData[] = [
@@ -28,32 +30,35 @@ const defaultTopBarbers: Barber[] = [];
 const defaultComments: Comment[] = [];
 const defaultAppointments: Appointment[] = [];
 
-// Service Price Table
+// Service Price Table - Now using numbers for consistency
 const SERVICE_MENU = [
-  { name: 'Classic Cut', price: '30.000 TND' },
-  { name: 'Fade & Beard Trim', price: '45.000 TND' },
-  { name: 'Hair Styling', price: '55.000 TND' },
-  { name: 'Hot Towel Shave', price: '35.000 TND' },
-  { name: 'Kids Cut', price: '25.000 TND' },
-  { name: 'Hair Coloring', price: '70.000 TND' },
-  { name: 'Beard Sculpting', price: '25.000 TND' },
+  { name: 'Classic Cut', price: 30.0 },
+  { name: 'Fade & Beard Trim', price: 45.0 },
+  { name: 'Hair Styling', price: 55.0 },
+  { name: 'Hot Towel Shave', price: 35.0 },
+  { name: 'Kids Cut', price: 25.0 },
+  { name: 'Hair Coloring', price: 70.0 },
+  { name: 'Beard Sculpting', price: 25.0 },
 ];
 
 interface DashboardProps {
   userRole?: string;
+  // ...existing code...
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
-  const { t, formatCurrency } = useLanguage();
+  const { t } = useLanguage();
   
   // State management
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [salonId, setSalonId] = useState<string>('');
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState<'7d' | '30d' | '90d' | '1y'>('7d');
   
   // Data states with default values
   const [chartData, setChartData] = useState<ChartData[]>(defaultChartData);
+  const [stats, setStats] = useState({ bookings: 0, revenue: 0 });
   const [topBarbers, setTopBarbers] = useState<Barber[]>(defaultTopBarbers);
   const [comments, setComments] = useState<Comment[]>(defaultComments);
   const [appointments, setAppointments] = useState<Appointment[]>(defaultAppointments);
@@ -71,54 +76,128 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
 
   // Load data on component mount - Security: Verify owner role and fetch real data
   useEffect(() => {
+    let subscription: any;
+
     const loadDashboardData = async () => {
       try {
         setIsLoadingData(true);
         setDataError(null);
 
         // Security check: Verify user is owner
-        if (!supabase) {
-          throw new Error('Database connection failed');
-        }
+        if (!supabase) throw new Error('Database connection failed');
 
-        // Verify current user session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !session?.user) {
-          throw new Error('Unauthorized access');
-        }
+        if (sessionError || !session?.user) throw new Error('Unauthorized access');
 
-        // Verify user is owner by checking staff table role
         const { data: userData, error: userError } = await supabase
           .from('staff')
           .select('role, salon_id')
           .eq('id', session.user.id)
           .single();
 
-        if (userError || !userData || userData.role !== 'owner') {
-          throw new Error('Access denied: Not an owner');
-        }
-        
+        if (userError || !userData || userData.role !== 'owner') throw new Error('Access denied: Not an owner');
         setSalonId(userData.salon_id);
 
-        // Fetch real appointments data from Supabase
-        const { data: appointmentsData, error: appointmentsError } = await supabase
+        const calculateStartDate = () => {
+          const now = new Date();
+          switch(dateFilter) {
+            case '7d': now.setDate(now.getDate() - 7); break;
+            case '30d': now.setDate(now.getDate() - 30); break;
+            case '90d': now.setDate(now.getDate() - 90); break;
+            case '1y': now.setFullYear(now.getFullYear() - 1); break;
+          }
+          return now.toISOString();
+        };
+
+        // Fetch All Stats Data (Aggregated)
+        const { data: statsData, error: statsError } = await supabase
+          .from('appointments')
+          .select('amount, appointment_date, status')
+          .eq('salon_id', userData.salon_id)
+          .gte('appointment_date', calculateStartDate())
+          .neq('status', 'Cancelled');
+
+        if (statsError) throw statsError;
+
+        // Calculate Totals
+        const totalBookings = statsData.length;
+        const totalRevenue = statsData.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+        setStats({ bookings: totalBookings, revenue: totalRevenue });
+
+        // Calculate Chart Data (Group by Day)
+        const groupedData = statsData.reduce((acc: any, curr) => {
+          const date = curr.appointment_date; // YYYY-MM-DD
+          // Format Date to Day Name (e.g., "Mon") if 7d, or "DD MMM" otherwise
+          const d = new Date(date);
+          const key = dateFilter === '7d' 
+            ? d.toLocaleDateString('en-US', { weekday: 'short' }) 
+            : d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+          
+          acc[key] = (acc[key] || 0) + 1; // Count bookings
+          return acc;
+        }, {});
+
+        // Fill chart data structure
+        const newChartData = Object.keys(groupedData).map(key => ({
+            name: key,
+            value: groupedData[key]
+        }));
+        
+        // If empty (no assignments), provide at least placeholders or empty state
+        setChartData(newChartData.length ? newChartData : defaultChartData);
+
+        // Fetch Staff & Calculate Performance
+        const { data: staffData, error: staffError } = await supabase
+          .from('staff')
+          .select('*')
+          .eq('salon_id', userData.salon_id)
+          .eq('status', 'Active');
+
+        if (staffData) {
+            // Group stats by staff_id
+            const staffStats: Record<string, { count: number; revenue: number }> = {};
+            statsData.forEach((apt: any) => {
+                const sid = apt.staff_id;
+                if (!sid) return;
+                if (!staffStats[sid]) staffStats[sid] = { count: 0, revenue: 0 };
+                staffStats[sid].count++;
+                staffStats[sid].revenue += (Number(apt.amount) || 0);
+            });
+
+            const rankedStaff = staffData.map((s: any) => ({
+                id: s.id,
+                name: s.full_name,
+                avatarUrl: s.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.full_name)}&background=random`,
+                rating: 5.0, // Placeholder
+                earnings: formatPrice(staffStats[s.id]?.revenue || 0),
+                clientCount: staffStats[s.id]?.count || 0
+            })).sort((a, b) => {
+                // Sort by revenue desc
+                const revA = parseFloat(a.earnings.replace(/[^0-9.]/g, ''));
+                const revB = parseFloat(b.earnings.replace(/[^0-9.]/g, ''));
+                return revB - revA;
+            }).slice(0, 4);
+            
+            setTopBarbers(rankedStaff);
+        }
+
+        // Fetch Recent Appointments (Limit 10)
+        const { data: listData, error: listError } = await supabase
           .from('appointments')
           .select('*')
           .eq('salon_id', userData.salon_id)
+          .order('created_at', { ascending: false })
           .limit(10);
 
-        if (appointmentsError) {
-          console.error('Error fetching appointments:', appointmentsError);
-        } else if (appointmentsData && appointmentsData.length > 0) {
-          // Transform real data to component format
-          const transformedAppointments: Appointment[] = appointmentsData.map((apt: any) => ({
+        if (listData) {
+          const transformedAppointments: Appointment[] = listData.map((apt: any) => ({
             id: apt.id,
             customerName: apt.customer_name,
-            customerAvatar: 'https://picsum.photos/id/338/50/50',
-            service: apt.service_id || 'Service',
+            customerAvatar: apt.customer_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.customer_name)}&background=random`,
+            service: 'Service', // Join fetching usually better, keeping simple for now
             time: apt.appointment_time || '00:00',
             status: apt.status,
-            amount: formatCurrency(apt.amount)
+            amount: formatPrice(apt.amount)
           }));
           setAppointments(transformedAppointments);
         }
@@ -126,15 +205,27 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
         setIsLoadingData(false);
       } catch (error: any) {
         console.error('Dashboard data loading error:', error);
-        setDataError(error.message || 'Failed to load dashboard data');
+        setDataError(error.message);
         setIsLoadingData(false);
       }
     };
 
     if (userRole === 'owner') {
       loadDashboardData();
+    
+       // Realtime Subscription
+       subscription = supabase
+       .channel('dashboard-realtime')
+       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => {
+         loadDashboardData(); // Refresh all data on any change
+       })
+       .subscribe();
     }
-  }, [userRole]);
+
+    return () => {
+      if (subscription) supabase.removeChannel(subscription);
+    };
+  }, [userRole, dateFilter]); // Re-run when filter changes
 
   // Security: Prevent staff from accessing this component
   if (userRole !== 'owner') {
@@ -150,14 +241,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
 
   // Loading state
   if (isLoadingData) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-treservi-accent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">Loading dashboard data...</p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   // Error state
@@ -183,7 +267,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
     setFormData({
       customerName: '',
       service: SERVICE_MENU[0].name,
-      amount: SERVICE_MENU[0].price,
+      amount: formatPrice(SERVICE_MENU[0].price),
       time: '09:00 AM',
       status: 'Pending',
     });
@@ -208,7 +292,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
     setFormData({
         ...formData,
         service: serviceName,
-        amount: service ? service.price : ''
+        amount: service ? formatPrice(service.price) : ''
     });
   };
 
@@ -231,7 +315,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
         service: formData.service || 'Classic Cut',
         time: formData.time || '09:00 AM',
         status: (formData.status as any) || 'Pending',
-        amount: formData.amount || '$30'
+        amount: formData.amount || formatPrice(30)
       };
       setAppointments(prev => [newApt, ...prev]);
     }
@@ -255,25 +339,24 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
               <div className="flex justify-between items-start mb-6">
                  <div>
                     <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">{t('dashboard.totalBookings')}</h3>
-                    <div className="text-4xl font-bold text-gray-900 dark:text-white">1,293</div>
+                    <div className="text-4xl font-bold text-gray-900 dark:text-white">
+                        {stats.bookings.toLocaleString()}
+                    </div>
                  </div>
                  <span className="flex items-center gap-1 text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-1 rounded-full text-xs font-bold">
-                    <ArrowUpRight className="rotate-90" size={12} /> 36.8%
+                    <ArrowUpRight className="rotate-90" size={12} /> --%
                  </span>
               </div>
               
               <div className="flex items-center justify-between mt-8">
                 <div className="flex -space-x-3">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <img key={i} src={`https://picsum.photos/id/${100 + i}/50/50`} alt="user" className="w-10 h-10 rounded-full border-2 border-white dark:border-treservi-card-dark" />
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="w-10 h-10 rounded-full border-2 border-white dark:border-treservi-card-dark bg-gray-200 dark:bg-gray-700" />
                   ))}
                   <div className="w-10 h-10 rounded-full border-2 border-white dark:border-treservi-card-dark bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-500">
-                    +8k
+                    ...
                   </div>
                 </div>
-                <button className="w-10 h-10 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors">
-                  <ArrowRight size={16} />
-                </button>
               </div>
             </div>
 
@@ -282,13 +365,15 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                <div className="flex justify-between items-start mb-6">
                  <div>
                     <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">{t('dashboard.todayRevenue')}</h3>
-                    <div className="text-4xl font-bold text-gray-900 dark:text-white">256,000 TND</div>
+                    <div className="text-4xl font-bold text-gray-900 dark:text-white">
+                        {formatPrice(stats.revenue)}
+                    </div>
                  </div>
                  <span className="flex items-center gap-1 text-treservi-accent bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-xs font-bold">
-                    <ArrowUpRight size={12} /> 36.8%
+                    <ArrowUpRight size={12} /> --%
                  </span>
               </div>
-              <p className="text-gray-400 text-sm mt-8">857 {t('dashboard.newCustomers')}</p>
+              <p className="text-gray-400 text-sm mt-8">{stats.bookings} {t('dashboard.newCustomers')}</p>
             </div>
           </div>
 
@@ -296,9 +381,15 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
           <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow h-[400px] min-h-[320px] flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-xl">{t('dashboard.bookingAnalytics')}</h3>
-              <select className="bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 text-sm border-none outline-none cursor-pointer">
-                <option>Last 7 days</option>
-                <option>Last Month</option>
+              <select 
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value as any)}
+                className="bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 text-sm border-none outline-none cursor-pointer"
+              >
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last Month</option>
+                <option value="90d">Last 3 Months</option>
+                <option value="1y">Last Year</option>
               </select>
             </div>
             <div className="flex-1 w-full min-h-0">
@@ -420,42 +511,36 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
         <div className="space-y-8">
           
           {/* Top Barbers */}
-          <div className="bg-black text-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow h-[420px] relative flex flex-col justify-between">
-            <div className="flex justify-between items-center">
+          <div className="bg-black text-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow h-auto relative flex flex-col justify-between min-h-[420px]">
+            <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-xl">{t('dashboard.topBarbers')}</h3>
               <MoreHorizontal className="text-gray-500 cursor-pointer" />
             </div>
 
-            {/* Circular Progress Placeholder */}
-            <div className="relative w-48 h-48 mx-auto flex items-center justify-center">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle cx="96" cy="96" r="80" fill="transparent" stroke="#333" strokeWidth="24" />
-                <circle cx="96" cy="96" r="80" fill="transparent" stroke="#22C55E" strokeWidth="24" strokeDasharray="502" strokeDashoffset="100" strokeLinecap="round" />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                 <span className="text-3xl font-bold">12.5%</span>
-                 <span className="text-xs text-gray-400">{t('dashboard.growth')}</span>
-              </div>
-              <div className="absolute -top-2 right-4 bg-white text-black text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                 Target
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              {topBarbers.map(barber => (
-                <div key={barber.id} className="flex items-center justify-between p-3 bg-white/10 rounded-2xl">
-                  <div className="flex items-center gap-3">
-                    <img src={barber.avatarUrl} alt={barber.name} className="w-10 h-10 rounded-full border border-white/20" />
-                    <div>
-                      <p className="text-sm font-bold">{barber.name}</p>
-                      <div className="flex items-center text-xs text-yellow-400">
-                         <Star size={10} fill="currentColor" /> {barber.rating}
-                      </div>
+            {/* List Only - No Circular Graph */}
+            <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              {topBarbers.length === 0 ? (
+                  <div className="text-gray-500 text-center py-10">No data available</div>
+              ) : (
+                topBarbers.map(barber => (
+                    <div key={barber.id} className="flex items-center justify-between p-4 bg-white/10 rounded-2xl border border-white/5 hover:bg-white/15 transition-colors">
+                    <div className="flex items-center gap-3">
+                        <img src={barber.avatarUrl} alt={barber.name} className="w-12 h-12 rounded-full border-2 border-white/20" />
+                        <div>
+                        <p className="text-base font-bold">{barber.name}</p>
+                        <div className="text-sm font-medium text-gray-400">
+                            {(barber as any).clientCount} Clients
+                        </div>
+                        </div>
                     </div>
-                  </div>
-                  <div className="text-sm font-bold text-treservi-accent">{barber.earnings}</div>
-                </div>
-              ))}
+                    <div className="text-right">
+                        <div className="text-base font-bold text-treservi-accent">
+                            {barber.earnings}
+                        </div>
+                    </div>
+                    </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -531,7 +616,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                     >
                       <option value="" disabled>Select Service</option>
                       {SERVICE_MENU.map((s, idx) => (
-                        <option key={idx} value={s.name}>{s.name} ({s.price})</option>
+                        <option key={idx} value={s.name}>{s.name} ({formatPrice(s.price)})</option>
                       ))}
                     </select>
                   </div>

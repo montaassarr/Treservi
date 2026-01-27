@@ -56,24 +56,67 @@ const AppRoutes: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      if (!supabase) {
-        console.error('Supabase client is not configured.');
-        setIsLoadingAuth(false);
-        return;
-      }
+    let mounted = true;
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUserEmail(session.user.email || '');
-        setUserId(session.user.id);
-        setIsAuthenticated(true);
-        await fetchUserData(session.user.id, session.user.email || '');
+    const initAuth = async () => {
+      if (!supabase) return;
+      
+      try {
+        // Check active session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user && mounted) {
+           setUserEmail(session.user.email || '');
+           setUserId(session.user.id);
+           setIsAuthenticated(true);
+           await fetchUserData(session.user.id, session.user.email || '');
+        } else if (mounted) {
+           // No session found
+           setIsAuthenticated(false);
+        }
+      } catch (error) {
+         console.error('Auth check failed:', error);
+         if (mounted) setIsAuthenticated(false);
+      } finally {
+         if (mounted) setIsLoadingAuth(false);
       }
-      setIsLoadingAuth(false);
     };
 
-    checkAuth();
+    initAuth();
+
+        // Listen for changes (sign in, sign out, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+       if (!mounted) return;
+       
+       if (session) {
+          if (!isAuthenticated) {
+            setIsAuthenticated(true);
+            setUserEmail(session.user.email || '');
+            setUserId(session.user.id);
+            await fetchUserData(session.user.id, session.user.email || '');
+          }
+          setIsLoadingAuth(false);
+          
+          // Auto-redirect to dashboard if on login page and authenticated
+          if (location.pathname === '/login' || location.pathname === '/') {
+              navigate('/dashboard', { replace: true });
+          }
+
+       } else if (event === 'SIGNED_OUT' || !session) {
+          setIsAuthenticated(false);
+          setIsLoadingAuth(false);
+          setUserEmail('');
+          setUserId('');
+          if (location.pathname !== '/login') {
+             navigate('/login', { replace: true });
+          }
+       }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchUserData]);
 
   const handleLogin = useCallback(async (email: string) => {

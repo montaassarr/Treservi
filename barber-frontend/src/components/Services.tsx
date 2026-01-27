@@ -16,6 +16,7 @@ import {
   updateService,
   deleteService,
 } from '../services/serviceService';
+import { formatPrice } from '../utils/format';
 
 interface ServicesProps {
   salonId: string;
@@ -213,7 +214,7 @@ const Services: React.FC<ServicesProps> = ({ salonId }) => {
                 <div className="flex items-center gap-2 text-sm">
                   <DollarSign className="w-4 h-4 text-emerald-600" />
                   <span className="font-bold text-emerald-600">
-                    ${service.price.toFixed(2)}
+                    {formatPrice(service.price)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -289,17 +290,17 @@ const Services: React.FC<ServicesProps> = ({ salonId }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-600">Price ($)</label>
+                  <label className="text-sm font-semibold text-gray-600">Price (TND)</label>
                   <div className="relative">
                     <DollarSign className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input
                       required
                       type="number"
-                      step="0.01"
+                      step="0.001"
                       min="0"
                       value={formData.price}
                       onChange={e => setFormData({ ...formData, price: e.target.value })}
-                      placeholder="30.00"
+                      placeholder="30.000"
                       className="w-full rounded-full bg-gray-50 border border-transparent focus:border-emerald-500 focus:bg-white py-3 pl-12 pr-4 outline-none shadow-inner"
                     />
                   </div>
