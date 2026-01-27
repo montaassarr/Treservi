@@ -10,6 +10,7 @@ import {
 import { MoreHorizontal, ArrowUpRight, ArrowRight, Star, Plus, Pencil, Trash2, X, Check, Calendar, User, DollarSign, Clock, Scissors } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../services/supabaseClient';
+import { StationManager } from './StationManager';
 import { Barber, Appointment, Comment, ChartData } from '../types';
 
 // Default/placeholder data while loading
@@ -29,13 +30,13 @@ const defaultAppointments: Appointment[] = [];
 
 // Service Price Table
 const SERVICE_MENU = [
-  { name: 'Classic Cut', price: '30 TND' },
-  { name: 'Fade & Beard Trim', price: '45 TND' },
-  { name: 'Hair Styling', price: '55 TND' },
-  { name: 'Hot Towel Shave', price: '35 TND' },
-  { name: 'Kids Cut', price: '25 TND' },
-  { name: 'Hair Coloring', price: '70 TND' },
-  { name: 'Beard Sculpting', price: '25 TND' },
+  { name: 'Classic Cut', price: '30.000 TND' },
+  { name: 'Fade & Beard Trim', price: '45.000 TND' },
+  { name: 'Hair Styling', price: '55.000 TND' },
+  { name: 'Hot Towel Shave', price: '35.000 TND' },
+  { name: 'Kids Cut', price: '25.000 TND' },
+  { name: 'Hair Coloring', price: '70.000 TND' },
+  { name: 'Beard Sculpting', price: '25.000 TND' },
 ];
 
 interface DashboardProps {
@@ -43,10 +44,11 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
-  const { t } = useLanguage();
+  const { t, formatCurrency } = useLanguage();
   
   // State management
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [salonId, setSalonId] = useState<string>('');
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   
@@ -95,6 +97,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
         if (userError || !userData || userData.role !== 'owner') {
           throw new Error('Access denied: Not an owner');
         }
+        
+        setSalonId(userData.salon_id);
 
         // Fetch real appointments data from Supabase
         const { data: appointmentsData, error: appointmentsError } = await supabase
@@ -114,7 +118,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
             service: apt.service_id || 'Service',
             time: apt.appointment_time || '00:00',
             status: apt.status,
-            amount: `${apt.amount} TND`
+            amount: formatCurrency(apt.amount)
           }));
           setAppointments(transformedAppointments);
         }
@@ -250,7 +254,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
             <div className="bg-white dark:bg-treservi-card-dark rounded-pill p-8 shadow-soft-glow relative overflow-hidden group">
               <div className="flex justify-between items-start mb-6">
                  <div>
-                    <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Total Bookings</h3>
+                    <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">{t('dashboard.totalBookings')}</h3>
                     <div className="text-4xl font-bold text-gray-900 dark:text-white">1,293</div>
                  </div>
                  <span className="flex items-center gap-1 text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-1 rounded-full text-xs font-bold">
@@ -277,21 +281,21 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
             <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow relative overflow-hidden">
                <div className="flex justify-between items-start mb-6">
                  <div>
-                    <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Today's Revenue</h3>
+                    <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">{t('dashboard.todayRevenue')}</h3>
                     <div className="text-4xl font-bold text-gray-900 dark:text-white">256,000 TND</div>
                  </div>
                  <span className="flex items-center gap-1 text-treservi-accent bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-xs font-bold">
                     <ArrowUpRight size={12} /> 36.8%
                  </span>
               </div>
-              <p className="text-gray-400 text-sm mt-8">857 new customers today!</p>
+              <p className="text-gray-400 text-sm mt-8">857 {t('dashboard.newCustomers')}</p>
             </div>
           </div>
 
           {/* Analytics Chart */}
           <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow h-[400px] min-h-[320px] flex flex-col">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-xl">Booking Analytics</h3>
+              <h3 className="font-bold text-xl">{t('dashboard.bookingAnalytics')}</h3>
               <select className="bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 text-sm border-none outline-none cursor-pointer">
                 <option>Last 7 days</option>
                 <option>Last Month</option>
@@ -342,24 +346,24 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
           {/* Appointments Table */}
           <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-xl">Upcoming Appointments</h3>
+              <h3 className="font-bold text-xl">{t('dashboard.upcomingAppointments')}</h3>
               <div className="flex items-center gap-2">
                  <button onClick={handleAddNew} className="flex items-center gap-2 bg-treservi-accent hover:bg-green-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-neon-glow transition-all transform hover:scale-105">
-                   <Plus size={16} /> <span className="hidden sm:inline">New Appointment</span>
+                   <Plus size={16} /> <span className="hidden sm:inline">{t('appointments.newAppointment')}</span>
                  </button>
-                 <button className="text-sm font-medium text-gray-500 hover:text-black dark:hover:text-white px-3 py-2">View all</button>
+                 <button className="text-sm font-medium text-gray-500 hover:text-black dark:hover:text-white px-3 py-2">{t('common.viewAll')}</button>
               </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="text-gray-400 text-sm border-b border-gray-100 dark:border-gray-800">
-                    <th className="pb-4 font-normal pl-4">Customer</th>
-                    <th className="pb-4 font-normal">Service</th>
-                    <th className="pb-4 font-normal">Time</th>
-                    <th className="pb-4 font-normal">Status</th>
-                    <th className="pb-4 font-normal text-right">Amount</th>
-                    <th className="pb-4 font-normal pr-4 text-right">Actions</th>
+                    <th className="pb-4 font-normal pl-4">{t('appointments.customer')}</th>
+                    <th className="pb-4 font-normal">{t('appointments.service')}</th>
+                    <th className="pb-4 font-normal">{t('appointments.time')}</th>
+                    <th className="pb-4 font-normal">{t('common.status')}</th>
+                    <th className="pb-4 font-normal text-right">{t('appointments.amount')}</th>
+                    <th className="pb-4 font-normal pr-4 text-right">{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
@@ -418,7 +422,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
           {/* Top Barbers */}
           <div className="bg-black text-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow h-[420px] relative flex flex-col justify-between">
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-xl">Top Barbers</h3>
+              <h3 className="font-bold text-xl">{t('dashboard.topBarbers')}</h3>
               <MoreHorizontal className="text-gray-500 cursor-pointer" />
             </div>
 
@@ -430,7 +434,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                  <span className="text-3xl font-bold">12.5%</span>
-                 <span className="text-xs text-gray-400">Growth</span>
+                 <span className="text-xs text-gray-400">{t('dashboard.growth')}</span>
               </div>
               <div className="absolute -top-2 right-4 bg-white text-black text-xs font-bold px-3 py-1 rounded-full shadow-lg">
                  Target
@@ -455,8 +459,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
             </div>
           </div>
 
-          {/* Recent Comments */}
-          <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow">
+          {/* Recent Comments - Removed as per user request */}
+          {/* <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-xl">Comments</h3>
             </div>
@@ -476,20 +480,11 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
 
-          {/* Promotional Card */}
-          <div className="bg-gradient-to-br from-treservi-accent to-green-700 rounded-[32px] p-8 shadow-neon-glow text-white relative overflow-hidden">
-             <div className="relative z-10">
-               <h3 className="font-bold text-2xl mb-2">Pro Features</h3>
-               <p className="text-sm opacity-90 mb-6">Upgrade to manage multi-location salons.</p>
-               <button className="bg-white text-green-700 px-6 py-3 rounded-full font-bold text-sm hover:scale-105 transition-transform">
-                 View Plans
-               </button>
-             </div>
-             {/* Decorative Background Elements */}
-             <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl transform translate-x-10 -translate-y-10"></div>
-             <div className="absolute bottom-0 left-0 w-24 h-24 bg-black opacity-10 rounded-full blur-xl transform -translate-x-5 translate-y-5"></div>
+          {/* Station Manager / Live Salon Map - Made Full Width */}
+          <div className="w-full">
+             {salonId && <StationManager salonId={salonId} userRole="owner" />}
           </div>
 
         </div>

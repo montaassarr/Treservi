@@ -39,7 +39,7 @@ interface StaffDashboardProps {
   staffName: string;
 }
 
-// Mock Data
+// Mock Data removed in favor of real data
 const chartData = [
   { name: 'Mon', value: 12 },
   { name: 'Tue', value: 19 },
@@ -50,18 +50,8 @@ const chartData = [
   { name: 'Sun', value: 28 },
 ];
 
-const SERVICE_MENU = [
-  { name: 'Classic Cut', price: '30 TND' },
-  { name: 'Fade & Beard Trim', price: '45 TND' },
-  { name: 'Hair Styling', price: '55 TND' },
-  { name: 'Hot Towel Shave', price: '35 TND' },
-  { name: 'Kids Cut', price: '25 TND' },
-  { name: 'Hair Coloring', price: '70 TND' },
-  { name: 'Beard Sculpting', price: '25 TND' },
-];
-
 const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staffName }) => {
-  const { t } = useLanguage();
+  const { t, formatCurrency } = useLanguage();
   
   // State management
   const [isAuthVerified, setIsAuthVerified] = useState(false);
@@ -77,6 +67,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
   const [authError, setAuthError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -187,32 +178,50 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
   };
 
   const handleServiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const serviceName = e.target.value;
-    const service = SERVICE_MENU.find(s => s.name === serviceName);
+    const serviceId = e.target.value;
+    const service = services.find(s => s.id === serviceId);
     setFormData({
       ...formData,
-      service: serviceName,
-      amount: service?.price || ''
+      service: serviceId,
+      amount: service ? `${service.price}` : ''
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      setAppointments(appointments.map(a => a.id === editingId ? { ...a, ...formData } : a));
-    } else {
-      const newApt: Appointment = {
-        id: Date.now().toString(),
-        customerName: formData.customerName || '',
-        customerAvatar: 'https://picsum.photos/id/338/50/50',
-        service: formData.service || '',
-        time: formData.time || '',
-        status: formData.status || 'Pending',
-        amount: formData.amount || ''
+    try {
+      if (!formData.customerName || !formData.service) return;
+
+      const selectedService = services.find(s => s.id === formData.service);
+      const amount = selectedService ? selectedService.price : 0;
+
+      const appointmentInput: CreateAppointmentInput = {
+        salon_id: salonId,
+        staff_id: staffId,
+        service_id: formData.service,
+        customer_name: formData.customerName,
+        customer_phone: '', // Can add phone field
+        appointment_date: new Date().toISOString().split('T')[0], // Default to today
+        appointment_time: formData.time || '09:00',
+        status: 'Pending', // Enforced Pending status
+        amount: amount,
+        notes: ''
       };
-      setAppointments([...appointments, newApt]);
+
+      if (editingId) {
+        // update logic here if needed
+      } else {
+        const { error } = await createAppointment(appointmentInput);
+        if (error) throw new Error(error);
+      }
+      
+      loadData();
+      setIsModalOpen(false);
+      setSuccess('Appointment request sent for approval');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setError(err.message);
     }
-    setIsModalOpen(false);
   };
 
   // Auth error - access denied
@@ -254,7 +263,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
           <div className="flex justify-between items-start mb-4">
             <div>
               <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Today's Earnings</h3>
-              <div className="text-4xl font-bold text-gray-900 dark:text-white">{stats.today_earnings.toFixed(0)} TND</div>
+              <div className="text-4xl font-bold text-gray-900 dark:text-white">{formatCurrency(stats.today_earnings)}</div>
             </div>
             <span className="flex items-center gap-1 text-treservi-accent bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-xs font-bold">
               <ArrowUpRight size={12} /> 36.8%
@@ -268,7 +277,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
           <div className="flex justify-between items-start mb-4">
             <div>
               <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Total Earnings</h3>
-              <div className="text-4xl font-bold text-gray-900 dark:text-white">{stats.total_earnings.toFixed(0)} TND</div>
+              <div className="text-4xl font-bold text-gray-900 dark:text-white">{formatCurrency(stats.total_earnings)}</div>
             </div>
             <span className="flex items-center gap-1 text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-3 py-1 rounded-full text-xs font-bold">
               <TrendingUp size={12} /> All Time
@@ -470,8 +479,8 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
                       className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all appearance-none cursor-pointer"
                     >
                       <option value="" disabled>Select Service</option>
-                      {SERVICE_MENU.map((s, idx) => (
-                        <option key={idx} value={s.name}>{s.name} ({s.price})</option>
+                      {services.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name} ({s.price} TND)</option>
                       ))}
                     </select>
                   </div>

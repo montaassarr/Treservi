@@ -9,6 +9,7 @@ import {
   Sun, 
   Moon,
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface SidebarProps {
   activeTab: string;
@@ -29,13 +30,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
   userRole = 'owner'
 }) => {
+  const { t } = useLanguage();
+
   // Define all navigation items
   const allNavItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['owner', 'staff'] },
-    { id: 'appointments', icon: CalendarDays, label: 'Appointments', roles: ['owner'] },
-    { id: 'staff', icon: Users, label: 'Staff', roles: ['owner'] },
-    { id: 'services', icon: Scissors, label: 'Services', roles: ['owner'] },
-    { id: 'income', icon: DollarSign, label: 'Income', roles: ['owner'] },
+    { id: 'dashboard', icon: LayoutDashboard, label: t('common.dashboard'), roles: ['owner', 'staff'] },
+    { id: 'appointments', icon: CalendarDays, label: t('common.appointments'), roles: ['owner'] },
+    { id: 'staff', icon: Users, label: t('common.staff'), roles: ['owner'] },
+    { id: 'services', icon: Scissors, label: t('common.services'), roles: ['owner'] },
+    { id: 'income', icon: DollarSign, label: t('common.income'), roles: ['owner'] },
   ];
 
   // Filter navigation items based on user role

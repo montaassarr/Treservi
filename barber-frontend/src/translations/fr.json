@@ -1,0 +1,92 @@
+{
+  "common": {
+    "dashboard": "Tableau de Bord",
+    "appointments": "Rendez-vous",
+    "staff": "Équipe",
+    "services": "Services",
+    "income": "Revenus",
+    "notifications": "Notifications",
+    "logout": "Déconnexion",
+    "darkMode": "Mode Sombre",
+    "lightMode": "Mode Clair",
+    "welcome": "Bon retour",
+    "viewAll": "Voir tout",
+    "actions": "Actions",
+    "status": "Statut",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès"
+  },
+  "dashboard": {
+    "todayClients": "Clients du Jour",
+    "todayEarnings": "Gains du Jour",
+    "totalCompleted": "Total Complété",
+    "totalEarnings": "Gains Totaux",
+    "quickAddWalkin": "Ajout Rapide (Sans RDV)",
+    "todaySchedule": "Planning du Jour",
+    "bookingAnalytics": "Analytique des Réservations",
+    "noAppointments": "Aucun rendez-vous aujourd'hui",
+    "addWalkIn": "Ajoutez un client sans RDV pour commencer",
+    "totalBookings": "Total Réservations",
+    "todayRevenue": "Revenu du Jour",
+    "newCustomers": "nouveaux clients aujourd'hui !",
+    "topBarbers": "Meilleurs Barbiers",
+    "growth": "Croissance",
+    "comments": "Commentaires",
+    "upcomingAppointments": "Rendez-vous à venir"
+  },
+  "appointments": {
+    "newAppointment": "Nouveau Rendez-vous",
+    "addAppointment": "Ajouter Rendez-vous",
+    "customer": "Client",
+    "service": "Service",
+    "time": "Heure",
+    "amount": "Montant",
+    "status": {
+      "confirmed": "Confirmé",
+      "pending": "En Attente",
+      "completed": "Terminé",
+      "cancelled": "Annulé"
+    },
+    "clientName": "Nom du Client",
+    "phoneNumber": "Numéro de Téléphone",
+    "selectService": "Sélectionner Service",
+    "selectStaff": "Sélectionner Staff",
+    "date": "Date"
+  },
+  "staff": {
+    "totalStaff": "Total Équipe",
+    "activeNow": "Actif Maintenant",
+    "addStaff": "Ajouter Membre",
+    "staffList": "Liste de l'Équipe",
+    "performance": "Performance",
+    "role": "Rôle",
+    "pendingApproval": "En Attente d'Approbation"
+  },
+  "services": {
+    "addService": "Ajouter Service",
+    "serviceName": "Nom du Service",
+    "price": "Prix",
+    "duration": "Durée (min)",
+    "description": "Description"
+  },
+  "stations": {
+    "title": "Stations du Salon en Direct",
+    "stationManager": "Gestionnaire de Stations",
+    "addStation": "Ajouter Station",
+    "stationName": "Nom de la Station",
+    "type": "Type",
+    "assignStaff": "Assigner Staff",
+    "available": "Disponible",
+    "busy": "Occupé",
+    "types": {
+      "chair": "Chaise Barbier",
+      "desk": "Table Manucure",
+      "table": "Table Massage"
+    }
+  }
+}

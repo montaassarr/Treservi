@@ -423,8 +423,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                 </div>
               </div>
 
-              {/* Email */}
-              <div className="space-y-2">
+              {/* Email removed as per requirement */}
+              {/* <div className="space-y-2">
                 <label className="text-sm font-semibold text-gray-600">Email (Optional)</label>
                 <input
                   type="email"
@@ -433,7 +433,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                   placeholder="john@example.com"
                   className="w-full rounded-full bg-gray-50 border border-transparent focus:border-emerald-500 focus:bg-white py-3 px-4 outline-none shadow-inner"
                 />
-              </div>
+              </div> */}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Staff */}
