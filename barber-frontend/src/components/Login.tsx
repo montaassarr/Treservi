@@ -75,6 +75,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                             <input 
                               id="login-email"
                               name="email"
+                              autoComplete="email"
                               type="email" 
                               value={email}
                               onChange={(e) => setEmail(e.target.value)}
@@ -91,6 +92,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                             <input 
                               id="login-password"
                               name="password"
+                              autoComplete="current-password"
                               type="password" 
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}

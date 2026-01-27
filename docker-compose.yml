@@ -97,6 +97,9 @@ services:
       PORT: 4000
       JWT_SECRET: ${JWT_SECRET}
       SECURE_CHANNELS: "false"
+      RLIMIT_NOFILE: 1024
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      FLY_APP_NAME: realtime
     networks:
       - supanet
 

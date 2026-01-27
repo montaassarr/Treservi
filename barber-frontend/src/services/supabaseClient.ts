@@ -19,8 +19,9 @@ export const supabase: SupabaseClient | null =
   finalUrl && finalAnonKey
     ? createClient(finalUrl, finalAnonKey, {
         auth: {
-          autoRefreshToken: false,
-          persistSession: false,
+          // Keep sessions across refresh and refresh tokens automatically
+          autoRefreshToken: true,
+          persistSession: true,
         },
       })
     : null;

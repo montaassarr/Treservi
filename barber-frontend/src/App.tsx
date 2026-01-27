@@ -57,21 +57,32 @@ const AppRoutes: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
+    let initTimeout: NodeJS.Timeout;
 
     const initAuth = async () => {
       if (!supabase) return;
       
       try {
-        // Check active session
-        const { data: { session } } = await supabase.auth.getSession();
+        // Check active session with 5s timeout
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Session check timeout')), 5000)
+        );
+
+        const { data: { session } } = (await Promise.race([
+          sessionPromise,
+          timeoutPromise,
+        ])) as any;
         
         if (session?.user && mounted) {
            setUserEmail(session.user.email || '');
            setUserId(session.user.id);
            setIsAuthenticated(true);
-           await fetchUserData(session.user.id, session.user.email || '');
+           // Fetch user data asynchronously without blocking
+           fetchUserData(session.user.id, session.user.email || '').catch(err =>
+             console.error('Failed to fetch user data:', err)
+           );
         } else if (mounted) {
-           // No session found
            setIsAuthenticated(false);
         }
       } catch (error) {
@@ -82,27 +93,29 @@ const AppRoutes: React.FC = () => {
       }
     };
 
+    // Start init immediately
     initAuth();
 
-        // Listen for changes (sign in, sign out, token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Also set up listener for subsequent changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
        if (!mounted) return;
        
-       if (session) {
-          if (!isAuthenticated) {
-            setIsAuthenticated(true);
-            setUserEmail(session.user.email || '');
-            setUserId(session.user.id);
-            await fetchUserData(session.user.id, session.user.email || '');
-          }
+       if (session?.user) {
+          setIsAuthenticated(true);
+          setUserEmail(session.user.email || '');
+          setUserId(session.user.id);
           setIsLoadingAuth(false);
+          // Fetch user data without blocking
+          fetchUserData(session.user.id, session.user.email || '').catch(err =>
+            console.error('Failed to fetch user data:', err)
+          );
           
           // Auto-redirect to dashboard if on login page and authenticated
           if (location.pathname === '/login' || location.pathname === '/') {
               navigate('/dashboard', { replace: true });
           }
 
-       } else if (event === 'SIGNED_OUT' || !session) {
+       } else {
           setIsAuthenticated(false);
           setIsLoadingAuth(false);
           setUserEmail('');
@@ -115,9 +128,10 @@ const AppRoutes: React.FC = () => {
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      clearTimeout(initTimeout);
+      subscription?.unsubscribe();
     };
-  }, [fetchUserData]);
+  }, []);
 
   const handleLogin = useCallback(async (email: string) => {
     if (!supabase) return;
