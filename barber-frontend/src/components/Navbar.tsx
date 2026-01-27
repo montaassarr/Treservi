@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, Mail, Search, Menu, X } from 'lucide-react';
+import { Bell, Mail, Search, Menu, X, Globe } from 'lucide-react';
 import { Comment } from '../types';
+import { useLanguage, Language } from '../context/LanguageContext';
 
 interface NavbarProps {
   title: string;
   onMenuClick: () => void;
+  userName?: string;
+  userRole?: 'owner' | 'staff';
 }
 
 // Mock Data for the Navbar
@@ -20,11 +23,14 @@ const mockNotifications = [
   { id: 3, text: 'System maintenance scheduled', time: '1d ago', type: 'system' },
 ];
 
-const Navbar: React.FC<NavbarProps> = ({ title, onMenuClick }) => {
+const Navbar: React.FC<NavbarProps> = ({ title, onMenuClick, userName = 'Admin', userRole = 'owner' }) => {
   const [showMessages, setShowMessages] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showLanguage, setShowLanguage] = useState(false);
   const msgRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+  const langRef = useRef<HTMLDivElement>(null);
+  const { language, setLanguage, t } = useLanguage();
 
   // Single handler registered once to avoid rules-of-hooks violations
   const handleClickOutside = useCallback((event: MouseEvent) => {
@@ -33,6 +39,9 @@ const Navbar: React.FC<NavbarProps> = ({ title, onMenuClick }) => {
     }
     if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
       setShowNotifications(false);
+    }
+    if (langRef.current && !langRef.current.contains(event.target as Node)) {
+      setShowLanguage(false);
     }
   }, []);
 
@@ -71,6 +80,43 @@ const Navbar: React.FC<NavbarProps> = ({ title, onMenuClick }) => {
 
         {/* Actions Container */}
         <div className="flex items-center gap-2 md:gap-4">
+          
+          {/* Language Switcher */}
+          <div className="relative" ref={langRef}>
+            <button 
+              onClick={() => { setShowLanguage(!showLanguage); setShowMessages(false); setShowNotifications(false); }}
+              className="p-2.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+              title={t('language')}
+            >
+              <Globe size={20} />
+            </button>
+
+            {/* Language Dropdown */}
+            {showLanguage && (
+              <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-treservi-card-dark rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
+                <div className="p-4 space-y-2">
+                  {(['en', 'fr', 'tn'] as Language[]).map((lang) => (
+                    <button
+                      key={lang}
+                      onClick={() => {
+                        setLanguage(lang);
+                        setShowLanguage(false);
+                      }}
+                      className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
+                        language === lang
+                          ? 'bg-treservi-accent text-white'
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      {lang === 'en' && t('english')}
+                      {lang === 'fr' && t('french')}
+                      {lang === 'tn' && t('tunisian')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           
           {/* Messages */}
           <div className="relative" ref={msgRef}>
@@ -146,8 +192,8 @@ const Navbar: React.FC<NavbarProps> = ({ title, onMenuClick }) => {
           <div className="ml-2 flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-gray-700">
              <img src="https://picsum.photos/id/433/100/100" alt="Profile" className="w-9 h-9 rounded-full border-2 border-white dark:border-gray-800 shadow-sm cursor-pointer hover:scale-105 transition-transform" />
              <div className="hidden lg:block">
-                <p className="text-xs font-bold text-gray-900 dark:text-gray-100">Admin</p>
-                <p className="text-[10px] text-gray-500">Salon Owner</p>
+                <p className="text-xs font-bold text-gray-900 dark:text-gray-100">{userName}</p>
+                <p className="text-[10px] text-gray-500">{userRole === 'owner' ? 'Salon Owner' : 'Staff Member'}</p>
              </div>
           </div>
 

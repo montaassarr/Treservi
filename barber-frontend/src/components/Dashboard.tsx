@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ResponsiveContainer, 
   BarChart, 
@@ -8,50 +8,53 @@ import {
   Cell 
 } from 'recharts';
 import { MoreHorizontal, ArrowUpRight, ArrowRight, Star, Plus, Pencil, Trash2, X, Check, Calendar, User, DollarSign, Clock, Scissors } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { supabase } from '../services/supabaseClient';
 import { Barber, Appointment, Comment, ChartData } from '../types';
 
-// Mock Data
-const chartData: ChartData[] = [
-  { name: 'Mon', value: 12 },
-  { name: 'Tue', value: 19 },
-  { name: 'Wed', value: 15 },
-  { name: 'Thu', value: 25 },
-  { name: 'Fri', value: 32 },
-  { name: 'Sat', value: 45 },
-  { name: 'Sun', value: 28 },
+// Default/placeholder data while loading
+const defaultChartData: ChartData[] = [
+  { name: 'Mon', value: 0 },
+  { name: 'Tue', value: 0 },
+  { name: 'Wed', value: 0 },
+  { name: 'Thu', value: 0 },
+  { name: 'Fri', value: 0 },
+  { name: 'Sat', value: 0 },
+  { name: 'Sun', value: 0 },
 ];
 
-const topBarbers: Barber[] = [
-  { id: '1', name: 'Elbert', avatarUrl: 'https://picsum.photos/id/64/100/100', rating: 4.9, earnings: '$1.2k' },
-  { id: '2', name: 'Joyce', avatarUrl: 'https://picsum.photos/id/65/100/100', rating: 4.8, earnings: '$980' },
-  { id: '3', name: 'Glad', avatarUrl: 'https://picsum.photos/id/91/100/100', rating: 4.7, earnings: '$850' },
-];
-
-const comments: Comment[] = [
-  { id: '1', author: 'Joyce', text: "Great work! When is the next slot?", timeAgo: '09:00 AM', avatar: 'https://picsum.photos/id/103/50/50' },
-  { id: '2', author: 'Mike', text: "Can we reschedule my cut?", timeAgo: '09:30 AM', avatar: 'https://picsum.photos/id/204/50/50' },
-];
-
-const initialAppointments: Appointment[] = [
-  { id: '1', customerName: 'Alex Smith', customerAvatar: 'https://picsum.photos/id/338/50/50', service: 'Fade & Beard Trim', time: '10:00 AM', status: 'Confirmed', amount: '$45' },
-  { id: '2', customerName: 'Jordan Lee', customerAvatar: 'https://picsum.photos/id/349/50/50', service: 'Classic Cut', time: '11:30 AM', status: 'Pending', amount: '$30' },
-  { id: '3', customerName: 'Casey West', customerAvatar: 'https://picsum.photos/id/355/50/50', service: 'Hair Styling', time: '1:00 PM', status: 'Completed', amount: '$55' },
-];
+const defaultTopBarbers: Barber[] = [];
+const defaultComments: Comment[] = [];
+const defaultAppointments: Appointment[] = [];
 
 // Service Price Table
 const SERVICE_MENU = [
-  { name: 'Classic Cut', price: '$30' },
-  { name: 'Fade & Beard Trim', price: '$45' },
-  { name: 'Hair Styling', price: '$55' },
-  { name: 'Hot Towel Shave', price: '$35' },
-  { name: 'Kids Cut', price: '$25' },
-  { name: 'Hair Coloring', price: '$70' },
-  { name: 'Beard Sculpting', price: '$25' },
+  { name: 'Classic Cut', price: '30 TND' },
+  { name: 'Fade & Beard Trim', price: '45 TND' },
+  { name: 'Hair Styling', price: '55 TND' },
+  { name: 'Hot Towel Shave', price: '35 TND' },
+  { name: 'Kids Cut', price: '25 TND' },
+  { name: 'Hair Coloring', price: '70 TND' },
+  { name: 'Beard Sculpting', price: '25 TND' },
 ];
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  userRole?: string;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
+  const { t } = useLanguage();
+  
+  // State management
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+  
+  // Data states with default values
+  const [chartData, setChartData] = useState<ChartData[]>(defaultChartData);
+  const [topBarbers, setTopBarbers] = useState<Barber[]>(defaultTopBarbers);
+  const [comments, setComments] = useState<Comment[]>(defaultComments);
+  const [appointments, setAppointments] = useState<Appointment[]>(defaultAppointments);
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -63,6 +66,113 @@ const Dashboard: React.FC = () => {
     status: 'Pending',
     amount: ''
   });
+
+  // Load data on component mount - Security: Verify owner role and fetch real data
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        setIsLoadingData(true);
+        setDataError(null);
+
+        // Security check: Verify user is owner
+        if (!supabase) {
+          throw new Error('Database connection failed');
+        }
+
+        // Verify current user session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session?.user) {
+          throw new Error('Unauthorized access');
+        }
+
+        // Verify user is owner by checking staff table role
+        const { data: userData, error: userError } = await supabase
+          .from('staff')
+          .select('role, salon_id')
+          .eq('id', session.user.id)
+          .single();
+
+        if (userError || !userData || userData.role !== 'owner') {
+          throw new Error('Access denied: Not an owner');
+        }
+
+        // Fetch real appointments data from Supabase
+        const { data: appointmentsData, error: appointmentsError } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('salon_id', userData.salon_id)
+          .limit(10);
+
+        if (appointmentsError) {
+          console.error('Error fetching appointments:', appointmentsError);
+        } else if (appointmentsData && appointmentsData.length > 0) {
+          // Transform real data to component format
+          const transformedAppointments: Appointment[] = appointmentsData.map((apt: any) => ({
+            id: apt.id,
+            customerName: apt.customer_name,
+            customerAvatar: 'https://picsum.photos/id/338/50/50',
+            service: apt.service_id || 'Service',
+            time: apt.appointment_time || '00:00',
+            status: apt.status,
+            amount: `${apt.amount} TND`
+          }));
+          setAppointments(transformedAppointments);
+        }
+
+        setIsLoadingData(false);
+      } catch (error: any) {
+        console.error('Dashboard data loading error:', error);
+        setDataError(error.message || 'Failed to load dashboard data');
+        setIsLoadingData(false);
+      }
+    };
+
+    if (userRole === 'owner') {
+      loadDashboardData();
+    }
+  }, [userRole]);
+
+  // Security: Prevent staff from accessing this component
+  if (userRole !== 'owner') {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center p-8 bg-white dark:bg-treservi-card-dark rounded-[32px] shadow-soft-glow">
+          <h2 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h2>
+          <p className="text-gray-600 dark:text-gray-400">You don't have permission to view this page.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-treservi-accent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500 dark:text-gray-400">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (dataError) {
+    return (
+      <div className="flex items-center justify-center h-full p-4">
+        <div className="text-center p-8 bg-red-50 dark:bg-red-900/20 rounded-[32px] border border-red-200 dark:border-red-800">
+          <h2 className="text-2xl font-bold mb-2 text-red-600">Error Loading Dashboard</h2>
+          <p className="text-red-600 dark:text-red-400 mb-4">{dataError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleAddNew = () => {
     setEditingId(null);
@@ -164,11 +274,11 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Balance Card */}
-            <div className="bg-white dark:bg-treservi-card-dark rounded-pill p-8 shadow-soft-glow relative overflow-hidden">
+            <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow relative overflow-hidden">
                <div className="flex justify-between items-start mb-6">
                  <div>
                     <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Today's Revenue</h3>
-                    <div className="text-4xl font-bold text-gray-900 dark:text-white">$256k</div>
+                    <div className="text-4xl font-bold text-gray-900 dark:text-white">256,000 TND</div>
                  </div>
                  <span className="flex items-center gap-1 text-treservi-accent bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-xs font-bold">
                     <ArrowUpRight size={12} /> 36.8%
@@ -179,7 +289,7 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Analytics Chart */}
-          <div className="bg-white dark:bg-treservi-card-dark rounded-pill p-8 shadow-soft-glow h-[400px] min-h-[320px] flex flex-col">
+          <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow h-[400px] min-h-[320px] flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-xl">Booking Analytics</h3>
               <select className="bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 text-sm border-none outline-none cursor-pointer">
@@ -188,8 +298,8 @@ const Dashboard: React.FC = () => {
               </select>
             </div>
             <div className="flex-1 w-full min-h-0">
-              <ResponsiveContainer width="100%" height={260} minWidth={200} minHeight={200}>
-                 <BarChart data={chartData} onMouseMove={(state) => {
+              <ResponsiveContainer width="100%" height={260}>
+                 <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }} onMouseMove={(state) => {
                    if (state.isTooltipActive) setActiveIndex(state.activeTooltipIndex ?? null);
                    else setActiveIndex(null);
                  }}>
@@ -198,7 +308,6 @@ const Dashboard: React.FC = () => {
                      axisLine={false} 
                      tickLine={false} 
                      tick={{ fill: '#9CA3AF', fontSize: 12 }} 
-                     dy={10}
                    />
                    <Tooltip 
                      cursor={{ fill: 'transparent' }}
@@ -231,7 +340,7 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Appointments Table */}
-          <div className="bg-white dark:bg-treservi-card-dark rounded-pill p-8 shadow-soft-glow">
+          <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-xl">Upcoming Appointments</h3>
               <div className="flex items-center gap-2">
@@ -303,10 +412,11 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Right Sidebar: Top Barbers & Comments */}
+        {userRole === 'owner' && (
         <div className="space-y-8">
           
           {/* Top Barbers */}
-          <div className="bg-black text-white dark:bg-treservi-card-dark rounded-pill p-8 shadow-soft-glow h-[420px] relative flex flex-col justify-between">
+          <div className="bg-black text-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow h-[420px] relative flex flex-col justify-between">
             <div className="flex justify-between items-center">
               <h3 className="font-bold text-xl">Top Barbers</h3>
               <MoreHorizontal className="text-gray-500 cursor-pointer" />
@@ -346,7 +456,7 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Recent Comments */}
-          <div className="bg-white dark:bg-treservi-card-dark rounded-pill p-8 shadow-soft-glow">
+          <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-xl">Comments</h3>
             </div>
@@ -369,7 +479,7 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Promotional Card */}
-          <div className="bg-gradient-to-br from-treservi-accent to-green-700 rounded-pill p-8 shadow-neon-glow text-white relative overflow-hidden">
+          <div className="bg-gradient-to-br from-treservi-accent to-green-700 rounded-[32px] p-8 shadow-neon-glow text-white relative overflow-hidden">
              <div className="relative z-10">
                <h3 className="font-bold text-2xl mb-2">Pro Features</h3>
                <p className="text-sm opacity-90 mb-6">Upgrade to manage multi-location salons.</p>
@@ -383,12 +493,13 @@ const Dashboard: React.FC = () => {
           </div>
 
         </div>
+        )}
       </div>
 
       {/* Appointment Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-treservi-card-dark w-full max-w-md rounded-pill shadow-2xl p-6 lg:p-8 animate-in fade-in zoom-in duration-200">
+          <div className="bg-white dark:bg-treservi-card-dark w-full max-w-md rounded-[32px] shadow-2xl p-6 lg:p-8 animate-in fade-in zoom-in duration-200">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">{editingId ? 'Edit Appointment' : 'New Appointment'}</h2>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
@@ -439,7 +550,7 @@ const Dashboard: React.FC = () => {
                       required
                       value={formData.amount}
                       onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                      placeholder="$0.00"
+                      placeholder="0 TND"
                       className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all"
                     />
                   </div>

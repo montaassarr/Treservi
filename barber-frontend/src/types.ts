@@ -35,6 +35,7 @@ export interface StaffMember {
   email: string;
   specialty: string;
   status: 'Active' | 'Inactive';
+  role: 'owner' | 'staff';
   avatar_url?: string;
   salon_id?: string;
   created_at?: string;
@@ -64,4 +65,58 @@ export interface StaffStats {
   completed_appointments: number;
   today_appointments: number;
   average_rating: number;
+}
+
+export interface Service {
+  id: string;
+  salon_id: string;
+  name: string;
+  price: number;
+  duration: number;
+  description?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateServiceInput {
+  name: string;
+  price: number;
+  duration: number;
+  description?: string;
+  salonId: string;
+}
+
+export interface AppointmentData {
+  id: string;
+  salon_id: string;
+  staff_id?: string;
+  service_id?: string;
+  customer_name: string;
+  customer_email?: string;
+  customer_phone?: string;
+  customer_avatar?: string;
+  appointment_date: string;
+  appointment_time: string;
+  status: 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
+  amount: number;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  service?: Service;
+  staff?: StaffMember;
+}
+
+export interface CreateAppointmentInput {
+  salon_id: string;
+  staff_id?: string;
+  service_id?: string;
+  customer_name: string;
+  customer_email?: string;
+  customer_phone?: string;
+  appointment_date: string;
+  appointment_time: string;
+  status?: 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
+  amount: number;
+  notes?: string;
 }

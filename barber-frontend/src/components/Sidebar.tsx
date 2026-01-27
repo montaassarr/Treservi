@@ -5,10 +5,9 @@ import {
   Users, 
   Scissors, 
   DollarSign, 
-  Megaphone, 
   LogOut, 
   Sun, 
-  Moon 
+  Moon,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -18,17 +17,29 @@ interface SidebarProps {
   toggleTheme: () => void;
   mobileMode?: boolean;
   onLogout: () => void;
+  userRole?: 'owner' | 'staff';
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDarkMode, toggleTheme, mobileMode = false, onLogout }) => {
-  const navItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { id: 'appointments', icon: CalendarDays, label: 'Appointments' },
-    { id: 'staff', icon: Users, label: 'Staff' },
-    { id: 'services', icon: Scissors, label: 'Services' },
-    { id: 'income', icon: DollarSign, label: 'Income' },
-    { id: 'marketing', icon: Megaphone, label: 'Marketing' },
+const Sidebar: React.FC<SidebarProps> = ({ 
+  activeTab, 
+  setActiveTab, 
+  isDarkMode, 
+  toggleTheme, 
+  mobileMode = false, 
+  onLogout,
+  userRole = 'owner'
+}) => {
+  // Define all navigation items
+  const allNavItems = [
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['owner', 'staff'] },
+    { id: 'appointments', icon: CalendarDays, label: 'Appointments', roles: ['owner'] },
+    { id: 'staff', icon: Users, label: 'Staff', roles: ['owner'] },
+    { id: 'services', icon: Scissors, label: 'Services', roles: ['owner'] },
+    { id: 'income', icon: DollarSign, label: 'Income', roles: ['owner'] },
   ];
+
+  // Filter navigation items based on user role
+  const navItems = allNavItems.filter(item => item.roles.includes(userRole));
 
   return (
     <div className={`

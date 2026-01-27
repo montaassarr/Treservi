@@ -58,12 +58,17 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
   });
 
   const resolvedSalonId = useMemo(
-    () => salonId || (import.meta.env.VITE_SALON_ID as string | undefined) || 'salon-1',
+    () => salonId || (import.meta.env.VITE_SALON_ID as string | undefined),
     [salonId]
   );
 
   useEffect(() => {
     const load = async () => {
+      if (!resolvedSalonId || resolvedSalonId === 'salon-1') {
+        // Can't load staff if no valid salon ID
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       const { data, error: err } = await fetchStaff(resolvedSalonId);
       if (err) setError(err.message);
@@ -98,6 +103,13 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
     setSubmitting(true);
     setError(null);
     setSuccess(null);
+
+    // Validate Salon ID
+    if (!resolvedSalonId || resolvedSalonId === 'salon-1') {
+      setError("System Configuration Error: No Salon ID found. Please refresh or contact support.");
+      setSubmitting(false);
+      return; 
+    }
 
     try {
       if (editingId) {
@@ -443,10 +455,13 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-600">Full Name</label>
+                <label htmlFor="staff-fullname" className="text-sm font-semibold text-gray-600">Full Name</label>
                 <div className="relative">
                   <UserRound className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                   <input
+                    id="staff-fullname"
+                    name="fullName"
+                    autoComplete="name"
                     required
                     value={form.fullName}
                     onChange={(e) => setForm({ ...form, fullName: e.target.value })}
@@ -457,10 +472,13 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-600">Email</label>
+                <label htmlFor="staff-email" className="text-sm font-semibold text-gray-600">Email</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                   <input
+                    id="staff-email"
+                    name="email"
+                    autoComplete="email"
                     required
                     type="email"
                     value={form.email}
@@ -474,10 +492,13 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
 
               {!editingId && (
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-600">Password</label>
+                  <label htmlFor="staff-password" className="text-sm font-semibold text-gray-600">Password</label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input
+                      id="staff-password"
+                      name="password"
+                      autoComplete="new-password"
                       required
                       type={showPassword ? 'text' : 'password'}
                       value={form.password}
@@ -497,10 +518,13 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
               )}
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-600">Specialty</label>
+                <label htmlFor="staff-specialty" className="text-sm font-semibold text-gray-600">Specialty</label>
                 <div className="relative">
                   <Scissors className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                   <select
+                    id="staff-specialty"
+                    name="specialty"
+                    autoComplete="off"
                     value={form.specialty}
                     onChange={(e) => setForm({ ...form, specialty: e.target.value })}
                     className="w-full rounded-full bg-gray-50 border border-transparent focus:border-emerald-500 focus:bg-white py-3 pl-12 pr-4 outline-none shadow-inner"

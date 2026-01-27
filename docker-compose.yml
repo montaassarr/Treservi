@@ -75,6 +75,7 @@ services:
       GOTRUE_ADMIN_PASSWORD: adminpass123
       GOTRUE_DB_NAMESPACE: auth
       GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
       PORT: 9999

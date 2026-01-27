@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from './services/supabaseClient';
+import { LanguageProvider } from './context/LanguageContext';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 
@@ -12,25 +13,45 @@ const LoadingScreen: React.FC = () => (
 
 const AppRoutes: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [ownerEmail, setOwnerEmail] = useState('');
-  const [salonId, setSalonId] = useState('salon-1');
+  const [userEmail, setUserEmail] = useState('');
+  const [userId, setUserId] = useState('');
+  const [userRole, setUserRole] = useState<'owner' | 'staff'>('owner');
+  const [staffName, setStaffName] = useState('');
+  const [salonId, setSalonId] = useState('');
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const fetchOwnerSalon = useCallback(async (email: string) => {
+  const fetchUserData = useCallback(async (userId: string, email: string) => {
     if (!supabase) return;
     try {
-      const { data } = await supabase
-        .from('salons')
-        .select('id')
-        .eq('owner_email', email)
+      // First, check if user is in staff table
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('id, full_name, role, salon_id')
+        .eq('id', userId)
         .single();
 
-      if (data) {
-        setSalonId(data.id);
+      if (staffData) {
+        // User is a staff member or owner
+        setUserRole(staffData.role);
+        setStaffName(staffData.full_name);
+        setSalonId(staffData.salon_id || '');
+      } else {
+        // Fallback: check if owner by email
+        const { data: salonData } = await supabase
+          .from('salons')
+          .select('id')
+          .eq('owner_email', email)
+          .single();
+
+        if (salonData) {
+          setSalonId(salonData.id);
+          setUserRole('owner');
+        }
       }
     } catch (err) {
-      console.error('Error fetching salon:', err);
+      console.error('Error fetching user data:', err);
     }
   }, []);
 
@@ -43,31 +64,44 @@ const AppRoutes: React.FC = () => {
       }
 
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.email) {
-        setOwnerEmail(session.user.email);
+      if (session?.user) {
+        setUserEmail(session.user.email || '');
+        setUserId(session.user.id);
         setIsAuthenticated(true);
-        await fetchOwnerSalon(session.user.email);
+        await fetchUserData(session.user.id, session.user.email || '');
       }
       setIsLoadingAuth(false);
     };
 
     checkAuth();
-  }, [fetchOwnerSalon]);
+  }, [fetchUserData]);
 
   const handleLogin = useCallback(async (email: string) => {
-    setOwnerEmail(email);
-    setIsAuthenticated(true);
-    await fetchOwnerSalon(email);
-    navigate('/dashboard', { replace: true });
-  }, [fetchOwnerSalon, navigate]);
+    if (!supabase) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      setUserEmail(email);
+      setUserId(session.user.id);
+      setIsAuthenticated(true);
+      await fetchUserData(session.user.id, email);
+      // Navigate to dashboard or stay on current route
+      const currentPath = location.pathname;
+      if (currentPath === '/login' || currentPath === '/') {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [fetchUserData, navigate, location.pathname]);
 
   const handleLogout = useCallback(async () => {
     if (supabase) {
       await supabase.auth.signOut();
     }
     setIsAuthenticated(false);
-    setOwnerEmail('');
-    setSalonId('salon-1');
+    setUserEmail('');
+    setUserId('');
+    setUserRole('owner');
+    setStaffName('');
+    setSalonId('');
     navigate('/login', { replace: true });
   }, [navigate]);
 
@@ -91,7 +125,13 @@ const AppRoutes: React.FC = () => {
         path="/dashboard"
         element={
           <RequireAuth>
-            <DashboardPage salonId={salonId} onLogout={handleLogout} />
+            <DashboardPage 
+              salonId={salonId} 
+              userId={userId}
+              userRole={userRole}
+              staffName={staffName}
+              onLogout={handleLogout} 
+            />
           </RequireAuth>
         }
       />
@@ -102,9 +142,11 @@ const AppRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => (
-  <BrowserRouter>
-    <AppRoutes />
-  </BrowserRouter>
+  <LanguageProvider>
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  </LanguageProvider>
 );
 
 export default App;
