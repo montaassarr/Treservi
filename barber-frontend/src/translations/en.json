@@ -19,13 +19,16 @@
     "edit": "Edit",
     "loading": "Loading...",
     "error": "Error",
-    "success": "Success"
+    "success": "Success",
+    "allTime": "All Time"
   },
   "dashboard": {
     "todayClients": "Today's Clients",
     "todayEarnings": "Today's Earnings",
+    "today_earnings": "Today's Earnings",
     "totalCompleted": "Total Completed",
     "totalEarnings": "Total Earnings",
+    "total_earnings": "Total Earnings",
     "quickAddWalkin": "Quick Add Walk-In",
     "todaySchedule": "Today's Schedule",
     "bookingAnalytics": "Booking Analytics",
@@ -37,7 +40,11 @@
     "topBarbers": "Top Barbers",
     "growth": "Growth",
     "comments": "Comments",
-    "upcomingAppointments": "Upcoming Appointments"
+    "upcomingAppointments": "Upcoming Appointments",
+    "completed_today": "Completed Today",
+    "successfully_completed": "Successfully completed",
+    "last7Days": "Last 7 days",
+    "lastMonth": "Last Month"
   },
   "appointments": {
     "newAppointment": "New Appointment",
@@ -73,6 +80,21 @@
     "price": "Price",
     "duration": "Duration (min)",
     "description": "Description"
+  },
+  "booking": {
+      "welcome": "Welcome to",
+      "fullName": "Full Name",
+      "phoneNumber": "Phone Number",
+      "startBooking": "Start Booking", 
+      "chooseBarber": "Choose your barber",
+      "clickMap": "Click on a station map to select your barber",
+      "nextStep": "Next Step",
+      "selectService": "Select Services",
+      "notes": "Special Note",
+      "optional": "Optional",
+      "confirmBooking": "Confirm Appointment",
+      "availability": "Availability",
+      "fullTime": "Full time"
   },
   "stations": {
     "title": "Live Salon Stations",

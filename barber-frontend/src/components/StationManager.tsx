@@ -262,9 +262,9 @@ export const StationManager: React.FC<StationManagerProps> = ({
               <div className="flex-1 bg-neutral-100 dark:bg-[#0F0F0F] relative overflow-hidden flex items-center justify-center p-4 md:p-8">
                 
                 {/* Mobile Scale Wrapper */}
-                <div className="w-full h-full flex items-center justify-center overflow-auto md:overflow-hidden">
+                <div className="w-full h-full flex items-center justify-center overflow-auto md:overflow-hidden touch-pan-x touch-pan-y">
                     {/* The Floor Plan Container */}
-                    <div className="relative w-[800px] h-[600px] flex-shrink-0 bg-white dark:bg-[#1E1E1E] rounded-[24px] md:rounded-[40px] shadow-2xl border-[4px] md:border-[8px] border-gray-200 dark:border-gray-800 overflow-hidden group/room scale-[0.55] sm:scale-75 md:scale-100 origin-center transition-transform">
+                    <div className="relative w-[800px] h-[600px] flex-shrink-0 bg-white dark:bg-[#1E1E1E] rounded-[24px] md:rounded-[40px] shadow-2xl border-[4px] md:border-[8px] border-gray-200 dark:border-gray-800 overflow-hidden group/room transform-gpu origin-center transition-transform scale-[0.6] sm:scale-75 md:scale-90">
                    
                    {/* Floor Texture (Subtle Grid) */}
                    <div className="absolute inset-0 opacity-20 pointer-events-none" 
@@ -276,14 +276,14 @@ export const StationManager: React.FC<StationManagerProps> = ({
                    {/* 1. Mirror Wall (Top Center) */}
                    <motion.div 
                      initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-                     className="absolute top-0 left-[15%] right-[15%] h-24 bg-gradient-to-b from-blue-50/50 to-white/5 backdrop-blur-sm border-b border-l border-r border-blue-200/30 dark:border-blue-900/30 rounded-b-[32px] flex flex-col items-center pt-2 z-0 shadow-lg"
+                     className="absolute top-0 left-[15%] right-[15%] h-24 bg-gradient-to-b from-blue-50/50 to-white/5 backdrop-blur-sm border-b border-l border-r border-blue-200/30 dark:border-blue-900/30 rounded-b-[32px] flex flex-col items-center pt-2 z-0 shadow-lg pointer-events-none"
                    >
                      <div className="w-[90%] h-1 bg-blue-400/30 shadow-[0_0_15px_rgba(59,130,246,0.4)] mb-1 rounded-full" />
                      <span className="text-[10px] font-bold text-blue-400/50 tracking-[0.2em] uppercase mt-1">Mirror Zone</span>
                    </motion.div>
 
                    {/* 2. Entrance (Left Wall) */}
-                   <div className="absolute bottom-32 -left-[4px] w-8 h-32 bg-gray-100 dark:bg-gray-800 flex flex-col justify-center items-center rounded-r-2xl border border-gray-200 dark:border-gray-700 shadow-inner gap-2 z-0">
+                   <div className="absolute bottom-32 -left-[4px] w-8 h-32 bg-gray-100 dark:bg-gray-800 flex flex-col justify-center items-center rounded-r-2xl border border-gray-200 dark:border-gray-700 shadow-inner gap-2 z-0 pointer-events-none">
                       <div className="w-1 h-12 bg-gray-300 dark:bg-gray-600 rounded-full" />
                       <DoorOpen size={20} className="text-gray-400 dark:text-gray-600" />
                    </div>
@@ -313,13 +313,26 @@ export const StationManager: React.FC<StationManagerProps> = ({
                      // Calculate sizing
                      const width = station.width || (isSofa ? 192 : 96); // Default 192px (w-48) or 96px (w-24)
                      const height = isSofa ? 80 : 96; // 80px (h-20) or 96px (h-24)
+                     
+                     // Interactive Check
+                     const isInteractive = userRole === 'client' && !isSofa;
 
                      return (
                        <motion.div
                          key={station.id}
-                         onClick={() => {
-                             if (userRole === 'client' && assignedStaff && onStationSelect) {
+                         onClick={(e) => {
+                             e.stopPropagation(); // Prevent bubbling
+                             if (!isInteractive) return;
+                             
+                             if (assignedStaff && onStationSelect) {
                                  onStationSelect(assignedStaff.id);
+                             } else {
+                                 // Feedback for empty station
+                                 const el = e.currentTarget;
+                                 el.classList.add('animate-shake');
+                                 setTimeout(() => el.classList.remove('animate-shake'), 500);
+                                 // Optional: You could use a toast here
+                                 console.log('Station is empty');
                              }
                          }}
                          drag={userRole === 'owner' && !resizingId} // Disable drag when resizing
@@ -340,15 +353,15 @@ export const StationManager: React.FC<StationManagerProps> = ({
                          }}
                          whileHover={{ 
                            zIndex: 50,
-                           scale: userRole === 'client' && assignedStaff ? 1.08 : 1
+                           scale: isInteractive && assignedStaff ? 1.08 : 1
                          }}
                          whileTap={{
-                           scale: userRole === 'client' && assignedStaff ? 0.95 : 1
+                           scale: isInteractive && assignedStaff ? 0.95 : 1
                          }}
                          whileDrag={{ scale: 1.02, zIndex: 60, cursor: 'grabbing' }}
                          className={`
                            absolute flex flex-col items-center justify-center group z-10
-                           ${userRole === 'client' && assignedStaff ? 'cursor-pointer' : ''}
+                           ${isInteractive ? (assignedStaff ? 'cursor-pointer' : 'cursor-not-allowed') : ''}
                          `}
                          style={{ width, height }}
                        >
@@ -361,7 +374,7 @@ export const StationManager: React.FC<StationManagerProps> = ({
                                       ? 'bg-gradient-to-br from-green-500 to-green-600 text-white border-green-700 shadow-xl scale-105 ring-4 ring-green-200' 
                                       : 'bg-white hover:bg-green-50 border-gray-200 hover:border-green-300 shadow-sm')
                                   : 'bg-white dark:bg-gray-800 border-red-100 dark:border-red-900/30 shadow-[0_8px_16px_rgba(239,68,68,0.15)]'
-                                : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-[0_8px_16px_rgba(0,0,0,0.05)] hover:shadow-lg'
+                                : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-[0_8px_16px_rgba(0,0,0,0.05)] hover:shadow-lg opacity-80'
                             }
                          `}>
                              {/* Resize Handle (Available for all draggable items) */}

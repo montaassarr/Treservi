@@ -27,6 +27,7 @@ import { supabase } from '../services/supabaseClient';
 import { Appointment, AppointmentData, Service, CreateAppointmentInput } from '../types';
 import {
   fetchTodayAppointments,
+  fetchUpcomingAppointments,
   getStaffAppointmentStats,
   createAppointment,
   updateAppointment,
@@ -40,15 +41,6 @@ interface StaffDashboardProps {
 }
 
 // Mock Data removed in favor of real data
-const chartData = [
-  { name: 'Mon', value: 12 },
-  { name: 'Tue', value: 19 },
-  { name: 'Wed', value: 15 },
-  { name: 'Thu', value: 25 },
-  { name: 'Fri', value: 32 },
-  { name: 'Sat', value: 45 },
-  { name: 'Sun', value: 28 },
-];
 
 const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staffName }) => {
   const { t, formatCurrency } = useLanguage();
@@ -56,11 +48,13 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
   // State management
   const [isAuthVerified, setIsAuthVerified] = useState(false);
   const [todayAppointments, setTodayAppointments] = useState<AppointmentData[]>([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<AppointmentData[]>([]);
   const [stats, setStats] = useState({
     today_appointments: 0,
     today_earnings: 0,
     completed_appointments: 0,
     total_earnings: 0,
+    chartData: [] as { name: string; value: number }[],
   });
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,17 +122,34 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
     
     setLoading(true);
     try {
-      const [appointmentsRes, statsRes, servicesRes] = await Promise.all([
+      const [appointmentsRes, upcomingRes, statsRes, servicesRes] = await Promise.all([
         fetchTodayAppointments(staffId),
+        fetchUpcomingAppointments(staffId),
         getStaffAppointmentStats(staffId),
         fetchServices(salonId),
       ]);
 
       if (appointmentsRes.error) throw appointmentsRes.error;
+      if (upcomingRes.error) console.error("Error fetching upcoming:", upcomingRes.error); // Non-blocking
       if (statsRes.error) throw statsRes.error;
       if (servicesRes.error) throw servicesRes.error;
 
       setTodayAppointments(appointmentsRes.data || []);
+      setUpcomingAppointments(upcomingRes.data || []);
+
+      // Map for the table view
+      const mapped = (upcomingRes.data || []).map((apt: any) => ({
+        id: apt.id,
+        customerName: apt.customer_name,
+        customerAvatar: apt.customer_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.customer_name)}&background=random`,
+        service: apt.service?.name || 'Unknown Service',
+        time: apt.appointment_time?.slice(0, 5) || '00:00',
+        status: apt.status,
+        amount: apt.amount,
+        date: apt.appointment_date // Keep date for sorting/display
+      }));
+      setAppointments(mapped);
+
       setStats(statsRes.data || stats);
       setServices(servicesRes.data || []);
     } catch (err: any) {
@@ -209,7 +220,18 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
       };
 
       if (editingId) {
-        // update logic here if needed
+        // Update existing appointment (including status changes)
+        // Only sending needed fields to update
+         const updatePayload: any = {
+           service_id: formData.service,
+           customer_name: formData.customerName,
+           appointment_time: formData.time,
+           status: formData.status,
+           amount: Number(amount)
+         };
+         
+         const { error } = await updateAppointment(editingId, updatePayload);
+         if (error) throw new Error(error.message);
       } else {
         const { error } = await createAppointment(appointmentInput);
         if (error) throw new Error(error);
@@ -262,42 +284,39 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
         <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Today's Earnings</h3>
+              <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">{t('dashboard.todayEarnings')}</h3>
               <div className="text-4xl font-bold text-gray-900 dark:text-white">{formatCurrency(stats.today_earnings)}</div>
             </div>
-            <span className="flex items-center gap-1 text-treservi-accent bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-xs font-bold">
-              <ArrowUpRight size={12} /> 36.8%
-            </span>
           </div>
-          <p className="text-gray-400 text-sm">{stats.today_appointments} appointments today!</p>
+          <p className="text-gray-400 text-sm">{stats.today_appointments} {t('common.appointments')}</p>
         </div>
 
         {/* Total Earnings */}
         <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Total Earnings</h3>
+              <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">{t('dashboard.totalEarnings')}</h3>
               <div className="text-4xl font-bold text-gray-900 dark:text-white">{formatCurrency(stats.total_earnings)}</div>
             </div>
             <span className="flex items-center gap-1 text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-3 py-1 rounded-full text-xs font-bold">
-              <TrendingUp size={12} /> All Time
+              <TrendingUp size={12} /> {t('common.allTime')}
             </span>
           </div>
-          <p className="text-gray-400 text-sm">{stats.completed_appointments} completed appointments</p>
+          <p className="text-gray-400 text-sm">{stats.completed_appointments} {t('dashboard.completed_appointments')}</p>
         </div>
 
         {/* Completed Count */}
         <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Completed Today</h3>
+              <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">{t('dashboard.completed_today')}</h3>
               <div className="text-4xl font-bold text-gray-900 dark:text-white">{stats.completed_appointments}</div>
             </div>
             <span className="text-treservi-accent bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-xs font-bold">
-              ✓ Done
+              ✓ {t('common.status')}
             </span>
           </div>
-          <p className="text-gray-400 text-sm">Successfully completed</p>
+          <p className="text-gray-400 text-sm">{t('dashboard.successfully_completed')}</p>
         </div>
       </div>
 
@@ -305,15 +324,15 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow h-[400px] min-h-[320px] flex flex-col">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-xl">Booking Analytics</h3>
+            <h3 className="font-bold text-xl">{t('dashboard.bookingAnalytics')}</h3>
             <select className="bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 text-sm border-none outline-none cursor-pointer">
-              <option>Last 7 days</option>
-              <option>Last Month</option>
+              <option>{t('dashboard.last7Days')}</option>
+              <option>{t('dashboard.lastMonth')}</option>
             </select>
           </div>
           <div className="flex-1 w-full min-h-0">
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }} onMouseMove={(state) => {
+              <BarChart data={stats.chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }} onMouseMove={(state) => {
                 if (state.isTooltipActive) setActiveIndex(state.activeTooltipIndex ?? null);
                 else setActiveIndex(null);
               }}>
@@ -337,7 +356,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
                   }}
                 />
                 <Bar dataKey="value" radius={[20, 20, 20, 20]} barSize={40}>
-                  {chartData.map((entry, index) => (
+                  {stats.chartData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={index === activeIndex ? '#22C55E' : '#E5E7EB'}
@@ -355,42 +374,31 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
 
         {/* Right Sidebar */}
         <div className="space-y-8">
-          {/* Promotional Card */}
-          <div className="bg-gradient-to-br from-treservi-accent to-green-700 rounded-[32px] p-8 shadow-neon-glow text-white relative overflow-hidden">
-            <div className="relative z-10">
-              <h3 className="font-bold text-2xl mb-2">Pro Features</h3>
-              <p className="text-sm opacity-90 mb-6">Track your performance better.</p>
-              <button className="bg-white text-green-700 px-6 py-3 rounded-full font-bold text-sm hover:scale-105 transition-transform">
-                Learn More
-              </button>
-            </div>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl transform translate-x-10 -translate-y-10"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-black opacity-10 rounded-full blur-xl transform -translate-x-5 translate-y-5"></div>
-          </div>
+          {/* Card removed by user request */}
         </div>
       </div>
 
       {/* Appointments Table */}
       <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow mt-8">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="font-bold text-xl">Upcoming Appointments</h3>
+          <h3 className="font-bold text-xl">{t('dashboard.upcomingAppointments')}</h3>
           <div className="flex items-center gap-2">
             <button onClick={handleAddNew} className="flex items-center gap-2 bg-treservi-accent hover:bg-green-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-neon-glow transition-all transform hover:scale-105">
-              <Plus size={16} /> <span className="hidden sm:inline">New Appointment</span>
+              <Plus size={16} /> <span className="hidden sm:inline">{t('appointments.newAppointment')}</span>
             </button>
-            <button className="text-sm font-medium text-gray-500 hover:text-black dark:hover:text-white px-3 py-2">View all</button>
+            <button className="text-sm font-medium text-gray-500 hover:text-black dark:hover:text-white px-3 py-2">{t('common.viewAll')}</button>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="text-gray-400 text-sm border-b border-gray-100 dark:border-gray-800">
-                <th className="pb-4 font-normal pl-4">Customer</th>
-                <th className="pb-4 font-normal">Service</th>
-                <th className="pb-4 font-normal">Time</th>
-                <th className="pb-4 font-normal">Status</th>
-                <th className="pb-4 font-normal text-right">Amount</th>
-                <th className="pb-4 font-normal pr-4 text-right">Actions</th>
+                <th className="pb-4 font-normal pl-4">{t('appointments.customer')}</th>
+                <th className="pb-4 font-normal">{t('appointments.service')}</th>
+                <th className="pb-4 font-normal">{t('appointments.time')}</th>
+                <th className="pb-4 font-normal">{t('common.status')}</th>
+                <th className="pb-4 font-normal text-right">{t('appointments.amount')}</th>
+                <th className="pb-4 font-normal pr-4 text-right">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="text-sm">
@@ -417,6 +425,25 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
                   <td className="py-4 text-right font-bold whitespace-nowrap">{formatCurrency(apt.amount)}</td>
                   <td className="py-4 pr-4 text-right rounded-r-2xl">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {apt.status !== 'Completed' && (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Mark this appointment as Completed?')) {
+                                try {
+                                    await updateAppointment(apt.id, { status: 'Completed' });
+                                    loadData();
+                                } catch (err) {
+                                    console.error('Failed to complete', err);
+                                }
+                            }
+                          }}
+                          className="p-2 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-full transition-colors"
+                          title="Mark as Completed"
+                        >
+                          <Check size={16} />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleEdit(apt)}
                         className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors"

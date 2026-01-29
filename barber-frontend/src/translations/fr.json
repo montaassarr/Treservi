@@ -19,13 +19,16 @@
     "edit": "Modifier",
     "loading": "Chargement...",
     "error": "Erreur",
-    "success": "Succès"
+    "success": "Succès",
+    "allTime": "Tout le temps"
   },
   "dashboard": {
     "todayClients": "Clients du Jour",
     "todayEarnings": "Gains du Jour",
+    "today_earnings": "Gains du Jour",
     "totalCompleted": "Total Complété",
     "totalEarnings": "Gains Totaux",
+    "total_earnings": "Gains Totaux",
     "quickAddWalkin": "Ajout Rapide (Sans RDV)",
     "todaySchedule": "Planning du Jour",
     "bookingAnalytics": "Analytique des Réservations",
@@ -37,7 +40,12 @@
     "topBarbers": "Meilleurs Barbiers",
     "growth": "Croissance",
     "comments": "Commentaires",
-    "upcomingAppointments": "Rendez-vous à venir"
+    "upcomingAppointments": "Rendez-vous à venir",
+    "completed_today": "Terminé Aujourd'hui",
+    "successfully_completed": "Terminé avec succès",
+    "last7Days": "7 derniers jours",
+    "lastMonth": "Dernier mois",
+    "completed_appointments": "Rendez-vous terminés"
   },
   "appointments": {
     "newAppointment": "Nouveau Rendez-vous",
@@ -73,6 +81,21 @@
     "price": "Prix",
     "duration": "Durée (min)",
     "description": "Description"
+  },
+  "booking": {
+      "welcome": "Bienvenue chez",
+      "fullName": "Nom Complet",
+      "phoneNumber": "Numéro de Téléphone",
+      "startBooking": "Commencer la Réservation", 
+      "chooseBarber": "Choisissez votre coiffeur",
+      "clickMap": "Cliquez sur une station pour choisir",
+      "nextStep": "Étape Suivante",
+      "selectService": "Choisir Services",
+      "notes": "Note Spéciale",
+      "optional": "Optionnel",
+      "confirmBooking": "Confirmer le Rendez-vous",
+      "availability": "Disponibilité",
+      "fullTime": "Temps plein"
   },
   "stations": {
     "title": "Stations du Salon en Direct",

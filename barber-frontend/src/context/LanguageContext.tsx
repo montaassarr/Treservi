@@ -2,13 +2,15 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import en from '../translations/en.json';
 import fr from '../translations/fr.json';
 import tn from '../translations/tn.json';
+import ar from '../translations/ar.json';
 
-export type Language = 'en' | 'fr' | 'tn';
+export type Language = 'en' | 'fr' | 'tn' | 'ar';
 
 const translations = {
   en,
   fr,
   tn,
+  ar
 };
 
 // Helper to get nested value by dot notation string
@@ -32,11 +34,17 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const saved = localStorage.getItem('language') as Language | null;
     return saved || 'en';
   });
+  
+  const [dir, setDir] = useState<'ltr' | 'rtl'>('ltr');
 
   useEffect(() => {
     localStorage.setItem('language', language);
     document.documentElement.lang = language;
-    document.documentElement.dir = 'ltr'; 
+    
+    // Set direction
+    const newDir = language === 'ar' ? 'rtl' : 'ltr';
+    setDir(newDir);
+    document.documentElement.dir = newDir;
   }, [language]);
 
   const setLanguage = (lang: Language) => {
@@ -54,13 +62,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return value;
   };
 
-  const dir: 'ltr' | 'rtl' = 'ltr'; 
-
   const formatCurrency = (amount: number | string): string => {
     const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     if (isNaN(numericAmount)) return '0.000 TND';
     
-    return new Intl.NumberFormat('fr-TN', {
+    return new Intl.NumberFormat(language === 'ar' ? 'ar-TN' : 'fr-TN', {
       style: 'decimal',
       minimumFractionDigits: 3, 
       maximumFractionDigits: 3,
@@ -68,7 +74,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const formatDate = (date: Date | string): string => {
-    return new Date(date).toLocaleDateString(language === 'tn' ? 'fr-TN' : language, {
+    return new Date(date).toLocaleDateString(language === 'tn' ? 'fr-TN' : (language === 'ar' ? 'ar-TN' : language), {
       year: 'numeric',
       month: 'long',
       day: 'numeric',

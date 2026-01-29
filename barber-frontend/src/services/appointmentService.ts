@@ -80,6 +80,35 @@ export async function fetchTodayAppointments(staffId: string) {
 }
 
 /**
+ * Fetch upcoming appointments (Staff dashboard)
+ * Returns appointments from today onwards
+ */
+export async function fetchUpcomingAppointments(staffId: string) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase client not initialized') };
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select(`
+        *,
+        service:services(*)
+      `)
+      .eq('staff_id', staffId)
+      .gte('appointment_date', today) // Greater than or equal to today
+      .order('appointment_date', { ascending: true })
+      .order('appointment_time', { ascending: true });
+
+    return { data: data as AppointmentData[] | null, error };
+  } catch (err: any) {
+    return { data: null, error: err };
+  }
+}
+
+/**
  * Fetch a single appointment by ID
  */
 export async function fetchAppointmentById(id: string) {
@@ -191,7 +220,9 @@ export async function deleteAppointment(id: string) {
 }
 
 /**
- * Get staff statistics (for staff dashboard)
+ * Get appointment statistics for a staff member (Earnings etc.)
+ * NOTE: This is a client-side calculation helper or could be an RPC call.
+ * For now implementing as a direct query aggregation.
  */
 export async function getStaffAppointmentStats(staffId: string) {
   if (!supabase) {
@@ -201,39 +232,67 @@ export async function getStaffAppointmentStats(staffId: string) {
   const today = new Date().toISOString().split('T')[0];
 
   try {
-    // Fetch all completed appointments for this staff
-    const { data: allCompleted, error: allError } = await supabase
+    // Fetch ALL appointments for this staff to calculate totals locally
+    // In a production app with millions of rows, use an RPC function instead.
+    const { data, error } = await supabase
       .from('appointments')
-      .select('amount')
-      .eq('staff_id', staffId)
-      .eq('status', 'Completed');
+      .select('amount, status, appointment_date')
+      .eq('staff_id', staffId);
 
-    if (allError) throw allError;
+    if (error) throw error;
 
-    // Fetch today's appointments
-    const { data: todayAppointments, error: todayError } = await supabase
-      .from('appointments')
-      .select('amount, status')
-      .eq('staff_id', staffId)
-      .eq('appointment_date', today);
+    let today_appointments = 0;
+    let today_earnings = 0;
+    let completed_appointments = 0;
+    let total_earnings = 0;
+    
+    // Initialize chart data for last 7 days
+    const last7Days = Array.from({length: 7}, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (6 - i));
+        return {
+            date: d.toISOString().split('T')[0],
+            name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+            value: 0
+        };
+    });
 
-    if (todayError) throw todayError;
+    data?.forEach(apt => {
+      const isCompleted = apt.status === 'Completed';
+      const isConfirmed = apt.status === 'Confirmed';
+      const isPending = apt.status === 'Pending';
+      const isCancelled = apt.status === 'Cancelled';
+      const isToday = apt.appointment_date === today;
 
-    const totalEarnings = allCompleted?.reduce((sum, apt) => sum + Number(apt.amount), 0) || 0;
-    const todayEarnings = todayAppointments
-      ?.filter(apt => apt.status === 'Completed')
-      .reduce((sum, apt) => sum + Number(apt.amount), 0) || 0;
-    const todayCount = todayAppointments?.length || 0;
-    const completedCount = allCompleted?.length || 0;
+      if (isToday && !isCancelled) {
+        today_appointments++;
+        // Include Pending/Confirmed in today's projected earnings
+        today_earnings += Number(apt.amount || 0);
+      }
+
+      if (isCompleted) {
+        completed_appointments++;
+        total_earnings += Number(apt.amount || 0);
+      }
+      
+      // Chart Data Calculation
+      if (!isCancelled) {
+          const dayStat = last7Days.find(d => d.date === apt.appointment_date);
+          if (dayStat) {
+              dayStat.value++;
+          }
+      }
+    });
 
     return {
       data: {
-        total_earnings: totalEarnings,
-        today_earnings: todayEarnings,
-        today_appointments: todayCount,
-        completed_appointments: completedCount,
+        today_appointments,
+        today_earnings,
+        completed_appointments,
+        total_earnings,
+        chartData: last7Days
       },
-      error: null,
+      error: null
     };
   } catch (err: any) {
     return { data: null, error: err };
