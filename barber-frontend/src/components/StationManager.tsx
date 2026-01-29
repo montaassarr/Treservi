@@ -357,7 +357,9 @@ export const StationManager: React.FC<StationManagerProps> = ({
                             relative w-full h-full rounded-2xl border-b-4 transition-all duration-200
                             ${assignedStaff 
                                 ? userRole === 'client'
-                                  ? 'bg-gradient-to-br from-green-50 to-white dark:from-green-900/20 dark:to-gray-800 border-green-400 dark:border-green-600 shadow-[0_8px_20px_rgba(34,197,94,0.25)] ring-2 ring-green-400/50 dark:ring-green-600/50' 
+                                  ? (assignedStaff.id === selectedStaffId 
+                                      ? 'bg-gradient-to-br from-green-500 to-green-600 text-white border-green-700 shadow-xl scale-105 ring-4 ring-green-200' 
+                                      : 'bg-white hover:bg-green-50 border-gray-200 hover:border-green-300 shadow-sm')
                                   : 'bg-white dark:bg-gray-800 border-red-100 dark:border-red-900/30 shadow-[0_8px_16px_rgba(239,68,68,0.15)]'
                                 : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-[0_8px_16px_rgba(0,0,0,0.05)] hover:shadow-lg'
                             }
