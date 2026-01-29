@@ -4,9 +4,17 @@ import { supabase } from '../services/supabaseClient';
 
 interface LoginProps {
   onLogin: (email: string) => void;
+  title?: string;
+  subtitle?: string;
+  logoUrl?: string; // Optional logo override
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC<LoginProps> = ({ 
+  onLogin, 
+  title = "Barber Owner", 
+  subtitle = "Manage your salon staff",
+  logoUrl 
+}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -53,11 +61,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 
                 {/* Logo Section */}
                 <div className="flex flex-col items-center mb-10">
-                    <div className="w-20 h-20 bg-treservi-accent rounded-[30px] flex items-center justify-center shadow-neon-glow mb-6 transform hover:rotate-6 transition-all duration-300 group cursor-pointer">
-                        <Scissors className="text-white w-10 h-10 group-hover:scale-110 transition-transform" />
+                    <div className="w-20 h-20 bg-treservi-accent rounded-[30px] flex items-center justify-center shadow-neon-glow mb-6 transform hover:rotate-6 transition-all duration-300 group cursor-pointer overflow-hidden">
+                        {logoUrl ? (
+                          <img src={logoUrl} alt="Salon Logo" className="w-full h-full object-cover" />
+                        ) : (
+                          <Scissors className="text-white w-10 h-10 group-hover:scale-110 transition-transform" />
+                        )}
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">Barber Owner</h1>
-                    <p className="text-gray-500 dark:text-gray-400 text-center">Manage your salon staff</p>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight text-center">{title}</h1>
+                    <p className="text-gray-500 dark:text-gray-400 text-center">{subtitle}</p>
                 </div>
 
                 {/* Error Message */}

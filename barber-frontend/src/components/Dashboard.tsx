@@ -11,6 +11,7 @@ import { MoreHorizontal, ArrowUpRight, ArrowRight, Star, Plus, Pencil, Trash2, X
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../services/supabaseClient';
 import { StationManager } from './StationManager';
+import ResponsiveGrid from './ResponsiveGrid';
 import { Barber, Appointment, Comment, ChartData } from '../types';
 import { formatPrice } from '../utils/format';
 import { DashboardSkeleton } from './SkeletonLoader';
@@ -323,32 +324,32 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
   };
 
   return (
-    <div className="p-6 lg:p-10 w-full max-w-[1600px] mx-auto space-y-8 relative">
+    <div className="p-3 sm:p-4 md:p-6 lg:p-10 w-full max-w-[1600px] mx-auto space-y-4 sm:space-y-6 md:space-y-8 relative">
       
-      {/* Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Grid Layout - Mobile First */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
         
         {/* Top Left: Overview & Stats */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6 md:space-y-8">
           
-          {/* Top Row Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Top Row Stats - Responsive Cards */}
+          <ResponsiveGrid mobile={1} tablet={2} desktop={2} gap="gap-4 sm:gap-6 md:gap-8">
             
             {/* Total Bookings Card */}
-            <div className="bg-white dark:bg-treservi-card-dark rounded-pill p-8 shadow-soft-glow relative overflow-hidden group">
-              <div className="flex justify-between items-start mb-6">
+            <div className="bg-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow relative overflow-hidden group">
+              <div className="flex justify-between items-start mb-4 sm:mb-6">
                  <div>
-                    <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">{t('dashboard.totalBookings')}</h3>
-                    <div className="text-4xl font-bold text-gray-900 dark:text-white">
+                    <h3 className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium mb-1">{t('dashboard.totalBookings')}</h3>
+                    <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
                         {stats.bookings.toLocaleString()}
                     </div>
                  </div>
-                 <span className="flex items-center gap-1 text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-1 rounded-full text-xs font-bold">
+                 <span className="flex items-center gap-1 text-red-500 bg-red-50 dark:bg-red-900/20 px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold">
                     <ArrowUpRight className="rotate-90" size={12} /> --%
                  </span>
               </div>
               
-              <div className="flex items-center justify-between mt-8">
+              <div className="flex items-center justify-between mt-4 sm:mt-6 md:mt-8">
                 <div className="flex -space-x-3">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="w-10 h-10 rounded-full border-2 border-white dark:border-treservi-card-dark bg-gray-200 dark:bg-gray-700" />
@@ -361,30 +362,30 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
             </div>
 
             {/* Balance Card */}
-            <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow relative overflow-hidden">
-               <div className="flex justify-between items-start mb-6">
+            <div className="bg-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow relative overflow-hidden">
+               <div className="flex justify-between items-start mb-4 sm:mb-6">
                  <div>
-                    <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">{t('dashboard.todayRevenue')}</h3>
-                    <div className="text-4xl font-bold text-gray-900 dark:text-white">
+                    <h3 className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium mb-1">{t('dashboard.todayRevenue')}</h3>
+                    <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
                         {formatPrice(stats.revenue)}
                     </div>
                  </div>
-                 <span className="flex items-center gap-1 text-treservi-accent bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-xs font-bold">
+                 <span className="flex items-center gap-1 text-treservi-accent bg-green-50 dark:bg-green-900/20 px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold">
                     <ArrowUpRight size={12} /> --%
                  </span>
               </div>
-              <p className="text-gray-400 text-sm mt-8">{stats.bookings} {t('dashboard.newCustomers')}</p>
+              <p className="text-gray-400 text-xs sm:text-sm mt-4 sm:mt-6 md:mt-8">{stats.bookings} {t('dashboard.newCustomers')}</p>
             </div>
-          </div>
+          </ResponsiveGrid>
 
-          {/* Analytics Chart */}
-          <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow h-[400px] min-h-[320px] flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-xl">{t('dashboard.bookingAnalytics')}</h3>
+          {/* Analytics Chart - Responsive Height */}
+          <div className="bg-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow h-[280px] sm:h-[320px] md:h-[400px] min-h-[240px] flex flex-col">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-0 mb-4 sm:mb-6">
+              <h3 className="font-bold text-base sm:text-lg md:text-xl">{t('dashboard.bookingAnalytics')}</h3>
               <select 
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value as any)}
-                className="bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 text-sm border-none outline-none cursor-pointer"
+                className="bg-gray-100 dark:bg-gray-800 rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm border-none outline-none cursor-pointer w-full sm:w-auto"
               >
                 <option value="7d">Last 7 days</option>
                 <option value="30d">Last Month</option>
@@ -393,8 +394,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
               </select>
             </div>
             <div className="flex-1 w-full min-h-0">
-              <ResponsiveContainer width="100%" height={260}>
-                 <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }} onMouseMove={(state) => {
+              <ResponsiveContainer width="100%" height="100%">
+                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }} onMouseMove={(state) => {
                    if (state.isTooltipActive) setActiveIndex(state.activeTooltipIndex ?? null);
                    else setActiveIndex(null);
                  }}>
@@ -402,7 +403,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                      dataKey="name" 
                      axisLine={false} 
                      tickLine={false} 
-                     tick={{ fill: '#9CA3AF', fontSize: 12 }} 
+                     tick={{ fill: '#9CA3AF', fontSize: 10 }} 
                    />
                    <Tooltip 
                      cursor={{ fill: 'transparent' }}
@@ -417,7 +418,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                        return null;
                      }}
                    />
-                   <Bar dataKey="value" radius={[20, 20, 20, 20]} barSize={40}>
+                   <Bar dataKey="value" radius={[16, 16, 16, 16]} barSize={32}>
                      {chartData.map((entry, index) => (
                        <Cell 
                          key={`cell-${index}`} 
@@ -434,19 +435,19 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
             </div>
           </div>
 
-          {/* Appointments Table */}
-          <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-xl">{t('dashboard.upcomingAppointments')}</h3>
+          {/* Appointments Table - Mobile Scrollable */}
+          <div className="bg-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+              <h3 className="font-bold text-base sm:text-lg md:text-xl">{t('dashboard.upcomingAppointments')}</h3>
               <div className="flex items-center gap-2">
-                 <button onClick={handleAddNew} className="flex items-center gap-2 bg-treservi-accent hover:bg-green-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-neon-glow transition-all transform hover:scale-105">
-                   <Plus size={16} /> <span className="hidden sm:inline">{t('appointments.newAppointment')}</span>
+                 <button onClick={handleAddNew} className="flex items-center justify-center gap-2 bg-treservi-accent hover:bg-green-600 text-white px-4 py-3 sm:py-2 rounded-full text-sm font-bold shadow-neon-glow transition-all transform hover:scale-105 active:scale-95 min-h-[48px] sm:min-h-0">
+                   <Plus size={18} className="sm:w-4 sm:h-4" /> <span className="sm:inline">{t('appointments.newAppointment')}</span>
                  </button>
-                 <button className="text-sm font-medium text-gray-500 hover:text-black dark:hover:text-white px-3 py-2">{t('common.viewAll')}</button>
+                 <button className="hidden md:block text-sm font-medium text-gray-500 hover:text-black dark:hover:text-white px-3 py-2">{t('common.viewAll')}</button>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+              <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
                   <tr className="text-gray-400 text-sm border-b border-gray-100 dark:border-gray-800">
                     <th className="pb-4 font-normal pl-4">{t('appointments.customer')}</th>
@@ -508,33 +509,33 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
 
         {/* Right Sidebar: Top Barbers & Comments */}
         {userRole === 'owner' && (
-        <div className="space-y-8">
+        <div className="space-y-4 sm:space-y-6 md:space-y-8">
           
           {/* Top Barbers */}
-          <div className="bg-black text-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow h-auto relative flex flex-col justify-between min-h-[420px]">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-xl">{t('dashboard.topBarbers')}</h3>
+          <div className="bg-black text-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow h-auto relative flex flex-col justify-between min-h-[320px] sm:min-h-[380px] md:min-h-[420px]">
+            <div className="flex justify-between items-center mb-4 sm:mb-6">
+              <h3 className="font-bold text-base sm:text-lg md:text-xl">{t('dashboard.topBarbers')}</h3>
               <MoreHorizontal className="text-gray-500 cursor-pointer" />
             </div>
 
             {/* List Only - No Circular Graph */}
-            <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-3 sm:space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
               {topBarbers.length === 0 ? (
                   <div className="text-gray-500 text-center py-10">No data available</div>
               ) : (
                 topBarbers.map(barber => (
-                    <div key={barber.id} className="flex items-center justify-between p-4 bg-white/10 rounded-2xl border border-white/5 hover:bg-white/15 transition-colors">
+                    <div key={barber.id} className="flex items-center justify-between p-3 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/5 hover:bg-white/15 transition-colors">
                     <div className="flex items-center gap-3">
-                        <img src={barber.avatarUrl} alt={barber.name} className="w-12 h-12 rounded-full border-2 border-white/20" />
+                        <img src={barber.avatarUrl} alt={barber.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-white/20" />
                         <div>
-                        <p className="text-base font-bold">{barber.name}</p>
-                        <div className="text-sm font-medium text-gray-400">
+                        <p className="text-sm sm:text-base font-bold">{barber.name}</p>
+                        <div className="text-xs sm:text-sm font-medium text-gray-400">
                             {(barber as any).clientCount} Clients
                         </div>
                         </div>
                     </div>
                     <div className="text-right">
-                        <div className="text-base font-bold text-treservi-accent">
+                        <div className="text-sm sm:text-base font-bold text-treservi-accent">
                             {barber.earnings}
                         </div>
                     </div>
@@ -576,20 +577,20 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
         )}
       </div>
 
-      {/* Appointment Modal */}
+      {/* Appointment Modal - Optimized for Mobile */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-treservi-card-dark w-full max-w-md rounded-[32px] shadow-2xl p-6 lg:p-8 animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">{editingId ? 'Edit Appointment' : 'New Appointment'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
+          <div className="bg-white dark:bg-treservi-card-dark w-full sm:max-w-md rounded-t-[32px] sm:rounded-[32px] shadow-2xl p-6 lg:p-8 animate-in slide-in-from-bottom sm:fade-in sm:zoom-in duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 sm:mb-6 sticky top-0 bg-white dark:bg-treservi-card-dark z-10 -mx-6 lg:-mx-8 px-6 lg:px-8 pt-6 lg:pt-8 pb-4 sm:pb-0 sm:relative sm:mx-0 sm:px-0 sm:pt-0">
+              <h2 className="text-xl sm:text-2xl font-bold">{editingId ? 'Edit Appointment' : 'New Appointment'}</h2>
+              <button onClick={() => setIsModalOpen(false)} className="p-3 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full min-h-[48px] min-w-[48px] sm:min-h-0 sm:min-w-0 flex items-center justify-center">
                 <X size={20} />
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               <div className="space-y-2">
-                <label className="text-sm font-medium ml-2 text-gray-500">Customer Name</label>
+                <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Customer Name</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input 
@@ -598,21 +599,21 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                     value={formData.customerName}
                     onChange={(e) => setFormData({...formData, customerName: e.target.value})}
                     placeholder="John Doe"
-                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-12 pr-4 outline-none transition-all"
+                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 sm:py-3 pl-12 pr-4 outline-none transition-all min-h-[48px] text-base sm:text-sm"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium ml-2 text-gray-500">Service</label>
+                  <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Service</label>
                   <div className="relative">
                     <Scissors className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 z-10" />
                     <select 
                       required
                       value={formData.service}
                       onChange={handleServiceChange}
-                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all appearance-none cursor-pointer"
+                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all appearance-none cursor-pointer min-h-[48px] text-base sm:text-sm"
                     >
                       <option value="" disabled>Select Service</option>
                       {SERVICE_MENU.map((s, idx) => (
@@ -622,7 +623,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                   <label className="text-sm font-medium ml-2 text-gray-500">Amount</label>
+                   <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Amount</label>
                    <div className="relative">
                     <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <input 
@@ -631,7 +632,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                       value={formData.amount}
                       onChange={(e) => setFormData({...formData, amount: e.target.value})}
                       placeholder="0 TND"
-                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all"
+                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all min-h-[48px] text-base sm:text-sm"
                     />
                   </div>
                 </div>
@@ -639,7 +640,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium ml-2 text-gray-500">Time</label>
+                  <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Time</label>
                   <div className="relative">
                     <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <input 
@@ -648,16 +649,16 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                       value={formData.time}
                       onChange={(e) => setFormData({...formData, time: e.target.value})}
                       placeholder="10:00 AM"
-                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all"
+                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all min-h-[48px] text-base sm:text-sm"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium ml-2 text-gray-500">Status</label>
+                  <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Status</label>
                   <select 
                     value={formData.status}
                     onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 px-4 outline-none transition-all appearance-none"
+                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 px-4 outline-none transition-all appearance-none min-h-[48px] text-base sm:text-sm cursor-pointer"
                   >
                     <option value="Pending">Pending</option>
                     <option value="Confirmed">Confirmed</option>
@@ -670,13 +671,13 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                 <button 
                   type="button" 
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-3 rounded-full font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  className="flex-1 py-3 rounded-full font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-h-[52px] text-base sm:text-sm"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 py-3 rounded-full bg-treservi-accent text-white font-bold shadow-neon-glow hover:scale-105 transition-transform"
+                  className="flex-1 py-3 rounded-full bg-treservi-accent text-white font-bold shadow-neon-glow hover:scale-105 active:scale-95 transition-transform min-h-[52px] text-base sm:text-sm"
                 >
                   {editingId ? 'Save Changes' : 'Book Appointment'}
                 </button>

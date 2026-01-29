@@ -26,6 +26,11 @@ services:
     image: supabase/postgres:15.1.0.97
     container_name: supabase-db
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: postgres
@@ -195,6 +200,36 @@ services:
       - ./barber-backend/docker/kong.yml:/var/lib/kong/kong.yml:ro
     ports:
       - "54321:8000"
+    networks:
+      - supanet
+
+  migrator:
+    image: postgres:15.1-alpine
+    container_name: supabase-migrator
+    restart: on-failure
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      POSTGRES_HOST: db
+    volumes:
+      - ./barber-backend/supabase/migrations:/migrations
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        echo "Waiting for postgres..."
+        until pg_isready -h db -U postgres; do
+          sleep 2
+        done
+        echo "Running migrations..."
+        for file in /migrations/*.sql; do
+          echo "Applying $$file..."
+          psql postgres://postgres:$${POSTGRES_PASSWORD}@db:5432/postgres -f "$$file"
+        done
+        echo "Migrations completed."
     networks:
       - supanet
 

@@ -22,6 +22,8 @@ export const supabase: SupabaseClient | null =
           // Keep sessions across refresh and refresh tokens automatically
           autoRefreshToken: true,
           persistSession: true,
+          detectSessionInUrl: false,
+          storageKey: 'reservi-auth',
         },
       })
     : null;

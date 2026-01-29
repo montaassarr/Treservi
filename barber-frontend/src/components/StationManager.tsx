@@ -23,7 +23,10 @@ interface Staff {
 
 interface StationManagerProps {
   salonId: string;
-  userRole?: 'owner' | 'staff';
+  userRole?: 'owner' | 'staff' | 'client';
+  onStationSelect?: (staffId: string) => void;
+  selectedStaffId?: string | null;
+  displayMode?: 'modal' | 'embedded';
 }
 
 const STATION_TYPES = [
@@ -33,7 +36,13 @@ const STATION_TYPES = [
   { type: 'sofa', icon: Sofa, label: 'Waiting Bench', color: 'bg-orange-100 text-orange-600' },
 ] as const;
 
-export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRole = 'owner' }) => {
+export const StationManager: React.FC<StationManagerProps> = ({ 
+  salonId, 
+  userRole = 'owner',
+  onStationSelect,
+  selectedStaffId,
+  displayMode = 'modal'
+}) => {
   const { t } = useLanguage();
   const [stations, setStations] = useState<Station[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -44,6 +53,10 @@ export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRol
   // Resizing State
   const [resizingId, setResizingId] = useState<string | null>(null);
   const [resizeStart, setResizeStart] = useState<{ x: number, width: number } | null>(null);
+
+  useEffect(() => {
+    if (displayMode === 'embedded') setIsOpen(true);
+  }, [displayMode]);
 
   useEffect(() => {
     fetchData();
@@ -155,7 +168,9 @@ export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRol
   };
 
   // Card View (Dashboard Widget)
-  const renderCard = () => (
+  const renderCard = () => {
+    if (displayMode === 'embedded') return null;
+    return (
     <motion.div 
       layoutId="station-card"
       className="bg-white dark:bg-treservi-card-dark p-6 rounded-[32px] shadow-soft-glow cursor-pointer relative overflow-hidden group"
@@ -190,6 +205,7 @@ export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRol
       </div>
     </motion.div>
   );
+  };
 
   // Expanded Modal View
   return (
@@ -202,18 +218,18 @@ export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRol
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            className={displayMode === 'embedded' ? "relative w-full h-[600px] z-0" : "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"}
           >
             <motion.div 
               layoutId="station-card"
-              className="bg-white dark:bg-treservi-card-dark w-full max-w-5xl h-[80vh] rounded-[40px] shadow-2xl overflow-hidden flex flex-col"
+              className={displayMode === 'embedded' ? "bg-white dark:bg-treservi-card-dark w-full h-full rounded-[24px] overflow-hidden flex flex-col border dark:border-gray-800" : "bg-white dark:bg-treservi-card-dark w-full max-w-5xl h-[80vh] rounded-[40px] shadow-2xl overflow-hidden flex flex-col"}
             >
               {/* Header */}
               <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-white/80 dark:bg-black/20 backdrop-blur-md sticky top-0 z-20">
                 <div>
                   <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{t('stations.stationManager') || 'Station Manager'}</h2>
                   <p className="text-gray-500">
-                    {userRole === 'owner' ? 'Drag to arrange. Click to assign staff.' : 'View current salon status.'}
+                    {userRole === 'owner' ? 'Drag to arrange. Click to assign staff.' : (userRole === 'client' ? '👆 Click on a green station to select your barber' : 'View current salon status.')}
                   </p>
                 </div>
                 <div className="flex gap-3">
@@ -231,20 +247,24 @@ export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRol
                        ))}
                      </div>
                    )}
+                   {displayMode !== 'embedded' && (
                    <button 
                      onClick={() => setIsOpen(false)}
                      className="p-4 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 transition-colors"
                    >
                      <X size={24} />
                    </button>
+                   )}
                 </div>
               </div>
 
               {/* Canvas - The Room */}
-              <div className="flex-1 bg-neutral-100 dark:bg-[#0F0F0F] relative overflow-hidden flex items-center justify-center p-8">
+              <div className="flex-1 bg-neutral-100 dark:bg-[#0F0F0F] relative overflow-hidden flex items-center justify-center p-4 md:p-8">
                 
-                {/* The Floor Plan Container */}
-                <div className="relative w-full h-full max-w-5xl bg-white dark:bg-[#1E1E1E] rounded-[40px] shadow-2xl border-[8px] border-gray-200 dark:border-gray-800 overflow-hidden group/room">
+                {/* Mobile Scale Wrapper */}
+                <div className="w-full h-full flex items-center justify-center overflow-auto md:overflow-hidden">
+                    {/* The Floor Plan Container */}
+                    <div className="relative w-[800px] h-[600px] flex-shrink-0 bg-white dark:bg-[#1E1E1E] rounded-[24px] md:rounded-[40px] shadow-2xl border-[4px] md:border-[8px] border-gray-200 dark:border-gray-800 overflow-hidden group/room scale-[0.55] sm:scale-75 md:scale-100 origin-center transition-transform">
                    
                    {/* Floor Texture (Subtle Grid) */}
                    <div className="absolute inset-0 opacity-20 pointer-events-none" 
@@ -297,6 +317,11 @@ export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRol
                      return (
                        <motion.div
                          key={station.id}
+                         onClick={() => {
+                             if (userRole === 'client' && assignedStaff && onStationSelect) {
+                                 onStationSelect(assignedStaff.id);
+                             }
+                         }}
                          drag={userRole === 'owner' && !resizingId} // Disable drag when resizing
                          dragConstraints={{ left: 0, right: 800, top: 0, bottom: 600 }}
                          dragMomentum={false}
@@ -313,10 +338,17 @@ export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRol
                            const newY = station.position_y + info.offset.y;
                            handleUpdatePosition(station.id, newX, newY);
                          }}
-                         whileHover={{ zIndex: 50 }}
+                         whileHover={{ 
+                           zIndex: 50,
+                           scale: userRole === 'client' && assignedStaff ? 1.08 : 1
+                         }}
+                         whileTap={{
+                           scale: userRole === 'client' && assignedStaff ? 0.95 : 1
+                         }}
                          whileDrag={{ scale: 1.02, zIndex: 60, cursor: 'grabbing' }}
                          className={`
                            absolute flex flex-col items-center justify-center group z-10
+                           ${userRole === 'client' && assignedStaff ? 'cursor-pointer' : ''}
                          `}
                          style={{ width, height }}
                        >
@@ -324,7 +356,9 @@ export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRol
                          <div className={`
                             relative w-full h-full rounded-2xl border-b-4 transition-all duration-200
                             ${assignedStaff 
-                                ? 'bg-white dark:bg-gray-800 border-red-100 dark:border-red-900/30 shadow-[0_8px_16px_rgba(239,68,68,0.15)]' 
+                                ? userRole === 'client'
+                                  ? 'bg-gradient-to-br from-green-50 to-white dark:from-green-900/20 dark:to-gray-800 border-green-400 dark:border-green-600 shadow-[0_8px_20px_rgba(34,197,94,0.25)] ring-2 ring-green-400/50 dark:ring-green-600/50' 
+                                  : 'bg-white dark:bg-gray-800 border-red-100 dark:border-red-900/30 shadow-[0_8px_16px_rgba(239,68,68,0.15)]'
                                 : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-[0_8px_16px_rgba(0,0,0,0.05)] hover:shadow-lg'
                             }
                          `}>
@@ -399,8 +433,10 @@ export const StationManager: React.FC<StationManagerProps> = ({ salonId, userRol
                        </motion.div>
                      );
                   })}
-
+                   {/* End of content */}
+                   </div>
                 </div>
+
               </div>
             </motion.div>
           </motion.div>

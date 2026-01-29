@@ -1,71 +1,89 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, Mail, Search, Menu, X, Globe } from 'lucide-react';
-import { Comment } from '../types';
+import { useNavigate } from 'react-router-dom';
+import { Bell, Search, Globe, LogOut, Home, Calendar, Users, Settings, Briefcase, User, Info, CreditCard } from 'lucide-react';
 import { useLanguage, Language } from '../context/LanguageContext';
 
 interface NavbarProps {
-  title: string;
-  onMenuClick: () => void;
+  // Mobile Header Props
+  activeTab?: string;
+  setActiveTab?: (tab: string) => void;
+  
+  // Existing Props
+  title?: string;
+  onMenuClick?: () => void;
   userName?: string;
-  userRole?: 'owner' | 'staff';
+  userRole?: 'owner' | 'staff' | 'super_admin';
+  salonName?: string;
+  isDarkMode: boolean;
+  toggleTheme: () => void;
+  isMobileMenuOpen: boolean;
+  setIsMobileMenuOpen: (isOpen: boolean) => void;
+  onLogout: () => void;
 }
 
-// Mock Data for the Navbar
-const mockMessages: Comment[] = [
-  { id: '1', author: 'Joyce', text: "Great work! When is the next slot?", timeAgo: '2m ago', avatar: 'https://picsum.photos/id/103/50/50' },
-  { id: '2', author: 'Mike', text: "Can we reschedule my cut?", timeAgo: '15m ago', avatar: 'https://picsum.photos/id/204/50/50' },
-  { id: '3', author: 'Sarah', text: "Loved the style, thanks!", timeAgo: '1h ago', avatar: 'https://picsum.photos/id/338/50/50' },
-];
-
-const mockNotifications = [
-  { id: 1, text: 'New booking from Alex Smith', time: '5m ago', type: 'booking' },
-  { id: 2, text: 'Revenue target reached!', time: '2h ago', type: 'success' },
-  { id: 3, text: 'System maintenance scheduled', time: '1d ago', type: 'system' },
-];
-
-const Navbar: React.FC<NavbarProps> = ({ title, onMenuClick, userName = 'Admin', userRole = 'owner' }) => {
-  const [showMessages, setShowMessages] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
+const Navbar: React.FC<NavbarProps> = ({ 
+  activeTab, 
+  setActiveTab, 
+  title, 
+  onMenuClick, 
+  userName = 'User', 
+  userRole = 'owner', 
+  salonName = 'Salon',
+  isDarkMode, 
+  toggleTheme,
+  onLogout
+}) => {
   const [showLanguage, setShowLanguage] = useState(false);
-  const msgRef = useRef<HTMLDivElement>(null);
-  const notifRef = useRef<HTMLDivElement>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
   const langRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   const { language, setLanguage, t } = useLanguage();
 
-  // Single handler registered once to avoid rules-of-hooks violations
-  const handleClickOutside = useCallback((event: MouseEvent) => {
-    if (msgRef.current && !msgRef.current.contains(event.target as Node)) {
-      setShowMessages(false);
-    }
-    if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
-      setShowNotifications(false);
+  // If onLogout is not passed (shouldn't happen in new App.tsx), use fallback
+  const handleLogout = onLogout || (async () => {
+    // Fallback if needed
+    console.error("onLogout prop missing in Navbar");
+    navigate('/');
+  });  const handleClickOutside = useCallback((event: MouseEvent) => {
+    if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+      setShowProfileMenu(false);
     }
     if (langRef.current && !langRef.current.contains(event.target as Node)) {
       setShowLanguage(false);
     }
   }, []);
 
-  // Close dropdowns on click outside
   useEffect(() => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [handleClickOutside]);
 
+  const navItems = userRole === 'owner' 
+  ? [
+      { icon: Home, label: 'Home', tab: 'dashboard' },
+      { icon: Calendar, label: 'Appointments', tab: 'appointments' },
+      { icon: Briefcase, label: 'Services', tab: 'services' },
+      { icon: Users, label: 'Staff', tab: 'staff' },
+    ]
+  : [
+      { icon: Home, label: 'Home', tab: 'dashboard' },
+    ];
+
   return (
-    <header className="sticky top-0 z-30 w-full bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex justify-between items-center transition-colors duration-300">
+    <header className="sticky top-0 z-30 w-full bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center transition-colors duration-300">
       
-      {/* Left: Mobile Menu & Title */}
-      <div className="flex items-center gap-4">
-        <button 
-          onClick={onMenuClick}
-          className="lg:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
-        >
-          <Menu size={24} />
-        </button>
-        <h1 className="text-xl font-bold capitalize text-gray-900 dark:text-white">{title}</h1>
+      {/* Left: Mobile Profile & Greeting */}
+      <div className="flex items-center gap-3 flex-1">
+        <div className="flex flex-col">
+            <h1 className="hidden md:flex text-xl md:text-2xl font-bold flex-col md:flex-row md:gap-2">
+                <span className="text-gray-900 dark:text-white capitalize">{salonName}</span>
+            </h1>
+            <p className="md:hidden text-sm text-gray-500 dark:text-gray-400 font-medium truncate">{salonName}</p>
+        </div>
       </div>
 
-      {/* Right: Search & Actions */}
+      {/* Right: Actions & Profile */}
       <div className="flex items-center gap-3 md:gap-6">
         
         {/* Search Bar (Desktop) */}
@@ -81,120 +99,89 @@ const Navbar: React.FC<NavbarProps> = ({ title, onMenuClick, userName = 'Admin',
         {/* Actions Container */}
         <div className="flex items-center gap-2 md:gap-4">
           
-          {/* Language Switcher */}
-          <div className="relative" ref={langRef}>
-            <button 
-              onClick={() => { setShowLanguage(!showLanguage); setShowMessages(false); setShowNotifications(false); }}
-              className="p-2.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
-              title={t('language')}
-            >
-              <Globe size={20} />
-            </button>
-
-            {/* Language Dropdown */}
-            {showLanguage && (
-              <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-treservi-card-dark rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
-                <div className="p-4 space-y-2">
-                  {(['en', 'fr', 'tn'] as Language[]).map((lang) => (
-                    <button
-                      key={lang}
-                      onClick={() => {
-                        setLanguage(lang);
-                        setShowLanguage(false);
-                      }}
-                      className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
-                        language === lang
-                          ? 'bg-treservi-accent text-white'
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {lang === 'en' && t('english')}
-                      {lang === 'fr' && t('french')}
-                      {lang === 'tn' && t('tunisian')}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Messages */}
-          <div className="relative" ref={msgRef}>
-            <button 
-              onClick={() => { setShowMessages(!showMessages); setShowNotifications(false); }}
+          {/* Notification Bell */}
+           <button 
               className="p-2.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors relative"
             >
-              <Mail size={20} />
-              <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#121212]"></span>
-            </button>
+              <Bell size={24} />
+              <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white dark:ring-[#121212]"></span>
+            </button> 
 
-            {/* Messages Dropdown */}
-            {showMessages && (
-              <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white dark:bg-treservi-card-dark rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
-                <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
-                  <h3 className="font-bold text-sm">Messages</h3>
-                  <button className="text-xs text-treservi-accent font-medium hover:underline">Mark all read</button>
+          {/* Profile Avatar / Toggle Menu */}
+          <div className="relative" ref={profileRef}>
+             <button 
+               onClick={() => setShowProfileMenu(!showProfileMenu)}
+               className="relative focus:outline-none"
+             >
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+                    <img 
+                        src={`https://ui-avatars.com/api/?name=${userName}&background=10b981&color=fff`} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                    />
                 </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {mockMessages.map((msg) => (
-                    <div key={msg.id} className="p-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer border-b border-gray-50 dark:border-gray-800/50 last:border-0 flex gap-3">
-                      <img src={msg.avatar} alt={msg.author} className="w-10 h-10 rounded-full object-cover ring-2 ring-white dark:ring-treservi-card-dark" />
-                      <div className="flex-1 min-w-0">
-                         <div className="flex justify-between items-baseline mb-1">
-                           <h4 className="font-bold text-sm truncate text-gray-900 dark:text-gray-100">{msg.author}</h4>
-                           <span className="text-xs text-gray-400 whitespace-nowrap">{msg.timeAgo}</span>
+             </button>
+
+             {/* Mobile Profile Dropdown Menu */}
+             {showProfileMenu && (
+                 <div className="absolute right-0 mt-4 w-72 md:w-80 bg-white/90 dark:bg-treservi-card-dark/95 backdrop-blur-xl rounded-[32px] shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300 ring-1 ring-black/5 z-50">
+                     
+                     <div className="p-6 pb-2 border-b border-gray-100 dark:border-gray-700/50">
+                        <div className="flex items-center gap-4 mb-4">
+                             <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-treservi-accent padding-1">
+                                <img src={`https://ui-avatars.com/api/?name=${userName}&background=10b981&color=fff`} alt="Profile" className="w-full h-full object-cover" />
+                             </div>
+                             <div>
+                                 <h3 className="font-bold text-lg dark:text-white">{userName}</h3>
+                                 <p className="text-sm text-gray-500 capitalize">{userRole === 'super_admin' ? 'Super Admin' : userRole}</p>
+                             </div>
+                        </div>
+                     </div>
+
+                     {/* Menu Items */}
+                     <div className="p-4 space-y-1">
+                         {(navItems).map((item) => (
+                             <button
+                                key={item.tab}
+                                onClick={() => { 
+                                    if(setActiveTab) setActiveTab(item.tab); 
+                                    setShowProfileMenu(false); 
+                                }}
+                                className={`w-full flex items-center gap-4 p-3 rounded-2xl transition-all ${
+                                    activeTab === item.tab 
+                                    ? 'bg-treservi-accent/10 text-treservi-accent font-bold' 
+                                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
+                                }`}
+                             >
+                                 <item.icon size={20} strokeWidth={activeTab === item.tab ? 2.5 : 2} />
+                                 {item.label}
+                             </button>
+                         ))}
+
+                         {/* Separator */}
+                         <div className="my-2 border-t border-gray-100 dark:border-gray-700/50"></div>
+
+                         {/* Language & Currency */}
+                         <div className="grid grid-cols-2 gap-2">
+                             <button className="flex items-center justify-center gap-2 p-3 bg-gray-50 dark:bg-white/5 rounded-2xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium">
+                                 <Globe size={16} /> {language.toUpperCase()}
+                             </button>
+                             <button className="flex items-center justify-center gap-2 p-3 bg-gray-50 dark:bg-white/5 rounded-2xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium">
+                                 <CreditCard size={16} /> TND
+                             </button>
                          </div>
-                         <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{msg.text}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="p-3 bg-gray-50 dark:bg-black/20 text-center border-t border-gray-100 dark:border-gray-700">
-                   <button className="text-xs font-bold hover:text-treservi-accent uppercase tracking-wide">View all messages</button>
-                </div>
-              </div>
-            )}
-          </div>
 
-          {/* Notifications */}
-          <div className="relative" ref={notifRef}>
-            <button 
-              onClick={() => { setShowNotifications(!showNotifications); setShowMessages(false); }}
-              className="p-2.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors relative"
-            >
-              <Bell size={20} />
-              <span className="absolute top-2.5 right-3 w-2 h-2 bg-treservi-accent rounded-full animate-pulse"></span>
-            </button>
-
-            {/* Notifications Dropdown */}
-            {showNotifications && (
-              <div className="absolute right-0 mt-3 w-72 sm:w-80 bg-white dark:bg-treservi-card-dark rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
-                <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
-                  <h3 className="font-bold text-sm">Notifications</h3>
-                  <span className="text-[10px] font-bold bg-treservi-accent text-white px-2 py-0.5 rounded-full">3 New</span>
-                </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {mockNotifications.map((notif) => (
-                    <div key={notif.id} className="p-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer border-b border-gray-50 dark:border-gray-800/50 last:border-0 flex gap-3 items-start">
-                      <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 shadow-sm ${notif.type === 'booking' ? 'bg-blue-500' : notif.type === 'success' ? 'bg-green-500' : 'bg-orange-500'}`}></div>
-                      <div>
-                         <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug mb-1 font-medium">{notif.text}</p>
-                         <span className="text-xs text-gray-400">{notif.time}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* User Profile */}
-          <div className="ml-2 flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-gray-700">
-             <img src="https://picsum.photos/id/433/100/100" alt="Profile" className="w-9 h-9 rounded-full border-2 border-white dark:border-gray-800 shadow-sm cursor-pointer hover:scale-105 transition-transform" />
-             <div className="hidden lg:block">
-                <p className="text-xs font-bold text-gray-900 dark:text-gray-100">{userName}</p>
-                <p className="text-[10px] text-gray-500">{userRole === 'owner' ? 'Salon Owner' : 'Staff Member'}</p>
-             </div>
+                         {/* Logout */}
+                         <button 
+                            onClick={handleLogout}
+                            className="w-full mt-2 flex items-center gap-4 p-3 rounded-2xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors font-medium"
+                         >
+                             <LogOut size={20} />
+                             Logout
+                         </button>
+                     </div>
+                 </div>
+             )}
           </div>
 
         </div>

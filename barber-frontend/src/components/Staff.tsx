@@ -257,7 +257,7 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
                 <button
                   key={member.id}
                   onClick={() => setSelectedStaff(member)}
-                  className={`flex items-center gap-4 p-4 rounded-[28px] text-left transition-all border-2 ${
+                  className={`group flex items-center gap-4 p-4 rounded-[28px] text-left transition-all border-2 ${
                     selectedStaff?.id === member.id
                       ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500'
                       : 'bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-[#1c1c1c] dark:via-[#1a1a1a] dark:to-[#111] border-white/70 dark:border-gray-800 hover:border-emerald-500'
