@@ -28,7 +28,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Show loading while checking auth or salon
   if (isLoadingAuth || (salonSlug && isSalonLoading)) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-white dark:bg-black">
+      <div className="w-full min-h-screen flex items-center justify-center bg-white dark:bg-black">
         <div className="w-12 h-12 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin"></div>
       </div>
     );

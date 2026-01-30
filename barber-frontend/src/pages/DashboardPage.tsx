@@ -5,7 +5,6 @@ import Dashboard from '../components/Dashboard';
 import StaffDashboard from '../components/StaffDashboard';
 import Appointments from '../components/Appointments';
 import Services from '../components/Services';
-import StationManager from '../components/StationManager';
 import Staff from '../components/Staff';
 import BottomNavigation from '../components/BottomNavigation';
 import { useSalon } from '../context/SalonContext';

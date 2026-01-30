@@ -137,7 +137,7 @@ const StepStaff = ({
         </div>
 
         {/* Layout container allows scrolling if content overflows */}
-        <div className="w-full h-[500px] md:h-[600px] relative bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden shadow-sm border border-gray-200 dark:border-zinc-800 touch-pan-x touch-pan-y">
+        <div className="w-full min-h-[500px] md:min-h-[600px] max-h-[80vh] relative bg-white dark:bg-zinc-900 rounded-3xl overflow-y-auto shadow-sm border border-gray-200 dark:border-zinc-800">
             <StationManager 
                 salonId={salon!.id} 
                 userRole="client" 
@@ -244,52 +244,54 @@ const StepServices = ({
     setNote 
 }: any) => (
     <div className="space-y-6">
-            <h2 className="text-2xl font-bold dark:text-white px-2">{t('booking.selectService')}</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {services.map((service: Service) => (
-                <div 
-                    key={service.id}
-                    onClick={() => setSelectedService(service)}
-                    className={`
-                        p-6 rounded-3xl cursor-pointer flex flex-col justify-between transition-all border group relative overflow-hidden
-                        ${selectedService?.id === service.id 
-                            ? 'bg-black dark:bg-white text-white dark:text-black shadow-xl ring-2 ring-offset-2 ring-black dark:ring-white dark:ring-offset-zinc-950' 
-                            : 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border-gray-200 dark:border-zinc-800 hover:shadow-md'
-                        }
-                    `}
-                >
-                    <div className="flex justify-between items-start mb-4">
+        <h2 className="text-2xl font-bold dark:text-white px-2">{t('booking.selectService')}</h2>
+
+        <div className="max-h-[65vh] md:max-h-[70vh] overflow-y-auto pr-1 pb-24">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {services.map((service: Service) => (
+                    <div 
+                        key={service.id}
+                        onClick={() => setSelectedService(service)}
+                        className={`
+                            p-6 rounded-3xl cursor-pointer flex flex-col justify-between transition-all border group relative overflow-hidden
+                            ${selectedService?.id === service.id 
+                                ? 'bg-black dark:bg-white text-white dark:text-black shadow-xl ring-2 ring-offset-2 ring-black dark:ring-white dark:ring-offset-zinc-950' 
+                                : 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border-gray-200 dark:border-zinc-800 hover:shadow-md'
+                            }
+                        `}
+                    >
+                        <div className="flex justify-between items-start mb-4">
                             <div className={`p-3 rounded-full ${selectedService?.id === service.id ? 'bg-white/20 dark:bg-black/10' : 'bg-gray-100 dark:bg-zinc-800'}`}>
-                            <Scissors size={20} />
+                                <Scissors size={20} />
                             </div>
                             <div className={`text-xl font-bold ${selectedService?.id === service.id ? 'text-white dark:text-black' : 'text-black dark:text-white'}`}>
-                            {formatPrice(service.price)}
+                                {formatPrice(service.price)}
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 className="font-bold text-lg mb-1">
+                                {service.name}
+                            </h3>
+                            <div className={`flex items-center gap-2 text-sm ${selectedService?.id === service.id ? 'opacity-80' : 'text-gray-500'}`}>
+                                <Clock size={14} />
+                                <span>{service.duration} mins</span>
+                            </div>
                         </div>
                     </div>
+                ))}
+            </div>
 
-                    <div>
-                        <h3 className="font-bold text-lg mb-1">
-                            {service.name}
-                        </h3>
-                        <div className={`flex items-center gap-2 text-sm ${selectedService?.id === service.id ? 'opacity-80' : 'text-gray-500'}`}>
-                            <Clock size={14} />
-                            <span>{service.duration} mins</span>
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
-
-        {/* Optional Note */}
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-gray-200 dark:border-zinc-800 mt-6">
+            {/* Optional Note */}
+            <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-gray-200 dark:border-zinc-800 mt-6">
                 <label className="block text-sm font-medium text-gray-500 mb-3">{t('booking.notes')}</label>
                 <textarea 
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                className="w-full p-4 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border-none resize-none h-32 outline-none focus:ring-2 focus:ring-black dark:focus:ring-white dark:text-white placeholder-gray-400"
-                placeholder="Anything we should know?"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    className="w-full p-4 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border-none resize-none h-32 outline-none focus:ring-2 focus:ring-black dark:focus:ring-white dark:text-white placeholder-gray-400"
+                    placeholder="Anything we should know?"
                 />
+            </div>
         </div>
     </div>
 );
@@ -463,8 +465,8 @@ const BookingPage: React.FC = () => {
         }
     };
 
-    if (isSalonLoading) return <div className="h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-zinc-950 dark:text-white">Loading...</div>;
-    if (!salon) return <div className="h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-zinc-950 dark:text-white">Salon not found</div>;
+    if (isSalonLoading) return <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-zinc-950 dark:text-white">Loading...</div>;
+    if (!salon) return <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-zinc-950 dark:text-white">Salon not found</div>;
 
     return (
         <div className={`min-h-screen bg-gray-50 dark:bg-zinc-950 font-sans ${dir === 'rtl' ? 'rtl' : 'ltr'}`}>

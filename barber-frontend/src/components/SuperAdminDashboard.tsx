@@ -99,16 +99,19 @@ const SuperAdminDashboard: React.FC = () => {
   };
 
   const handleDeleteSalon = async (salonId: string) => {
-    if (!window.confirm('Are you sure? This will delete the salon, its staff, and all appointments.')) return;
+    if (!window.confirm('Are you sure? This will delete the salon, its URL, all staff accounts, and all related data.')) return;
 
     try {
-      await supabase.from('appointments').delete().eq('salon_id', salonId);
-      await supabase.from('staff').delete().eq('salon_id', salonId);
-      await supabase.from('stations').delete().eq('salon_id', salonId);
-      await supabase.from('services').delete().eq('salon_id', salonId);
-      const { error } = await supabase.from('salons').delete().eq('id', salonId);
+      const { data, error } = await supabase.functions.invoke('delete-salon', {
+        body: { salonId },
+      });
 
       if (error) throw error;
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
       fetchData();
     } catch (err) {
       console.error("Error deleting salon:", err);
@@ -286,7 +289,7 @@ const SuperAdminDashboard: React.FC = () => {
                    <Plus size={18} /> Add Tenant
               </button>
             </div>
-            <div className="overflow-x-auto">
+            <div className="max-h-[60vh] overflow-y-auto overflow-x-auto pr-1">
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead>
                   <tr className="text-gray-400 text-sm border-b border-gray-100 dark:border-gray-800">
