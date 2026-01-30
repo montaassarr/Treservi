@@ -104,12 +104,21 @@ export const deleteStaff = async (id: string) => {
       return { data: { id }, error: null };
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('staff')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
     if (error) return { data: null, error };
+    
+    // Check if any row was actually deleted
+    if (data && data.length === 0) {
+        // This usually happens if the ID doesn't exist OR RLS policies prevented deletion
+        console.warn('Delete operation returned 0 rows. Check RLS policies or ID.');
+        return { data: null, error: new Error("Could not delete staff. Permission denied or record not found.") };
+    }
+
     return { data: { id }, error: null };
   } catch (err) {
     console.error('Error deleting staff:', err);

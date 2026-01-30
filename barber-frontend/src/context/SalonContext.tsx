@@ -43,17 +43,19 @@ interface SalonProviderProps {
 }
 
 export const SalonProvider: React.FC<SalonProviderProps> = ({ children }) => {
-  const { salonSlug } = useParams<{ salonSlug: string }>();
+  const params = useParams<{ salonSlug: string; salonId?: string }>();
+  const salonParam = params.salonSlug || params.salonId;
+  
   const [salon, setSalon] = useState<Salon | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchSalon = async () => {
     // Debug log
-    console.log('[SalonContext] fetchSalon called with slug:', salonSlug);
+    console.log('[SalonContext] fetchSalon called with param:', salonParam);
     
-    if (!salonSlug || !supabase) {
-      console.log('[SalonContext] No slug or supabase client, aborting.');
+    if (!salonParam || !supabase) {
+      console.log('[SalonContext] No slug/id or supabase client, aborting.');
       setIsLoading(false);
       return;
     }
@@ -61,22 +63,28 @@ export const SalonProvider: React.FC<SalonProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log('[SalonContext] Querying supabase for salon:', salonSlug);
 
-      // Create a timeout promise
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timed out')), 5000)
-      );
-
-      // Race the supabase query against the timeout
-      const { data, error: fetchError } = await Promise.race([
-        supabase
+      // Try fetching by slug first
+      let { data, error: fetchError } = await supabase
           .from('salons')
           .select('*')
-          .eq('slug', salonSlug)
-          .single(),
-        timeoutPromise.then(() => ({ data: null, error: { message: 'Timeout' } }))
-      ]) as any;
+          .eq('slug', salonParam)
+          .single();
+
+      // If failed and looks like UUID, try by ID
+      if ((!data || fetchError) && /^[0-9a-fA-F-]{36}$/.test(salonParam)) {
+          console.log('[SalonContext] Slug lookup failed, trying ID lookup for:', salonParam);
+          const { data: byId, error: errId } = await supabase
+            .from('salons')
+            .select('*')
+            .eq('id', salonParam)
+            .single();
+          
+          if (byId && !errId) {
+             data = byId;
+             fetchError = null;
+          }
+      }
 
       if (fetchError) {
         if (fetchError.code === 'PGRST116') {
@@ -87,21 +95,20 @@ export const SalonProvider: React.FC<SalonProviderProps> = ({ children }) => {
         setSalon(null);
       } else {
         console.log('[SalonContext] Salon loaded:', data);
-        setSalon(data);
+        setSalon(data as Salon);
       }
     } catch (err) {
       console.error('[SalonContext] Error fetching salon:', err);
       setError('An unexpected error occurred');
       setSalon(null);
     } finally {
-      console.log('[SalonContext] Finished loading.');
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchSalon();
-  }, [salonSlug]);
+  }, [salonParam]); 
 
   const refreshSalon = async () => {
     await fetchSalon();
@@ -111,7 +118,7 @@ export const SalonProvider: React.FC<SalonProviderProps> = ({ children }) => {
     <SalonContext.Provider
       value={{
         salon,
-        salonSlug: salonSlug || null,
+        salonSlug: salonParam || null,
         isLoading,
         error,
         refreshSalon,

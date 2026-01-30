@@ -208,12 +208,19 @@ export async function deleteAppointment(id: string) {
   }
 
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('appointments')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
-    return { error };
+    if (error) return { error };
+
+    if (!data || data.length === 0) {
+        return { error: new Error("Could not delete appointment. Check permissions or if record exists.") };
+    }
+
+    return { error: null };
   } catch (err: any) {
     return { error: err };
   }

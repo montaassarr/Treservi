@@ -4,7 +4,7 @@ import {
   CalendarDays, 
   Users, 
   Scissors, 
-  DollarSign, 
+  Wallet, 
   LogOut, 
   Sun, 
   Moon,
@@ -38,7 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'appointments', icon: CalendarDays, label: t('common.appointments'), roles: ['owner'] },
     { id: 'staff', icon: Users, label: t('common.staff'), roles: ['owner'] },
     { id: 'services', icon: Scissors, label: t('common.services'), roles: ['owner'] },
-    { id: 'income', icon: DollarSign, label: t('common.income'), roles: ['owner'] },
+    { id: 'income', icon: Wallet, label: t('common.income'), roles: ['owner'] },
   ];
 
   // Filter navigation items based on user role

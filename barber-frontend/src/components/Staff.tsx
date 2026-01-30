@@ -27,6 +27,7 @@ import {
   getStaffStats,
   fetchClientsByStaff,
 } from '../services/staffService';
+import { formatPrice } from '../utils/format';
 
 interface StaffProps {
   salonId?: string;
@@ -367,11 +368,11 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
             <div className={`${clayCard} p-6`}>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white">
-                  <DollarSign className="w-5 h-5" />
+                  <span className="text-xs font-bold">DT</span>
                 </div>
                 <h3 className="font-bold">Today's Earnings</h3>
               </div>
-              <p className="text-3xl font-black text-emerald-600">${staffStats.today_earnings}</p>
+              <p className="text-3xl font-black text-emerald-600">{formatPrice(staffStats.today_earnings)}</p>
               <p className="text-xs text-gray-500 mt-2">
                 {staffStats.today_appointments} appointments
               </p>
@@ -385,7 +386,7 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
                 </div>
                 <h3 className="font-bold">Total Earnings</h3>
               </div>
-              <p className="text-3xl font-black text-green-600">${staffStats.total_earnings}</p>
+              <p className="text-3xl font-black text-green-600">{formatPrice(staffStats.total_earnings)}</p>
               <p className="text-xs text-gray-500 mt-2">
                 {staffStats.completed_appointments} completed appointments
               </p>

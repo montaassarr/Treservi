@@ -507,7 +507,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
                     >
                       <option value="" disabled>Select Service</option>
                       {services.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name} ({s.price} TND)</option>
+                        <option key={s.id} value={s.id}>{s.name} ({s.price} DT)</option>
                       ))}
                     </select>
                   </div>
@@ -515,13 +515,13 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
                 <div className="space-y-2">
                   <label className="text-sm font-medium ml-2 text-gray-500">Amount</label>
                   <div className="relative">
-                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">DT</span>
                     <input
                       type="text"
                       required
                       value={formData.amount}
                       onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                      placeholder="0 TND"
+                      placeholder="0 DT"
                       className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all"
                     />
                   </div>

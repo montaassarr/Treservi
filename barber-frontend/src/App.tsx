@@ -268,7 +268,11 @@ const AppRoutes: React.FC = () => {
             } />
 
             {/* Public Booking Page */}
-            <Route path="book" element={<BookingPage />} />
+            <Route path="book" element={
+               <div className="w-full min-h-screen bg-[#FAFAFA]">
+                   <BookingPage />
+               </div>
+            } />
             
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>

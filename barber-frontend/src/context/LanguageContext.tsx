@@ -64,13 +64,13 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const formatCurrency = (amount: number | string): string => {
     const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    if (isNaN(numericAmount)) return '0.000 TND';
+    if (isNaN(numericAmount)) return '0.000 DT';
     
     return new Intl.NumberFormat(language === 'ar' ? 'ar-TN' : 'fr-TN', {
       style: 'decimal',
       minimumFractionDigits: 3, 
       maximumFractionDigits: 3,
-    }).format(numericAmount) + ' TND';
+    }).format(numericAmount) + ' DT';
   };
 
   const formatDate = (date: Date | string): string => {

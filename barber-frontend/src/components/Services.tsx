@@ -212,7 +212,6 @@ const Services: React.FC<ServicesProps> = ({ salonId }) => {
               {/* Details */}
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-2 text-sm">
-                  <DollarSign className="w-4 h-4 text-emerald-600" />
                   <span className="font-bold text-emerald-600">
                     {formatPrice(service.price)}
                   </span>
@@ -290,9 +289,9 @@ const Services: React.FC<ServicesProps> = ({ salonId }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-600">Price (TND)</label>
+                  <label className="text-sm font-semibold text-gray-600">Price (DT)</label>
                   <div className="relative">
-                    <DollarSign className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">DT</span>
                     <input
                       required
                       type="number"

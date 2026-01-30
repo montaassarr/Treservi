@@ -21,6 +21,7 @@ import {
 } from '../services/appointmentService';
 import { fetchServices } from '../services/serviceService';
 import { fetchStaff } from '../services/staffService';
+import { formatPrice } from '../utils/format';
 
 interface AppointmentsProps {
   salonId: string;
@@ -338,7 +339,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                       </span>
                     </td>
                     <td className="py-4 text-right font-bold whitespace-nowrap">
-                      ${Number(apt.amount).toFixed(2)}
+                      {formatPrice(Number(apt.amount))}
                     </td>
                     <td className="py-4 pr-4 text-right rounded-r-2xl">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -470,7 +471,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                       <option value="">Select Service</option>
                       {services.map(service => (
                         <option key={service.id} value={service.id}>
-                          {service.name} (${service.price})
+                          {service.name} ({formatPrice(service.price)})
                         </option>
                       ))}
                     </select>
@@ -513,14 +514,14 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-600">Amount</label>
                   <div className="relative">
-                    <DollarSign className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                     <span className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold">DT</span>
                     <input
                       required
                       type="number"
                       step="0.01"
                       value={formData.amount}
                       onChange={e => setFormData({ ...formData, amount: Number(e.target.value) })}
-                      placeholder="0.00"
+                      placeholder="0.000"
                       className="w-full rounded-full bg-gray-50 border border-transparent focus:border-emerald-500 focus:bg-white py-3 pl-12 pr-4 outline-none shadow-inner"
                     />
                   </div>

@@ -167,7 +167,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                  <Globe size={16} /> {language.toUpperCase()}
                              </button>
                              <button className="flex items-center justify-center gap-2 p-3 bg-gray-50 dark:bg-white/5 rounded-2xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium">
-                                 <CreditCard size={16} /> TND
+                                 <CreditCard size={16} /> DT
                              </button>
                          </div>
 

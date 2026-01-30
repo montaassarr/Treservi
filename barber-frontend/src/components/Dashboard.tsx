@@ -10,9 +10,9 @@ import {
 import { MoreHorizontal, ArrowUpRight, ArrowRight, Star, Plus, Pencil, Trash2, X, Check, Calendar, User, DollarSign, Clock, Scissors } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../services/supabaseClient';
-import { StationManager } from './StationManager';
 import ResponsiveGrid from './ResponsiveGrid';
 import { Barber, Appointment, Comment, ChartData } from '../types';
+import { deleteAppointment } from '../services/appointmentService';
 import { formatPrice } from '../utils/format';
 import { DashboardSkeleton } from './SkeletonLoader';
 
@@ -113,7 +113,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
         // Fetch All Stats Data (Aggregated)
         const { data: statsData, error: statsError } = await supabase
           .from('appointments')
-          .select('amount, appointment_date, status')
+          .select('amount, appointment_date, status, staff_id, customer_phone')
           .eq('salon_id', userData.salon_id)
           .gte('appointment_date', calculateStartDate())
           .neq('status', 'Cancelled');
@@ -156,12 +156,25 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
 
         if (staffData) {
             // Group stats by staff_id
-            const staffStats: Record<string, { count: number; revenue: number }> = {};
+            const staffStats: Record<string, { clients: Set<string>; revenue: number }> = {};
+            
             statsData.forEach((apt: any) => {
                 const sid = apt.staff_id;
                 if (!sid) return;
-                if (!staffStats[sid]) staffStats[sid] = { count: 0, revenue: 0 };
-                staffStats[sid].count++;
+                
+                if (!staffStats[sid]) {
+                    staffStats[sid] = { clients: new Set(), revenue: 0 };
+                }
+                
+                // Track unique clients by phone number (fallback to random if no phone, though phone is required usually)
+                if (apt.customer_phone) {
+                    staffStats[sid].clients.add(apt.customer_phone);
+                } else {
+                    // Fallback to just counting if no phone (should not happen with new booking)
+                    // We generate a unique key if no phone to just count it as +1
+                    staffStats[sid].clients.add('anon-' + Math.random());
+                }
+                
                 staffStats[sid].revenue += (Number(apt.amount) || 0);
             });
 
@@ -171,7 +184,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                 avatarUrl: s.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.full_name)}&background=random`,
                 rating: 5.0, // Placeholder
                 earnings: formatPrice(staffStats[s.id]?.revenue || 0),
-                clientCount: staffStats[s.id]?.count || 0
+                clientCount: staffStats[s.id]?.clients.size || 0
             })).sort((a, b) => {
                 // Sort by revenue desc
                 const revA = parseFloat(a.earnings.replace(/[^0-9.]/g, ''));
@@ -281,9 +294,20 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this appointment?')) {
-      setAppointments(prev => prev.filter(a => a.id !== id));
+      try {
+        const { error } = await deleteAppointment(id);
+        if (error) {
+           alert("Failed to delete appointment: " + error.message);
+           // Restore optimistic update if needed, but here we waited.
+           return;
+        }
+        // Optimistic update for UI responsiveness
+        setAppointments(prev => prev.filter(a => a.id !== id));
+      } catch (err: any) {
+        alert("An unexpected error occurred: " + err.message);
+      }
     }
   };
 
@@ -568,11 +592,6 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
             </div>
           </div> */}
 
-          {/* Station Manager / Live Salon Map - Made Full Width */}
-          <div className="w-full">
-             {salonId && <StationManager salonId={salonId} userRole="owner" />}
-          </div>
-
         </div>
         )}
       </div>
@@ -625,13 +644,13 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                 <div className="space-y-2">
                    <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Amount</label>
                    <div className="relative">
-                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">DT</span>
                     <input 
                       type="text" 
                       required
                       value={formData.amount}
                       onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                      placeholder="0 TND"
+                      placeholder="0 DT"
                       className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all min-h-[48px] text-base sm:text-sm"
                     />
                   </div>
