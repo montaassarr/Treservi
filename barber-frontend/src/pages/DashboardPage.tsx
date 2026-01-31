@@ -43,9 +43,19 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [hasReadNotifications, setHasReadNotifications] = useState(false);
   const isLiveRef = useRef(false); // Track if we're receiving live updates (not bootstrap)
 
-  // Initialize app badge hook with auto-permission request
-  const { updateBadge, clearBadge, hasPermission, isSupported } = useAppBadge({ 
-    autoRequestPermission: true 
+  // Initialize app badge hook with Supabase sync
+  const { 
+    updateBadge, 
+    clearBadge, 
+    hasPermission, 
+    isSupported, 
+    refreshBadgeFromDB,
+    badgeCount 
+  } = useAppBadge({ 
+    autoRequestPermission: true,
+    userId: userId,
+    salonId: salonId,
+    userRole: userRole
   });
 
   // Update page title with salon name
@@ -198,16 +208,17 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           },
           ...prev.filter(n => n.id !== appointmentId), // Remove duplicates
         ];
-        // Keep only 3 most recent
-        return newNotifications.slice(0, 3);
+        // Keep last 10 notifications (no hardcoded limit)
+        return newNotifications.slice(0, 10);
       });
       
       // Only play sound and increment count for LIVE updates (not bootstrap/refresh)
       if (isLiveRef.current) {
-        setNotificationCount((prev) => Math.min(prev + 1, 3));
+        setNotificationCount((prev) => prev + 1); // No cap
         setHasReadNotifications(false);
         localStorage.setItem('dashboard_notifications_read', 'false');
         playNotification();
+        // Badge auto-updates via useAppBadge hook's realtime subscription
       }
     };
 
@@ -229,7 +240,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             service:service_id(name, price)
           `)
           .order('created_at', { ascending: false })
-          .limit(3);
+          .limit(10); // Load more initial notifications
 
         const { data } = userRole === 'owner'
           ? await query.eq('salon_id', salonId)
@@ -371,10 +382,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             userName={staffName || 'User'}
             notificationCount={notificationCount}
             notifications={notifications}
-            onNotificationsOpen={() => {
+            onNotificationsOpen={async () => {
+              // Instagram-style: clear badge and mark as read
               setNotificationCount(0);
               setHasReadNotifications(true);
-              localStorage.setItem('dashboard_notifications_read', 'true');
+              await clearBadge();
+              
+              // Refresh badge count from DB
+              if (refreshBadgeFromDB) {
+                await refreshBadgeFromDB();
+              }
             }}
             currentLanguage={language}
             onLanguageToggle={toggleLanguage}
