@@ -563,14 +563,14 @@ export default function BookingPage() {
       </main>
 
       {/* Sticky Footer */}
-      <div className="fixed bottom-0 w-full z-40 p-6 bg-gradient-to-t from-white via-white to-transparent">
-        <div className="max-w-md mx-auto">
+      <div className="fixed bottom-0 w-full z-40 px-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-6 bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
+        <div className="max-w-md mx-auto pointer-events-auto">
           <button
             onClick={booking.step === 4 ? handleBook : nextStep}
             disabled={!isStepValid()}
-            className={`w-full py-4 rounded-[24px] font-bold text-lg shadow-xl transition-all duration-300 transform active:scale-95 ${
+            className={`w-full py-4 rounded-[24px] font-bold text-lg shadow-xl shadow-black/5 transition-all duration-300 transform active:scale-95 mb-safe ${
               isStepValid() 
-                ? 'bg-gray-900 text-white opacity-100' 
+                ? 'bg-gray-900 text-white opacity-100 hover:shadow-2xl' 
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
