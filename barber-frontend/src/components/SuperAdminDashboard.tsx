@@ -233,71 +233,30 @@ const SuperAdminDashboard: React.FC = () => {
         if (error) throw error;
         setSuccess('Salon updated successfully');
       } else {
-        // CREATE: Direct database insert (simplified - no auth user creation)
-        if (!formData.owner_password || formData.owner_password.length < 6) {
-          setError('Password must be at least 6 characters');
-          return;
-        }
-
-        // Step 1: Create auth user
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: formData.owner_email,
-          password: formData.owner_password,
-          options: {
-            data: {
-              full_name: formData.owner_name,
-              role: 'owner',
-            }
+      // CREATE: Use Edge Function for atomic creation
+      const { data, error } = await supabase.functions.invoke('create-salon-complete', {
+          body: {
+            salonName: formData.name,
+            salonSlug: formData.slug,
+            ownerName: formData.owner_name,
+            ownerEmail: formData.owner_email,
+            ownerPassword: formData.owner_password,
           }
-        });
+      });
 
-        if (authError) {
-          throw new Error(`Failed to create owner account: ${authError.message}`);
+      if (error) {
+        // Parse error message
+        let errorMsg = error.message;
+        try {
+          const body = JSON.parse(await error.context.json());
+          if (body.error) errorMsg = body.error;
+        } catch (e) {
+            // ignore
         }
+        throw new Error(errorMsg || 'Failed to create salon');
+      }
 
-        if (!authData.user) {
-          throw new Error('Failed to create owner account');
-        }
-
-        const userId = authData.user.id;
-
-        // Step 2: Create salon
-        const { data: salonData, error: salonError } = await supabase
-          .from('salons')
-          .insert({
-            name: formData.name,
-            slug: formData.slug,
-            owner_email: formData.owner_email,
-            status: 'active',
-            total_revenue: 0,
-          })
-          .select()
-          .single();
-
-        if (salonError) {
-          // Cleanup: try to delete the auth user we just created
-          try {
-            await supabase.auth.admin.deleteUser(userId);
-          } catch (cleanupErr) {
-            console.error('Failed to cleanup auth user:', cleanupErr);
-          }
-          throw new Error(`Failed to create salon: ${salonError.message}`);
-        }
-
-        // Step 3: Create owner staff profile
-        const { error: staffError } = await supabase
-          .from('staff')
-          .insert({
-            id: userId,
-            salon_id: salonData.id,
-            email: formData.owner_email,
-            full_name: formData.owner_name,
-            role: 'owner',
-            specialty: 'Management',
-            status: 'Active',
-          });
-
-        if (staffError) {
+      setSuccess('Salon created successfully');
           // Cleanup: delete salon and auth user
           try {
             await supabase.from('salons').delete().eq('id', salonData.id);
