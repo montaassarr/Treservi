@@ -6,6 +6,7 @@
 import { supabase } from './supabaseClient';
 
 const UNREAD_BADGE_KEY = 'unread_badge_count';
+// LAST_CHECKED_KEY no longer needed given IS_READ column, but kept for legacy cleanup
 const LAST_CHECKED_KEY = 'last_notification_check';
 
 export interface UnreadNotification {
@@ -21,6 +22,9 @@ export interface UnreadNotification {
 /**
  * Get the count of unread appointments for the current user
  */
+/**
+ * Get the count of unread appointments for the current user (using is_read column)
+ */
 export const getUnreadCount = async (
   userId: string,
   salonId: string,
@@ -29,34 +33,26 @@ export const getUnreadCount = async (
   try {
     if (!supabase) return 0;
 
-    // For owners: count all pending/confirmed appointments in salon
-    // For staff: count only their assigned appointments
+    // Count appointments where is_read is false
     const query = supabase
       .from('appointments')
-      .select('id, status, created_at', { count: 'exact', head: false })
-      .in('status', ['Pending', 'Confirmed'])
-      .order('created_at', { ascending: false });
+      .select('id', { count: 'exact', head: true });
 
-    const { data, count, error } = userRole === 'owner'
-      ? await query.eq('salon_id', salonId)
-      : await query.eq('staff_id', userId).eq('salon_id', salonId);
+    if (userRole === 'owner') {
+      query.eq('salon_id', salonId);
+    } else {
+      query.eq('staff_id', userId).eq('salon_id', salonId);
+    }
+
+    // Only count unread ones
+    const { count, error } = await query.eq('is_read', false);
 
     if (error) {
       console.error('Error fetching unread count:', error);
       return getStoredBadgeCount();
     }
 
-    // Get last checked timestamp
-    const lastChecked = localStorage.getItem(LAST_CHECKED_KEY);
-    const lastCheckedDate = lastChecked ? new Date(lastChecked) : new Date(0);
-
-    // Filter appointments created after last check
-    const unreadAppointments = (data || []).filter((apt: any) => {
-      const createdAt = new Date(apt.created_at);
-      return createdAt > lastCheckedDate;
-    });
-
-    const unreadCount = unreadAppointments.length;
+    const unreadCount = count || 0;
 
     // Store in localStorage as backup
     localStorage.setItem(UNREAD_BADGE_KEY, unreadCount.toString());
@@ -81,14 +77,34 @@ export const getStoredBadgeCount = (): number => {
 };
 
 /**
- * Mark all notifications as read (clear badge)
+ * Mark all notifications as read (clear badge) via RPC
  */
-export const markAllAsRead = async (): Promise<void> => {
+export const markAllAsRead = async (
+  salonId: string,
+  userId: string,
+  userRole: 'owner' | 'staff'
+): Promise<void> => {
   try {
-    // Update last checked timestamp
-    localStorage.setItem(LAST_CHECKED_KEY, new Date().toISOString());
+    if (!supabase) return;
+
+    let error;
+
+    if (userRole === 'owner') {
+      const result = await supabase.rpc('mark_notifications_read', { 
+        p_salon_id: salonId 
+      });
+      error = result.error;
+    } else {
+      const result = await supabase.rpc('mark_staff_notifications_read', { 
+        p_staff_id: userId 
+      });
+      error = result.error;
+    }
+
+    if (error) throw error;
+
+    // Update local storage just in case
     localStorage.setItem(UNREAD_BADGE_KEY, '0');
-    localStorage.setItem('dashboard_notifications_read', 'true');
   } catch (error) {
     console.error('Failed to mark as read:', error);
   }

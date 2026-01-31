@@ -167,7 +167,9 @@ export const useAppBadge = (options: UseAppBadgeOptions = {}) => {
 
   // Clear badge (Instagram-style - marks all as read)
   const clearBadge = useCallback(async () => {
-    await markAllAsRead();
+    if (userId && salonId && userRole) {
+      await markAllAsRead(salonId, userId, userRole);
+    }
     setBadgeCount(0);
     
     if (!hasPermission || !isSupported) {
@@ -175,7 +177,7 @@ export const useAppBadge = (options: UseAppBadgeOptions = {}) => {
     }
 
     await clearNotificationBadge();
-  }, [hasPermission, isSupported]);
+  }, [hasPermission, isSupported, userId, salonId, userRole]);
 
   // Increment badge
   const incrementBadge = useCallback(async () => {

@@ -81,13 +81,14 @@ self.addEventListener('fetch', (event) => {
 // Handle push notifications
 self.addEventListener('push', (event) => {
   const options = {
-    body: event.data ? event.data.text() : 'New notification',
+    body: event.data ? event.data.text() : 'You have a new appointment!',
     icon: '/icon-192.png',
     badge: '/icon-72.png',
     vibrate: [200, 100, 200],
     data: {
       dateOfArrival: Date.now(),
-      primaryKey: 1
+      primaryKey: 1,
+      url: '/'
     },
     actions: [
       {
@@ -104,7 +105,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification('Treservi', options)
+    self.registration.showNotification('New Appointment', options)
   );
 });
 
@@ -123,7 +124,7 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'UPDATE_BADGE') {
     const count = event.data.count || 0;
-    
+
     // Set badge using Badge API
     if (self.navigator && self.navigator.setAppBadge) {
       if (count > 0) {
@@ -147,10 +148,10 @@ async function syncAppointments() {
     // Fetch pending appointment updates
     const cache = await caches.open(CACHE_NAME);
     const pendingUpdates = await cache.match('/api/pending-updates');
-    
+
     if (pendingUpdates) {
       const data = await pendingUpdates.json();
-      
+
       // Send updates to server
       for (const update of data.updates) {
         await fetch(update.url, {
@@ -159,7 +160,7 @@ async function syncAppointments() {
           body: JSON.stringify(update.body)
         });
       }
-      
+
       // Clear pending updates
       await cache.delete('/api/pending-updates');
     }
