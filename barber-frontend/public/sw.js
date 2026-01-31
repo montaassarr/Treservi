@@ -1,4 +1,4 @@
-const CACHE_NAME = 'treservi-cache-v2';
+const CACHE_NAME = 'treservi-cache-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -9,7 +9,6 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS).catch(() => {
-        // Silently continue if some assets fail to cache (e.g., network error)
         console.log('Some assets failed to cache during install');
       });
     })
@@ -39,7 +38,6 @@ self.addEventListener('fetch', (event) => {
           if (!response || response.status !== 200 || response.type === 'error') {
             return response;
           }
-          // Clone and cache successful responses
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
@@ -72,5 +70,23 @@ self.addEventListener('fetch', (event) => {
         });
       })
     );
+  }
+});
+
+/**
+ * Handle app launch from home screen or deep link
+ * Restores user to their last viewed salon/page (like Facebook)
+ */
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'RESTORE_STATE') {
+    // Notify all clients that state restoration is needed
+    self.clients.matchAll().then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({
+          type: 'STATE_RESTORED',
+          data: event.data.state,
+        });
+      });
+    });
   }
 });

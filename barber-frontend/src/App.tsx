@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from
 import { supabase } from './services/supabaseClient';
 import { LanguageProvider } from './context/LanguageContext';
 import { SalonProvider } from './context/SalonContext';
+import { parseDeepLink, saveAppState, restoreAppState, saveSalonPreference } from './utils/stateManager';
 import LoginPage from './pages/LoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -188,27 +189,28 @@ const AppRoutes: React.FC = () => {
     }
   }, [navigate, isSuperAdmin, userSalonSlug]);
 
-  // Auto-redirect logic for root path with salon detection
+  // Auto-redirect logic for root path with salon detection (Deep Linking)
   useEffect(() => {
     const path = location.pathname;
     
-    // Root path - check for salon param or use stored salon
+    // Root path - check for salon param or restore previous state
     if (path === '/') {
       const params = new URLSearchParams(location.search);
-      const salonParam = params.get('salon');
+      const deepLink = parseDeepLink(params);
       
-      // If salon param in URL, save it
-      if (salonParam) {
-        localStorage.setItem('lastSalonSlug', salonParam);
+      // If salon param in URL (from QR code), save and redirect
+      if (deepLink.salonSlug) {
+        saveSalonPreference(deepLink.salonSlug);
+        saveAppState(deepLink.route, deepLink.salonSlug, deepLink.params);
         // Redirect to booking page without params
-        navigate(`/${salonParam}/book`, { replace: true });
+        navigate(`/${deepLink.salonSlug}${deepLink.route}`, { replace: true });
         return;
       }
       
-      // Check if we have a stored salon from previous visit
-      const storedSalon = localStorage.getItem('lastSalonSlug');
-      if (storedSalon) {
-        navigate(`/${storedSalon}/book`, { replace: true });
+      // Try to restore previous app state (like Facebook does)
+      const savedState = restoreAppState();
+      if (savedState && savedState.salonSlug) {
+        navigate(`/${savedState.salonSlug}${savedState.route}`, { replace: true });
         return;
       }
       

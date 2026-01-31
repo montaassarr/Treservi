@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSalon } from '../context/SalonContext';
-import { useLanguage } from '../context/LanguageContext'; // We might use this for syncing or ignoring
+import { useLanguage } from '../context/LanguageContext';
+import { saveAppState, saveSalonPreference } from '../utils/stateManager';
 import { Step1Specialist } from '../components/booking/Step1Specialist';
 import { Step2DateTime } from '../components/booking/Step2DateTime';
 import { Step3Service } from '../components/booking/Step3Service';
@@ -214,6 +215,14 @@ export default function BookingPage() {
 
     loadData();
   }, [salon?.id]);
+
+  // Save app state on booking changes (so user is restored to this page if they close app)
+  useEffect(() => {
+    if (salon?.slug) {
+      saveAppState('/book', salon.slug, { step: booking.step.toString() });
+      saveSalonPreference(salon.slug);
+    }
+  }, [booking.step, salon?.slug]);
 
   useEffect(() => {
     const loadBookedTimes = async () => {
