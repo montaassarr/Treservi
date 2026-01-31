@@ -189,7 +189,11 @@ jobs:
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           cd barber-backend
-          supabase link --project-ref $SUPABASE_PROJECT_ID
+          if [ -z "$SUPABASE_PROJECT_ID" ]; then
+            echo "Error: SUPABASE_PROJECT_ID is not set"
+            exit 1
+          fi
+          supabase link --project-ref "$SUPABASE_PROJECT_ID"
       
       - name: Run database migrations
         env:
@@ -205,9 +209,16 @@ jobs:
         run: |
           cd barber-backend
           
+          if [ -z "$SUPABASE_PROJECT_ID" ]; then
+            echo "Error: SUPABASE_PROJECT_ID is not set"
+            exit 1
+          fi
+          
           # Deploy all Edge Functions
-          supabase functions deploy create-salon-complete --project-ref $SUPABASE_PROJECT_ID --no-verify-jwt
-          supabase functions deploy create-staff --project-ref $SUPABASE_PROJECT_ID --no-verify-jwt
+          supabase functions deploy create-salon-complete --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
+          supabase functions deploy create-staff --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
+          supabase functions deploy delete-salon --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
+          supabase functions deploy reset-staff-password --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
           supabase functions deploy delete-salon --project-ref $SUPABASE_PROJECT_ID --no-verify-jwt
           supabase functions deploy reset-staff-password --project-ref $SUPABASE_PROJECT_ID --no-verify-jwt
       
