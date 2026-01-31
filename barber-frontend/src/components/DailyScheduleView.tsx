@@ -212,22 +212,22 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
           background: 'linear-gradient(180deg, #FFF9F0 0%, #FFF5E6 100%)',
         }}
       >
-        {/* Header - Compact on mobile */}
-        <div className="relative z-10 px-3 sm:px-6 py-4 sm:py-5 flex items-center justify-between gap-2">
+        {/* Header - Compact on mobile with better spacing */}
+        <div className="relative z-10 px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between gap-3 sm:gap-4">
           {/* Yesterday Pill */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigateDay(-1)}
-            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-white rounded-full shadow-md shadow-orange-900/5 text-[#8B7355] font-medium text-xs sm:text-sm hover:shadow-lg transition-shadow"
+            className="flex items-center justify-center gap-1 sm:gap-2 px-4 sm:px-5 py-2.5 sm:py-2.5 bg-white rounded-full shadow-md shadow-orange-900/5 text-[#8B7355] font-medium text-xs sm:text-sm hover:shadow-lg transition-shadow min-w-[70px] sm:min-w-[100px]"
           >
-            <ChevronLeft size={14} className="sm:w-4 sm:h-4" />
+            <ChevronLeft size={16} />
             <span className="hidden sm:inline">{getYesterdayLabel()}</span>
             <span className="sm:hidden">Prev</span>
           </motion.button>
 
           {/* Current Date */}
-          <div className="text-center flex-1">
+          <div className="text-center flex-1 px-2">
             <h2 className="text-lg sm:text-2xl font-bold text-[#1F1F1F] tracking-tight">
               {formatDateHeader(currentDate)}
             </h2>
@@ -241,11 +241,11 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigateDay(1)}
-            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-white rounded-full shadow-md shadow-orange-900/5 text-[#8B7355] font-medium text-xs sm:text-sm hover:shadow-lg transition-shadow"
+            className="flex items-center justify-center gap-1 sm:gap-2 px-4 sm:px-5 py-2.5 sm:py-2.5 bg-white rounded-full shadow-md shadow-orange-900/5 text-[#8B7355] font-medium text-xs sm:text-sm hover:shadow-lg transition-shadow min-w-[70px] sm:min-w-[100px]"
           >
             <span className="hidden sm:inline">{getTomorrowLabel()}</span>
             <span className="sm:hidden">Next</span>
-            <ChevronRight size={14} className="sm:w-4 sm:h-4" />
+            <ChevronRight size={16} />
           </motion.button>
         </div>
 
