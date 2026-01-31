@@ -35,6 +35,8 @@ serve(async (req) => {
     })
   }
 
+  const corsHeaders = getCorsHeaders(req.headers.get('Origin'))
+
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -51,8 +53,6 @@ serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization') ?? ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
-
-    const corsHeaders = getCorsHeaders(req.headers.get('Origin'))
 
     if (!token) {
       return new Response(

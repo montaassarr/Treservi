@@ -7,7 +7,7 @@
     "strict": false,
     "noImplicitAny": false,
     "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "types": ["https://deno.land/x/types/index.d.ts"]
-  }
+    "noEmit": true
+  },
+  "include": ["**/*.ts", "globals.d.ts"]
 }
