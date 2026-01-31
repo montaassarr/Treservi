@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   ResponsiveContainer, 
   BarChart, 
@@ -67,57 +67,53 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
     amount: ''
   });
 
-  // Load data on component mount - Security: Verify owner role and fetch real data
-  useEffect(() => {
-    let subscription: any;
+  const loadDashboardData = useCallback(async () => {
+    try {
+      setIsLoadingData(true);
+      setDataError(null);
 
-    const loadDashboardData = async () => {
-      try {
-        setIsLoadingData(true);
-        setDataError(null);
+      // Security check: Verify user is owner
+      if (!supabase) throw new Error('Database connection failed');
 
-        // Security check: Verify user is owner
-        if (!supabase) throw new Error('Database connection failed');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.user) throw new Error('Unauthorized access');
 
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !session?.user) throw new Error('Unauthorized access');
+      const { data: userData, error: userError } = await supabase
+        .from('staff')
+        .select('role, salon_id')
+        .eq('id', session.user.id)
+        .single();
 
-        const { data: userData, error: userError } = await supabase
-          .from('staff')
-          .select('role, salon_id')
-          .eq('id', session.user.id)
-          .single();
+      if (userError || !userData || userData.role !== 'owner') throw new Error('Access denied: Not an owner');
+      setSalonId(userData.salon_id);
 
-        if (userError || !userData || userData.role !== 'owner') throw new Error('Access denied: Not an owner');
-        setSalonId(userData.salon_id);
+      const calculateStartDate = () => {
+        const now = new Date();
+        switch(dateFilter) {
+          case '7d': now.setDate(now.getDate() - 7); break;
+          case '30d': now.setDate(now.getDate() - 30); break;
+          case '90d': now.setDate(now.getDate() - 90); break;
+          case '1y': now.setFullYear(now.getFullYear() - 1); break;
+        }
+        return now.toISOString();
+      };
 
-        const calculateStartDate = () => {
-          const now = new Date();
-          switch(dateFilter) {
-            case '7d': now.setDate(now.getDate() - 7); break;
-            case '30d': now.setDate(now.getDate() - 30); break;
-            case '90d': now.setDate(now.getDate() - 90); break;
-            case '1y': now.setFullYear(now.getFullYear() - 1); break;
-          }
-          return now.toISOString();
-        };
+      // Fetch All Stats Data (Aggregated)
+      const { data: statsData, error: statsError } = await supabase
+        .from('appointments')
+        .select('amount, appointment_date, status, staff_id, customer_phone')
+        .eq('salon_id', userData.salon_id)
+        .gte('appointment_date', calculateStartDate())
+        .neq('status', 'Cancelled');
 
-        // Fetch All Stats Data (Aggregated)
-        const { data: statsData, error: statsError } = await supabase
-          .from('appointments')
-          .select('amount, appointment_date, status, staff_id, customer_phone')
-          .eq('salon_id', userData.salon_id)
-          .gte('appointment_date', calculateStartDate())
-          .neq('status', 'Cancelled');
+      if (statsError) throw statsError;
 
-        if (statsError) throw statsError;
+      // Calculate Totals
+      const totalBookings = statsData.length;
+      const totalRevenue = statsData.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+      setStats({ bookings: totalBookings, revenue: totalRevenue });
 
-        // Calculate Totals
-        const totalBookings = statsData.length;
-        const totalRevenue = statsData.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-        setStats({ bookings: totalBookings, revenue: totalRevenue });
-
-        // Calculate Chart Data (Group by Day)
+      // Calculate Chart Data (Group by Day)
         const groupedData = statsData.reduce((acc: any, curr) => {
           const date = curr.appointment_date; // YYYY-MM-DD
           // Format Date to Day Name (e.g., "Mon") if 7d, or "DD MMM" otherwise
@@ -211,31 +207,33 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
         // Fetch Services for Modal
         const { data: servicesData } = await fetchServices(userData.salon_id);
         if (servicesData) setServicesList(servicesData);
+    } catch (error: any) {
+      setDataError(error?.message || 'Failed to load dashboard');
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [dateFilter]);
 
-        setIsLoadingData(false);
-      } catch (error: any) {
-        console.error('Dashboard data loading error:', error);
-        setDataError(error.message);
-        setIsLoadingData(false);
-      }
-    };
+  // Load data on component mount - Security: Verify owner role and fetch real data
+  useEffect(() => {
+    let subscription: any;
 
     if (userRole === 'owner') {
       loadDashboardData();
     
-       // Realtime Subscription
-       subscription = supabase
-       .channel('dashboard-realtime')
-       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => {
-         loadDashboardData(); // Refresh all data on any change
-       })
-       .subscribe();
+      // Realtime Subscription
+      subscription = supabase
+        .channel('dashboard-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => {
+          loadDashboardData(); // Refresh all data on any change
+        })
+        .subscribe();
     }
 
     return () => {
       if (subscription) supabase.removeChannel(subscription);
     };
-  }, [userRole, dateFilter]); // Re-run when filter changes
+  }, [userRole, dateFilter, loadDashboardData]); // Re-run when filter changes
 
   // Security: Prevent staff from accessing this component
   if (userRole !== 'owner') {
@@ -249,8 +247,11 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
     );
   }
 
+  const hasData = appointments.length > 0 || servicesList.length > 0 || topBarbers.length > 0 || comments.length > 0;
+  const showLoading = isLoadingData && !hasData;
+
   // Loading state
-  if (isLoadingData) {
+  if (showLoading) {
     return <DashboardSkeleton />;
   }
 
@@ -262,7 +263,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
           <h2 className="text-2xl font-bold mb-2 text-red-600">Error Loading Dashboard</h2>
           <p className="text-red-600 dark:text-red-400 mb-4">{dataError}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => void loadDashboardData()}
             className="px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
           >
             Retry

@@ -51,7 +51,7 @@ const Login: React.FC<LoginProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex items-center justify-center relative overflow-hidden">
+    <div className="w-full min-h-screen flex items-start justify-center pt-8 pb-12 relative overflow-hidden">
         {/* Decorative Background Elements */}
         <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-treservi-accent/10 rounded-full blur-[120px] pointer-events-none"></div>
         <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none"></div>
@@ -131,11 +131,6 @@ const Login: React.FC<LoginProps> = ({
                     </button>
                 </form>
 
-                <div className="mt-6 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-200">
-                  <p className="font-semibold mb-1">Demo Credentials:</p>
-                  <p>Email: owner@barbershop.com</p>
-                  <p>Password: password123</p>
-                </div>
             </div>
             
             <p className="text-center text-gray-400 text-xs mt-8">

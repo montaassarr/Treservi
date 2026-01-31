@@ -269,8 +269,8 @@ const AppRoutes: React.FC = () => {
 
             {/* Public Booking Page */}
             <Route path="book" element={
-               <div className="w-full min-h-screen bg-[#FAFAFA]">
-                   <BookingPage />
+               <div className="w-full h-screen bg-[#FAFAFA] overflow-y-auto no-scrollbar">
+                 <BookingPage />
                </div>
             } />
             

@@ -16,14 +16,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isLoadingAuth, isAuthent
   // If already authenticated, redirect done in App.tsx or ProtectedRoute, 
   // but explicitly handling here doesn't hurt.
   
-  if (isLoadingAuth || (salonSlug && isSalonLoading)) {
-    return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-white dark:bg-black">
-        <div className="w-12 h-12 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
   if (salonSlug && error) {
     return <Navigate to="/404" replace />;
   }

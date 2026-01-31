@@ -50,7 +50,8 @@ export const createStaff = async (payload: CreateStaffInput) => {
     });
 
     if (error) return { data: null, error };
-    return { data: data as StaffMember, error: null };
+    const staff = (data as any)?.data ?? data;
+    return { data: staff as StaffMember, error: null };
   } catch (err) {
     console.error('Error creating staff:', err);
     return { data: null, error: err as Error };

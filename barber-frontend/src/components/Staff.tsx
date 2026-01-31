@@ -131,7 +131,7 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
         }
       } else {
         // Create new
-        const { data, error: err } = await createStaff({
+        const { data: createdStaff, error: err } = await createStaff({
           fullName: form.fullName,
           email: form.email,
           password: form.password,
@@ -142,7 +142,11 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
         if (err) {
           setError(err.message);
         } else {
-          setStaff((prev) => [data as StaffMember, ...prev]);
+          if (createdStaff) {
+            setStaff((prev) => [createdStaff as StaffMember, ...prev]);
+          }
+          const { data: freshData } = await fetchStaff(resolvedSalonId);
+          if (freshData) setStaff(freshData);
           setSuccess('Staff member created successfully.');
           setModalOpen(false);
           resetForm();
@@ -181,6 +185,8 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
     if (err) setError(err.message);
     else setSuccess('Password reset email sent.');
   };
+
+  const showLoading = loading && staff.length === 0;
 
   const clayCard =
     'bg-white dark:bg-treservi-card-dark rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100/60 dark:border-gray-800/60 backdrop-blur-sm';
@@ -234,7 +240,7 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
             </div>
           </div>
 
-          {loading ? (
+          {showLoading ? (
             <div className="grid md:grid-cols-2 gap-3 animate-pulse">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="h-24 rounded-[28px] bg-gray-100 dark:bg-gray-800" />
