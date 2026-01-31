@@ -128,23 +128,27 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       const subtitle = `${serviceName} • ${staffName} • ${appointment?.appointment_date || ''} ${appointment?.appointment_time || ''}`.trim();
       const timestamp = new Date().toLocaleString();
 
-      setNotifications((prev) => [
-        { 
-          id: appointmentId, 
-          title, 
-          subtitle, 
-          timestamp,
-          staffName,
-          serviceName,
-          amount,
-          date: appointment?.appointment_date,
-          time: appointment?.appointment_time,
-          customerName: appointment?.customer_name,
-          customerPhone: appointment?.customer_phone,
-          customerEmail: appointment?.customer_email
-        },
-        ...prev,
-      ]);
+      setNotifications((prev) => {
+        const newNotifications = [
+          { 
+            id: appointmentId, 
+            title, 
+            subtitle, 
+            timestamp,
+            staffName,
+            serviceName,
+            amount,
+            date: appointment?.appointment_date,
+            time: appointment?.appointment_time,
+            customerName: appointment?.customer_name,
+            customerPhone: appointment?.customer_phone,
+            customerEmail: appointment?.customer_email
+          },
+          ...prev,
+        ];
+        // Limit to 3 upcoming appointments
+        return newNotifications.slice(0, 3);
+      });
       setNotificationCount((prev) => prev + 1);
       playNotification();
     };

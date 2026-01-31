@@ -151,7 +151,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   {notifications.length === 0 ? (
                     <div className="p-4 text-sm text-gray-500">No new appointments.</div>
                   ) : (
-                    notifications.slice(0, 10).map((item) => (
+                    notifications.slice(0, 3).map((item) => (
                       <div key={item.id} className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">{item.title}</p>
                         <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">{item.subtitle}</p>

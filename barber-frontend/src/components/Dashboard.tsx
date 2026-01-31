@@ -345,16 +345,16 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
   };
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 lg:p-10 w-full max-w-[1600px] mx-auto space-y-4 sm:space-y-6 md:space-y-8 relative">
+    <div className="p-3 sm:p-5 md:p-7 lg:p-10 w-full max-w-[1600px] mx-auto space-y-5 sm:space-y-7 md:space-y-9 relative">
       
       {/* Grid Layout - Mobile First */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-7 md:gap-9">
         
         {/* Top Left: Overview & Stats */}
-        <div className="lg:col-span-2 space-y-4 sm:space-y-6 md:space-y-8">
+        <div className="lg:col-span-2 space-y-5 sm:space-y-7 md:space-y-9">
           
           {/* Top Row Stats - Responsive Cards */}
-          <ResponsiveGrid mobile={1} tablet={2} desktop={2} gap="gap-4 sm:gap-6 md:gap-8">
+          <ResponsiveGrid mobile={1} tablet={2} desktop={2} gap="gap-5 sm:gap-7 md:gap-9">
             
             {/* Total Bookings Card */}
             <div className="bg-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow relative overflow-hidden group">
@@ -456,7 +456,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
             </div>
           </div>
 
-          {/* Appointments Table - Mobile Scrollable */}
+          {/* Appointments - Desktop Table / Mobile Cards */}
           <div className="bg-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
               <h3 className="font-bold text-base sm:text-lg md:text-xl">{t('dashboard.upcomingAppointments')}</h3>
@@ -467,7 +467,9 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                  <button className="hidden md:block text-sm font-medium text-gray-500 hover:text-black dark:hover:text-white px-3 py-2">{t('common.viewAll')}</button>
               </div>
             </div>
-            <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+
+            {/* Desktop Table View - Hidden on Mobile */}
+            <div className="hidden sm:block overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
               <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
                   <tr className="text-gray-400 text-sm border-b border-gray-100 dark:border-gray-800">
@@ -524,13 +526,75 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Card View - Visible on Mobile Only */}
+            <div className="sm:hidden space-y-3">
+              {appointments.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">{t('appointments.noAppointments') || 'No appointments'}</p>
+                </div>
+              ) : (
+                appointments.slice(0, 3).map((apt) => (
+                  <div key={apt.id} className="bg-gray-50 dark:bg-white/5 rounded-[20px] p-4 border border-gray-100 dark:border-white/10 hover:border-treservi-accent transition-colors">
+                    {/* Header: Time, Name, Status */}
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Clock className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm font-bold text-gray-900 dark:text-white">{apt.time}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <img src={apt.customerAvatar} className="w-6 h-6 rounded-full object-cover" alt={apt.customerName} />
+                          <span className="font-semibold text-gray-900 dark:text-white text-sm">{apt.customerName}</span>
+                        </div>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap
+                        ${apt.status === 'Confirmed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : ''}
+                        ${apt.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
+                        ${apt.status === 'Completed' ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' : ''}
+                      `}>
+                        {apt.status}
+                      </span>
+                    </div>
+                    
+                    {/* Details - Vertical Stack */}
+                    <div className="space-y-2 text-sm border-t border-gray-200 dark:border-gray-700 pt-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500 dark:text-gray-400 text-xs">{t('appointments.service') || 'Service'}</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{apt.service}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500 dark:text-gray-400 text-xs">{t('common.amount') || 'Amount'}</span>
+                        <span className="font-bold text-treservi-accent">{apt.amount}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Actions - Bottom */}
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <button 
+                        onClick={() => handleEdit(apt)}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        <Pencil size={14} /> Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(apt.id)}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
         </div>
 
         {/* Right Sidebar: Top Barbers & Comments */}
         {userRole === 'owner' && (
-        <div className="space-y-4 sm:space-y-6 md:space-y-8">
+        <div className="space-y-5 sm:space-y-7 md:space-y-9">
           
           {/* Top Barbers */}
           <div className="bg-black text-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow h-auto relative flex flex-col justify-between min-h-[320px] sm:min-h-[380px] md:min-h-[420px]">
