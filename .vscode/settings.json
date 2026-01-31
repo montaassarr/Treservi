@@ -1,10 +1,20 @@
 {
   "deno.enablePaths": [
-    "supabase/functions"
+    "barber-backend/supabase/functions"
   ],
   "deno.lint": true,
   "deno.unstable": true,
+  "deno.enable": false,
   "[typescript]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
-  }
+  },
+  "files.associations": {
+    "*.yml": "yaml",
+    "*.yaml": "yaml"
+  },
+  "yaml.schemas": {
+    "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml"
+  },
+  "css.lint.unknownAtRules": "ignore",
+  "typescript.tsdk": "barber-frontend/node_modules/typescript/lib"
 }

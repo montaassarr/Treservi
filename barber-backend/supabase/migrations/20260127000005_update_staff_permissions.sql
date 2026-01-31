@@ -1,5 +1,8 @@
 -- Restrict Staff to see only their own appointments
 drop policy if exists "Staff can view appointments for their salon" on public.appointments;
+drop policy if exists "Staff can view their own appointments" on public.appointments;
+drop policy if exists "Staff can insert appointments" on public.appointments;
+drop policy if exists "Staff can update their own appointments" on public.appointments;
 
 create policy "Staff can view their own appointments"
   on public.appointments for select
