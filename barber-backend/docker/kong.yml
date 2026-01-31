@@ -1,0 +1,76 @@
+_format_version: "2.1"
+
+services:
+  - name: auth
+    url: http://auth:9999/
+    routes:
+      - name: auth-route
+        paths:
+          - /auth/v1
+
+  - name: rest
+    url: http://rest:3000/
+    routes:
+      - name: rest-route
+        paths:
+          - /rest/v1
+
+  - name: realtime
+    url: http://realtime:4000/
+    routes:
+      - name: realtime-route
+        paths:
+          - /realtime/v1
+
+  - name: storage
+    url: http://storage:5000/
+    routes:
+      - name: storage-route
+        paths:
+          - /storage/v1
+
+  - name: functions
+    url: http://functions:9000/
+    routes:
+      - name: functions-route
+        paths:
+          - /functions/v1
+
+  - name: studio
+    url: http://studio:3000/
+    routes:
+      - name: studio-route
+        paths:
+          - /studio
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Authorization
+        - Content-Type
+        - apikey
+        - X-Client-Info
+        - x-supabase-api-version
+        - x-supabase-client-platform
+        - accept-profile
+        - content-profile
+        - Prefer
+        - Accept
+        - Accept-Encoding
+        - Accept-Language
+      exposed_headers:
+        - Content-Range
+        - Content-Type
+        - Content-Profile
+      credentials: true
+      max_age: 86400

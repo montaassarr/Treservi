@@ -1,0 +1,77 @@
+{
+  "common": {
+    "dashboard": "Tableau de Bord",
+    "appointments": "Mawidh",
+    "staff": "Equipe",
+    "services": "Khadamet",
+    "income": "Madakhil",
+    "notifications": "Ichaarat",
+    "logout": "Khrouj",
+    "darkMode": "Wadh'a Modhlem",
+    "lightMode": "Wadh'a Modhi'",
+    "welcome": "Ahla bik",
+    "viewAll": "Chouf el kol",
+    "actions": "Ijraat",
+    "status": "Hala",
+    "save": "Sajjel",
+    "cancel": "Battal",
+    "delete": "Faskh",
+    "edit": "Baddel",
+    "loading": "Chargement...",
+    "error": "Ghalta",
+    "success": "Najja7"
+  },
+  "dashboard": {
+    "todayClients": "Kalyanet el Youm",
+    "todayEarnings": "Madakhil el Youm",
+    "totalCompleted": "Kammelna",
+    "totalEarnings": "Majmou' el Madakhil",
+    "quickAddWalkin": "Zid Walk-In Fissa",
+    "todaySchedule": "Programme el Youm",
+    "bookingAnalytics": "Tahliil el Hujuzat",
+    "noAppointments": "Mafamech rendevouwette lyoum",
+    "addWalkIn": "Zid kalyane walk-in bech tabda",
+    "totalBookings": "Majmou' el Rendevouwette",
+    "todayRevenue": "Madakhil el Youm",
+    "newCustomers": "kalyanet jdod lyoum!",
+    "topBarbers": "A7sen Haffafa",
+    "growth": "Numou",
+    "comments": "Ta3li9at",
+    "upcomingAppointments": "Rendevouwette Jayya"
+  },
+  "appointments": {
+    "newAppointment": "Rendez-vous Jdid",
+    "addAppointment": "Zid Rendez-vous",
+    "customer": "Kalyane",
+    "service": "Khidma",
+    "time": "Wa9t",
+    "amount": "Soum",
+    "status": {
+      "confirmed": "Makked",
+      "pending": "Yestanna",
+      "completed": "Kammel",
+      "cancelled": "Battal"
+    },
+    "clientName": "Esem el Kalyane",
+    "phoneNumber": "Numro Telifoun",
+    "selectService": "Ikhtar Khidma",
+    "selectStaff": "Ikhtar Staff",
+    "date": "Tarikh"
+  },
+  "staff": {
+    "totalStaff": "Majmou' el Equipe",
+    "activeNow": "Yekhdmou Taw",
+    "addStaff": "Zid Wahed fel Equipe",
+    "staffList": "Listet el Equipe",
+    "performance": "Mardoudiya",
+    "role": "Dawr",
+    "pendingApproval": "Yestanna Mwaf9a"
+  },
+  "services": {
+    "addService": "Zid Khidma",
+    "serviceName": "Esem el Khidma",
+    "price": "Soum",
+    "duration": "Wadh'a (d9i9a)",
+    "description": "Wasf"
+  }
+}
