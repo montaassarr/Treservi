@@ -35,6 +35,7 @@ services:
       - name: functions-route
         paths:
           - /functions/v1
+        strip_path: true
 
   - name: studio
     url: http://studio:3000/

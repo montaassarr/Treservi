@@ -64,8 +64,11 @@ serve(async (req) => {
       ownerPassword,
     }: CreateSalonRequest = await req.json();
 
+    console.log("[create-salon-complete] Received Body:", { salonName, salonSlug, ownerName, ownerEmail, ownerPassword: "***" });
+
     // Validate inputs
     if (!salonName || !salonSlug || !ownerName || !ownerEmail || !ownerPassword) {
+      console.error("[create-salon-complete] Missing fields:", { salonName, salonSlug, ownerName, ownerEmail });
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

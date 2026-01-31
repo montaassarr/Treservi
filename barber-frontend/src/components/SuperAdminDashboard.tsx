@@ -248,10 +248,18 @@ const SuperAdminDashboard: React.FC = () => {
         // Parse error message
         let errorMsg = error.message;
         try {
-          const body = JSON.parse(await error.context.json());
-          if (body.error) errorMsg = body.error;
+          // If error has a context with response, try to parse JSON
+          if (error instanceof Error && 'context' in error) {
+             const response = (error as any).context as Response;
+             if (response && typeof response.json === 'function') {
+                const body = await response.json();
+                if (body && body.error) {
+                   errorMsg = body.error;
+                }
+             }
+          }
         } catch (e) {
-            // ignore
+            console.warn("Failed to parse error response:", e);
         }
         throw new Error(errorMsg || 'Failed to create salon');
       }
