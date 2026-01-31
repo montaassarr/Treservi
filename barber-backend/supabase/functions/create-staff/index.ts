@@ -108,7 +108,7 @@ serve(async (req) => {
     }
 
     // 1. Create user in auth.users with service role
-    const { data: userData, error: userError } = await supabaseClient.auth.admin.createUser({
+    const { data: userData, error: createUserError } = await supabaseClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -119,10 +119,10 @@ serve(async (req) => {
       },
     })
 
-    if (userError) {
-      console.error('User creation error:', userError)
+    if (createUserError) {
+      console.error('User creation error:', createUserError)
       return new Response(
-        JSON.stringify({ error: userError.message }),
+        JSON.stringify({ error: createUserError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
