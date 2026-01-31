@@ -26,6 +26,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../services/supabaseClient';
 import { Appointment, AppointmentData, Service, CreateAppointmentInput } from '../types';
 import { getCustomerAvatar } from '../utils/avatarGenerator';
+import DailyScheduleView from './DailyScheduleView';
 import {
   fetchTodayAppointments,
   fetchUpcomingAppointments,
@@ -66,6 +67,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [showScheduleView, setShowScheduleView] = useState(false);
 
   const [formData, setFormData] = useState<Partial<Appointment>>({
     customerName: '',
@@ -390,11 +392,49 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
           </div>
         </div>
 
-        {/* Right Sidebar */}
-        <div className="space-y-8">
-          {/* Card removed by user request */}
+        {/* Right Sidebar - Calendar */}
+        <div className="space-y-6">
+          {/* Today's Schedule Card */}
+          <div 
+            onClick={() => setShowScheduleView(true)}
+            className="bg-white dark:bg-treservi-card-dark rounded-[24px] p-6 shadow-soft-glow cursor-pointer hover:shadow-lg transition-all group"
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">{t('dashboard.todaySchedule')}</h3>
+                <div className="text-4xl font-bold text-gray-900 dark:text-white">
+                  {new Date().getDate()}
+                </div>
+                <p className="text-gray-400 text-sm mt-1">
+                  {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
+                {new Date().toLocaleDateString('en-US', { weekday: 'short' })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 group-hover:text-treservi-accent transition-colors">
+              <Calendar size={16} />
+              <span>{t('common.viewAll') || 'View Schedule'}</span>
+              <ArrowRight size={14} className="ml-auto group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Schedule Modal */}
+      {showScheduleView && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-treservi-card-dark w-full max-w-4xl max-h-[90vh] rounded-[32px] shadow-2xl overflow-hidden">
+            <DailyScheduleView 
+              salonId={salonId} 
+              userRole="staff"
+              userId={staffId}
+              onClose={() => setShowScheduleView(false)} 
+            />
+          </div>
+        </div>
+      )}
 
       {/* Appointments Table */}
       <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow mt-8">

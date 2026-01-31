@@ -627,33 +627,33 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
 
         {/* Right Sidebar: Top Barbers & Comments */}
         {userRole === 'owner' && (
-        <div className="space-y-5 sm:space-y-7 md:space-y-9">
+        <div className="space-y-5 sm:space-y-6">
           
-          {/* Top Barbers */}
-          <div className="bg-black text-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow h-auto relative flex flex-col justify-between min-h-[320px] sm:min-h-[380px] md:min-h-[420px]">
-            <div className="flex justify-between items-center mb-4 sm:mb-6">
-              <h3 className="font-bold text-base sm:text-lg md:text-xl">{t('dashboard.topBarbers')}</h3>
-              <MoreHorizontal className="text-gray-500 cursor-pointer" />
+          {/* Top Barbers - Compact */}
+          <div className="bg-black text-white dark:bg-treservi-card-dark rounded-[20px] sm:rounded-[24px] p-4 sm:p-5 shadow-soft-glow">
+            <div className="flex justify-between items-center mb-3 sm:mb-4">
+              <h3 className="font-bold text-sm sm:text-base">{t('dashboard.topBarbers')}</h3>
+              <MoreHorizontal className="text-gray-500 cursor-pointer w-4 h-4" />
             </div>
 
-            {/* List Only - No Circular Graph */}
-            <div className="space-y-3 sm:space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            {/* Compact List */}
+            <div className="space-y-2 sm:space-y-3">
               {topBarbers.length === 0 ? (
-                  <div className="text-gray-500 text-center py-10">No data available</div>
+                  <div className="text-gray-500 text-center py-4 text-sm">No data available</div>
               ) : (
-                topBarbers.map(barber => (
-                    <div key={barber.id} className="flex items-center justify-between p-3 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/5 hover:bg-white/15 transition-colors">
-                    <div className="flex items-center gap-3">
-                        <img src={barber.avatarUrl} alt={barber.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-white/20" />
+                topBarbers.slice(0, 3).map(barber => (
+                    <div key={barber.id} className="flex items-center justify-between p-2 sm:p-3 bg-white/10 rounded-xl border border-white/5 hover:bg-white/15 transition-colors">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <img src={barber.avatarUrl} alt={barber.name} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-white/20" />
                         <div>
-                        <p className="text-sm sm:text-base font-bold">{barber.name}</p>
-                        <div className="text-xs sm:text-sm font-medium text-gray-400">
+                        <p className="text-xs sm:text-sm font-bold">{barber.name}</p>
+                        <div className="text-[10px] sm:text-xs font-medium text-gray-400">
                             {(barber as any).clientCount} Clients
                         </div>
                         </div>
                     </div>
                     <div className="text-right">
-                        <div className="text-sm sm:text-base font-bold text-treservi-accent">
+                        <div className="text-xs sm:text-sm font-bold text-treservi-accent">
                             {barber.earnings}
                         </div>
                     </div>
@@ -663,28 +663,19 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
             </div>
           </div>
 
-          {/* Recent Comments - Removed as per user request */}
-          {/* <div className="bg-white dark:bg-treservi-card-dark rounded-[32px] p-8 shadow-soft-glow">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-xl">Comments</h3>
+          {/* Total Earnings Card */}
+          <div className="bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-[20px] sm:rounded-[24px] p-4 sm:p-5 shadow-soft-glow">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-white/80 text-xs sm:text-sm font-medium mb-1">{t('dashboard.totalEarnings')}</h3>
+                <div className="text-2xl sm:text-3xl font-bold">{formatPrice(stats.revenue)}</div>
+              </div>
+              <span className="flex items-center gap-1 text-white bg-white/20 px-2 py-1 rounded-full text-[10px] sm:text-xs font-bold">
+                <ArrowUpRight size={10} /> {t('common.allTime')}
+              </span>
             </div>
-            <div className="space-y-4">
-              {comments.map(comment => (
-                <div key={comment.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-3xl rounded-tl-none relative">
-                   <div className="flex items-center gap-3 mb-2">
-                      <img src={comment.avatar} alt="author" className="w-8 h-8 rounded-full" />
-                      <div>
-                        <h4 className="text-sm font-bold">{comment.author}</h4>
-                        <span className="text-xs text-gray-400">{comment.timeAgo}</span>
-                      </div>
-                   </div>
-                   <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed pl-11">
-                      {comment.text}
-                   </p>
-                </div>
-              ))}
-            </div>
-          </div> */}
+            <p className="text-white/70 text-xs">{stats.bookings} {t('common.appointments') || 'appointments'}</p>
+          </div>
 
         </div>
         )}
