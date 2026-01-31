@@ -41,18 +41,37 @@ export const useAppBadge = (options: UseAppBadgeOptions = {}) => {
   const [isSupported, setIsSupported] = useState(false);
   const channelRef = useRef<any>(null);
 
-  // Check support and permission on mount
+  // Check support and permission on mount + Refresh from DB
+  const refreshBadgeFromDB = useCallback(async () => {
+    if (!userId || !salonId || !userRole) return 0;
+
+    try {
+      const count = await getUnreadCount(userId, salonId, userRole);
+      setBadgeCount(count);
+      if (isSupported) {
+        await setNotificationBadge(count);
+      }
+      return count;
+    } catch (error) {
+      console.error('Failed to refresh badge:', error);
+      return badgeCount;
+    }
+  }, [userId, salonId, userRole, isSupported]); // removed badgeCount dep to avoid loop
+
   useEffect(() => {
     setIsSupported(isBadgeSupported());
-    setHasPermission(Notification.permission === 'granted');
+    const granted = Notification.permission === 'granted';
+    setHasPermission(granted);
     
-    // Load stored count
+    // Load stored count first for instant UI
     const stored = getStoredBadgeCount();
     setBadgeCount(stored);
-    if (stored > 0 && isBadgeSupported()) {
-      setNotificationBadge(stored);
+    
+    // Always refresh from DB if we have user context
+    if (userId && salonId && userRole) {
+      refreshBadgeFromDB();
     }
-  }, []);
+  }, [userId, salonId, userRole, refreshBadgeFromDB]);
 
   // Request notification permission
   const requestPermission = useCallback(async () => {
@@ -76,30 +95,9 @@ export const useAppBadge = (options: UseAppBadgeOptions = {}) => {
       console.error('Failed to request notification permission:', error);
       return false;
     }
-  }, [userId, salonId, userRole]);
+  }, [userId, salonId, userRole, refreshBadgeFromDB]);
 
-  /**
-   * Fetch actual unread count from Supabase
-   */
-  const refreshBadgeFromDB = useCallback(async () => {
-    if (!userId || !salonId || !userRole) return 0;
-
-    try {
-      const count = await getUnreadCount(userId, salonId, userRole);
-      setBadgeCount(count);
-      if (isSupported) {
-        await setNotificationBadge(count);
-      }
-      return count;
-    } catch (error) {
-      console.error('Failed to refresh badge:', error);
-      return badgeCount;
-    }
-  }, [userId, salonId, userRole, isSupported, badgeCount]);
-
-  /**
-   * Setup realtime subscription for new appointments
-   */
+  // Setup realtime subscription for new appointments
   useEffect(() => {
     if (!userId || !salonId || !userRole) return;
 

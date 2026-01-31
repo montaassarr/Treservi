@@ -155,10 +155,37 @@ export const subscribeToNewAppointments = (
 /**
  * Play notification sound
  */
+// Global audio context for iOS compatibility
+let audioContext: AudioContext | null = null;
+
+/**
+ * Initialize audio context on first user interaction (iOS requirement)
+ */
+export const initAudioContext = () => {
+  if (!audioContext) {
+    try {
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    } catch (e) {
+      console.error('AudioContext not supported');
+    }
+  }
+  
+  if (audioContext && audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
+};
+
+/**
+ * Play notification sound
+ */
 export const playNotificationSound = () => {
   try {
-    // Use Web Audio API for iOS compatibility
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (!audioContext) {
+      initAudioContext();
+    }
+
+    if (!audioContext) return;
+
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
