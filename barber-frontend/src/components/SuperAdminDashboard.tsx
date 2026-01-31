@@ -257,17 +257,6 @@ const SuperAdminDashboard: React.FC = () => {
       }
 
       setSuccess('Salon created successfully');
-          // Cleanup: delete salon and auth user
-          try {
-            await supabase.from('salons').delete().eq('id', salonData.id);
-            await supabase.auth.admin.deleteUser(userId);
-          } catch (cleanupErr) {
-            console.error('Failed to cleanup:', cleanupErr);
-          }
-          throw new Error(`Failed to create staff profile: ${staffError.message}`);
-        }
-
-        setSuccess(`Salon created! Owner can login at /${formData.slug} with email: ${formData.owner_email}`);
       }
 
       setIsModalOpen(false);
