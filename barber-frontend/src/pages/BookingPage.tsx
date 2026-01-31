@@ -466,9 +466,9 @@ export default function BookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] font-sans text-gray-900 pb-32" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-      {/* Header */}
-      <header className="fixed top-0 w-full z-40 pt-[calc(env(safe-area-inset-top)+1rem)] px-6 bg-white/80 backdrop-blur-xl transition-all duration-300">
+    <div className="min-h-screen bg-[#FAFAFA] font-sans text-gray-900" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      {/* Header - Fixed at absolute top */}
+      <header className="fixed top-0 left-0 right-0 z-40 pt-[env(safe-area-inset-top)] px-6 bg-white/90 backdrop-blur-xl shadow-sm">
         <div className="flex justify-between items-center h-16 max-w-md mx-auto">
           {booking.step === 1 ? (
             <div className="w-10" /> // Spacer
@@ -501,7 +501,7 @@ export default function BookingPage() {
       </header>
 
       {/* Main Content */}
-      <main className="pt-[calc(env(safe-area-inset-top)+7rem)] px-6 max-w-md mx-auto pb-32">
+      <main className="pt-[calc(env(safe-area-inset-top)+4rem)] px-6 max-w-md mx-auto pb-[calc(env(safe-area-inset-bottom)+7rem)]">
         <AnimatePresence mode="wait">
           {/* @ts-ignore */}
           <motion.div
@@ -561,8 +561,8 @@ export default function BookingPage() {
         </AnimatePresence>
       </main>
 
-      {/* Sticky Footer */}
-      <div className="fixed bottom-0 w-full z-40 px-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-6 bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
+      {/* Sticky Footer - Fixed at absolute bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 px-6 pb-[env(safe-area-inset-bottom)] pt-4 bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-none">
         <div className="max-w-md mx-auto pointer-events-auto">
           <button
             onClick={booking.step === 4 ? handleBook : nextStep}

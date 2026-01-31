@@ -10,7 +10,7 @@ import Settings from '../components/Settings';
 import BottomNavigation from '../components/BottomNavigation';
 import { useSalon } from '../context/SalonContext';
 import { useLanguage } from '../context/LanguageContext';
-import { setNotificationBadge } from '../utils/badgeApi';
+import { useAppBadge } from '../hooks/useAppBadge';
 import { Sparkles } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -42,6 +42,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [hasBootstrappedNotifications, setHasBootstrappedNotifications] = useState(false);
   const [hasReadNotifications, setHasReadNotifications] = useState(false);
   const isLiveRef = useRef(false); // Track if we're receiving live updates (not bootstrap)
+
+  // Initialize app badge hook with auto-permission request
+  const { updateBadge, clearBadge, hasPermission, isSupported } = useAppBadge({ 
+    autoRequestPermission: true 
+  });
 
   // Update page title with salon name
   useEffect(() => {
@@ -86,8 +91,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   // Update app badge when notification count changes
   useEffect(() => {
-    setNotificationBadge(notificationCount);
-  }, [notificationCount]);
+    if (hasPermission && isSupported) {
+      updateBadge(notificationCount);
+    }
+  }, [notificationCount, hasPermission, isSupported, updateBadge]);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -375,7 +382,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       </div>
 
         {/* Main Content - scrollable with bottom padding for mobile nav */}
-        <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 pt-[calc(env(safe-area-inset-top)+6.5rem)] md:pt-6 pb-32 md:pb-6">
+        <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 pt-[calc(env(safe-area-inset-top)+5rem)] md:pt-6 pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-6">
           {bookingUrl && userRole === 'owner' && (
             <div className="mb-6 bg-white dark:bg-treservi-card-dark rounded-[28px] p-5 border border-gray-100 dark:border-gray-800 shadow-soft-glow">
               <div className="flex flex-col md:flex-row md:items-center gap-4">

@@ -27,8 +27,8 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({
     ];
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] px-4 pointer-events-none mb-1">
-      <div className="bg-white/90 dark:bg-[#121212]/95 backdrop-blur-xl border border-gray-100 dark:border-gray-800 rounded-[2rem] shadow-xl p-2 pointer-events-auto">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)] px-4 pointer-events-none">
+      <div className="bg-white/90 dark:bg-[#121212]/95 backdrop-blur-xl border border-gray-100 dark:border-gray-800 rounded-[2rem] shadow-xl p-2 mb-2 pointer-events-auto">
         <div className="flex justify-around items-center w-full relative">
         
         {navItems.map((item, index) => (

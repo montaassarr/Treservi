@@ -57,10 +57,10 @@ export const Step1Specialist: React.FC<Props> = ({ onSelect, staffList, t, selec
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.1 }}
-              className={`${staff.bgColor} p-5 rounded-[32px] flex items-center justify-between relative group cursor-pointer transition-all duration-300 ${
+              className={`${staff.bgColor} p-5 rounded-[32px] flex items-center justify-between relative group cursor-pointer transition-all duration-300 shadow-soft ${
                 isSelected 
-                  ? 'ring-2 ring-gray-900 ring-offset-2 scale-[1.02] shadow-xl' 
-                  : 'hover:shadow-lg'
+                  ? 'ring-2 ring-gray-900 ring-offset-4 scale-[1.02] shadow-xl bg-gradient-to-br from-gray-50 to-white' 
+                  : 'hover:shadow-lg hover:scale-[1.01] bg-white'
               }`}
               onClick={() => onSelect(staff)}
             >
