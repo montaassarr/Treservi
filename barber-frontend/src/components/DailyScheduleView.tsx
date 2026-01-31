@@ -208,7 +208,7 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="relative w-full h-full sm:max-w-4xl sm:h-[90vh] sm:mx-4 sm:rounded-[32px] rounded-t-[32px] overflow-hidden shadow-2xl"
+        className="relative w-full h-[85vh] sm:h-auto sm:max-w-4xl sm:h-[90vh] mx-4 my-[calc(env(safe-area-inset-top)+2rem)] mb-[calc(env(safe-area-inset-bottom)+5rem)] sm:my-0 sm:mx-4 rounded-[32px] overflow-hidden shadow-2xl"
         style={{
           background: 'linear-gradient(180deg, #FFF9F0 0%, #FFF5E6 100%)',
         }}
