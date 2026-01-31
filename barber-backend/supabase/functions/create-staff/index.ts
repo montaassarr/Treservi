@@ -1,11 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Max-Age': '86400',
+const allowedOrigins = new Set([
+  'https://barber-sigma-wheat.vercel.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+])
+
+const getCorsHeaders = (origin: string | null) => {
+  const allowOrigin = origin && allowedOrigins.has(origin) ? origin : '*'
+  return {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  }
 }
 
 interface CreateStaffRequest {
@@ -19,9 +28,10 @@ interface CreateStaffRequest {
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      status: 204,
-      headers: corsHeaders 
+    const corsHeaders = getCorsHeaders(req.headers.get('Origin'))
+    return new Response('ok', {
+      status: 200,
+      headers: corsHeaders,
     })
   }
 
@@ -41,6 +51,8 @@ serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization') ?? ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
+
+    const corsHeaders = getCorsHeaders(req.headers.get('Origin'))
 
     if (!token) {
       return new Response(
