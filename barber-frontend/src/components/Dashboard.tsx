@@ -354,7 +354,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
         <div className="lg:col-span-2 space-y-5 sm:space-y-7 md:space-y-9">
           
           {/* Top Row Stats - Responsive Cards */}
-          <ResponsiveGrid mobile={1} tablet={2} desktop={2} gap="gap-5 sm:gap-7 md:gap-9">
+          <ResponsiveGrid mobile={1} tablet={2} desktop={2} gap="gap-3 sm:gap-4 md:gap-6">
             
             {/* Total Bookings Card */}
             <div className="bg-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow relative overflow-hidden group">
