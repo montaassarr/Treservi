@@ -12,6 +12,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import BookingPage from './pages/BookingPage';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 const LoadingScreen: React.FC = () => (
   <div className="w-full min-h-screen flex items-center justify-center bg-white dark:bg-black">
@@ -320,6 +321,7 @@ const App: React.FC = () => (
   <LanguageProvider>
     <BrowserRouter>
       <AppRoutes />
+      <PWAInstallPrompt />
     </BrowserRouter>
   </LanguageProvider>
 );
