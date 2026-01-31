@@ -236,30 +236,32 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
             )}
           </div>
 
-          {/* Tomorrow Pill */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => navigateDay(1)}
-            className="flex items-center justify-center gap-1 sm:gap-2 px-4 sm:px-5 py-2.5 sm:py-2.5 bg-white rounded-full shadow-md shadow-orange-900/5 text-[#8B7355] font-medium text-xs sm:text-sm hover:shadow-lg transition-shadow min-w-[70px] sm:min-w-[100px]"
-          >
-            <span className="hidden sm:inline">{getTomorrowLabel()}</span>
-            <span className="sm:hidden">Next</span>
-            <ChevronRight size={16} />
-          </motion.button>
-        </div>
+          {/* Tomorrow Pill + Close Button */}
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigateDay(1)}
+              className="flex items-center justify-center gap-1 sm:gap-2 px-4 sm:px-5 py-2.5 sm:py-2.5 bg-white rounded-full shadow-md shadow-orange-900/5 text-[#8B7355] font-medium text-xs sm:text-sm hover:shadow-lg transition-shadow min-w-[70px] sm:min-w-[100px]"
+            >
+              <span className="hidden sm:inline">{getTomorrowLabel()}</span>
+              <span className="sm:hidden">Next</span>
+              <ChevronRight size={16} />
+            </motion.button>
 
-        {/* Close Button */}
-        {onClose && (
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={onClose}
-            className="absolute top-4 right-4 z-20 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-[#1F1F1F]"
-          >
-            ×
-          </motion.button>
-        )}
+            {/* Close Button */}
+            {onClose && (
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={onClose}
+                className="w-10 h-10 bg-white rounded-full shadow-md shadow-orange-900/5 flex items-center justify-center text-[#1F1F1F] font-bold text-lg hover:shadow-lg transition-shadow"
+              >
+                ×
+              </motion.button>
+            )}
+          </div>
+        </div>
 
         {/* Timeline Content */}
         <motion.div
