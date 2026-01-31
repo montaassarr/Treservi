@@ -146,6 +146,14 @@ export default function BookingPage() {
     }
   }, [language]);
 
+  const toggleLang = () => {
+    const langs: Language[] = ['en', 'fr', 'tn'];
+    const nextIndex = (langs.indexOf(lang) + 1) % langs.length;
+    const nextLang = langs[nextIndex];
+    setLang(nextLang);
+    setLanguage(nextLang);
+  };
+
   const [bookingCompleted, setBookingCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [staffLoaded, setStaffLoaded] = useState(false);
@@ -328,17 +336,6 @@ export default function BookingPage() {
       case 4: return !!booking.customerName && isPhoneValid(booking.customerPhone);
       default: return false;
     }
-  };
-
-  const toggleLanguage = () => {
-    let newLang: Language = 'en';
-    if (lang === 'en') newLang = 'fr';
-    else if (lang === 'fr') newLang = 'ar';
-    else if (lang === 'ar') newLang = 'tn';
-    else newLang = 'en';
-    
-    setLang(newLang);
-    setLanguage(newLang); // Sync with global context
   };
 
   if (loading && !staffLoaded) {
