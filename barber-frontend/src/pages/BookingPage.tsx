@@ -148,6 +148,7 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(true);
   const [staffData, setStaffData] = useState<Staff[]>([]);
   const [servicesData, setServicesData] = useState<Service[]>([]);
+  const [bookedTimes, setBookedTimes] = useState<string[]>([]);
 
   const [booking, setBooking] = useState<BookingState>({
     step: 1,
@@ -203,6 +204,53 @@ export default function BookingPage() {
 
     loadData();
   }, [salon?.id]);
+
+  useEffect(() => {
+    const loadBookedTimes = async () => {
+      if (!supabase || !salon?.id || !booking.selectedStaff || !booking.selectedDate) {
+        setBookedTimes([]);
+        return;
+      }
+
+      const dateKey = booking.selectedDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' });
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('appointment_time, status')
+        .eq('salon_id', salon.id)
+        .eq('staff_id', booking.selectedStaff.id)
+        .eq('appointment_date', dateKey)
+        .neq('status', 'Cancelled');
+
+      if (error || !data) {
+        setBookedTimes([]);
+        return;
+      }
+
+      const times = data
+        .map((item: any) => (item.appointment_time || '').slice(0, 5))
+        .filter((time: string) => Boolean(time));
+      setBookedTimes(times);
+    };
+
+    loadBookedTimes();
+
+    if (!supabase || !salon?.id || !booking.selectedStaff) return;
+    const channel = supabase
+      .channel('booking-slots')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'appointments',
+        filter: `staff_id=eq.${booking.selectedStaff.id}`,
+      }, () => {
+        loadBookedTimes();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [salon?.id, booking.selectedStaff?.id, booking.selectedDate]);
   
   const nextStep = () => setBooking(prev => ({ ...prev, step: prev.step + 1 }));
   const prevStep = () => setBooking(prev => ({ ...prev, step: Math.max(1, prev.step - 1) }));
@@ -213,7 +261,7 @@ export default function BookingPage() {
       
       try {
         // Create actual appointment
-        const appointmentDate = booking.selectedDate.toISOString().split('T')[0];
+        const appointmentDate = booking.selectedDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' });
         
         await createAppointment({
           salon_id: salon.id,
@@ -373,6 +421,7 @@ export default function BookingPage() {
                 staff={booking.selectedStaff}
                 selectedDate={booking.selectedDate}
                 selectedTime={booking.selectedTime}
+                bookedTimes={bookedTimes}
                 onDateSelect={(d) => setBooking(prev => ({ ...prev, selectedDate: d }))}
                 onTimeSelect={(t) => setBooking(prev => ({ ...prev, selectedTime: t }))}
                 t={t}

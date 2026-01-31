@@ -164,6 +164,23 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
     if (isAuthVerified) {
       loadData();
     }
+
+    if (!supabase || !isAuthVerified) return;
+    const channel = supabase
+      .channel('appointments-staff')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'appointments',
+        filter: `staff_id=eq.${staffId}`,
+      }, () => {
+        loadData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [staffId, salonId, isAuthVerified]);
 
   const handleAddNew = () => {

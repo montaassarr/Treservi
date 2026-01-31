@@ -22,6 +22,7 @@ import {
 import { fetchServices } from '../services/serviceService';
 import { fetchStaff } from '../services/staffService';
 import { formatPrice } from '../utils/format';
+import { supabase } from '../services/supabaseClient';
 
 interface AppointmentsProps {
   salonId: string;
@@ -76,6 +77,23 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
 
   useEffect(() => {
     loadData();
+
+    if (!supabase) return;
+    const channel = supabase
+      .channel('appointments-owner')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'appointments',
+        filter: `salon_id=eq.${salonId}`,
+      }, () => {
+        loadData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [salonId]);
 
   const resetForm = () => {

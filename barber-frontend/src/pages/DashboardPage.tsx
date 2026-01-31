@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import Dashboard from '../components/Dashboard';
@@ -34,6 +34,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; subtitle: string; timestamp: string }>>([]);
   const [notificationCount, setNotificationCount] = useState(0);
+  const seenAppointmentsRef = useRef<Set<string>>(new Set());
+  const [hasBootstrappedNotifications, setHasBootstrappedNotifications] = useState(false);
 
   // Update page title with salon name
   useEffect(() => {
@@ -61,20 +63,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   }, [salonSlug]);
 
   const playNotification = () => {
-    try {
-      const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      oscillator.type = 'sine';
-      oscillator.frequency.value = 880;
-      gain.gain.value = 0.05;
-      oscillator.connect(gain);
-      gain.connect(context.destination);
-      oscillator.start();
-      oscillator.stop(context.currentTime + 0.2);
-    } catch {
-      // Ignore audio errors
-    }
     if (navigator.vibrate) {
       navigator.vibrate(200);
     }
@@ -82,6 +70,43 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   useEffect(() => {
     if (!supabase || !salonId || !userId) return;
+
+    const addNotification = (appointment: any) => {
+      const appointmentId = appointment?.id || `${Date.now()}`;
+      if (seenAppointmentsRef.current.has(appointmentId)) return;
+      seenAppointmentsRef.current.add(appointmentId);
+
+      const title = `New appointment${appointment?.customer_name ? ` • ${appointment.customer_name}` : ''}`;
+      const subtitle = `${appointment?.appointment_date || ''} ${appointment?.appointment_time || ''}`.trim();
+      const timestamp = new Date().toLocaleString();
+
+      setNotifications((prev) => [
+        { id: appointmentId, title, subtitle, timestamp },
+        ...prev,
+      ]);
+      setNotificationCount((prev) => prev + 1);
+      playNotification();
+    };
+
+    const bootstrapNotifications = async () => {
+      if (hasBootstrappedNotifications) return;
+      const query = supabase
+        .from('appointments')
+        .select('id')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      const { data } = userRole === 'owner'
+        ? await query.eq('salon_id', salonId)
+        : await query.eq('staff_id', userId);
+
+      (data || []).forEach((apt: any) => {
+        if (apt?.id) seenAppointmentsRef.current.add(apt.id);
+      });
+      setHasBootstrappedNotifications(true);
+    };
+
+    bootstrapNotifications();
 
     const channel = supabase
       .channel('notifications-appointments')
@@ -93,24 +118,29 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           ? `salon_id=eq.${salonId}`
           : `staff_id=eq.${userId}`,
       }, (payload) => {
-        const appointment = payload.new as any;
-        const title = `New appointment${appointment?.customer_name ? ` • ${appointment.customer_name}` : ''}`;
-        const subtitle = `${appointment?.appointment_date || ''} ${appointment?.appointment_time || ''}`.trim();
-        const timestamp = new Date().toLocaleString();
-
-        setNotifications((prev) => [
-          { id: appointment.id || `${Date.now()}`, title, subtitle, timestamp },
-          ...prev,
-        ]);
-        setNotificationCount((prev) => prev + 1);
-        playNotification();
+        addNotification(payload.new as any);
       })
       .subscribe();
 
+    const polling = setInterval(async () => {
+      const query = supabase
+        .from('appointments')
+        .select('id, customer_name, appointment_date, appointment_time')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      const { data } = userRole === 'owner'
+        ? await query.eq('salon_id', salonId)
+        : await query.eq('staff_id', userId);
+
+      (data || []).forEach((apt: any) => addNotification(apt));
+    }, 30000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(polling);
     };
-  }, [salonId, userId, userRole]);
+  }, [salonId, userId, userRole, hasBootstrappedNotifications]);
 
   const toggleTheme = () => setIsDarkMode((prev) => !prev);
 

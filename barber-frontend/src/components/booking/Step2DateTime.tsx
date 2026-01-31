@@ -7,13 +7,14 @@ interface Props {
   staff: Staff;
   selectedDate: Date | null;
   selectedTime: string | null;
+  bookedTimes: string[];
   onDateSelect: (date: Date) => void;
   onTimeSelect: (time: string) => void;
   t: Translations;
   lang: string;
 }
 
-export const Step2DateTime: React.FC<Props> = ({ staff, selectedDate, selectedTime, onDateSelect, onTimeSelect, t, lang }) => {
+export const Step2DateTime: React.FC<Props> = ({ staff, selectedDate, selectedTime, bookedTimes, onDateSelect, onTimeSelect, t, lang }) => {
   // Automatically select today if not selected
   useEffect(() => {
     if (!selectedDate) {
@@ -22,6 +23,16 @@ export const Step2DateTime: React.FC<Props> = ({ staff, selectedDate, selectedTi
   }, [selectedDate, onDateSelect]);
 
   const today = new Date();
+  const tunisNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Tunis' }));
+  const todayKey = tunisNow.toLocaleDateString('en-CA');
+  const selectedKey = selectedDate ? selectedDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' }) : todayKey;
+  const nowMinutes = tunisNow.getHours() * 60 + tunisNow.getMinutes();
+  const isSameDay = selectedKey === todayKey;
+  const toMinutes = (time: string) => {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+  };
+
   // Adjust locale for date formatting based on selected language
   const locale = lang === 'ar' ? 'ar-TN' : lang === 'fr' ? 'fr-FR' : 'en-US';
   const dateString = today.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' });
@@ -79,6 +90,9 @@ export const Step2DateTime: React.FC<Props> = ({ staff, selectedDate, selectedTi
         <div className="grid grid-cols-3 gap-3">
           {timeSlots.map((time, idx) => {
             const isSelected = selectedTime === time;
+            const isBooked = bookedTimes.includes(time);
+            const isPast = isSameDay && toMinutes(time) <= nowMinutes;
+            const isUnavailable = isBooked || isPast;
             return (
               // @ts-ignore
               <motion.button
@@ -86,11 +100,14 @@ export const Step2DateTime: React.FC<Props> = ({ staff, selectedDate, selectedTi
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: idx * 0.05 }}
-                onClick={() => onTimeSelect(time)}
+                onClick={() => !isUnavailable && onTimeSelect(time)}
+                disabled={isUnavailable}
                 className={`py-3 px-2 rounded-xl text-sm font-medium border transition-all ${
                   isSelected
                     ? 'bg-gray-900 text-white border-gray-900 shadow-md transform scale-105'
-                    : 'bg-white text-gray-600 border-gray-100 hover:border-gray-300'
+                    : isUnavailable
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                      : 'bg-white text-gray-600 border-gray-100 hover:border-gray-300'
                 }`}
               >
                 {time}
