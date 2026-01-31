@@ -104,9 +104,10 @@ const Navbar: React.FC<NavbarProps> = ({
     ];
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 px-4 md:px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-3 md:pt-4 md:pb-4 flex justify-between items-center transition-colors duration-300 shadow-sm">
-      
-      {/* Left: Mobile Profile & Greeting */}
+    <div className="fixed top-0 left-0 right-0 z-30 pt-[calc(env(safe-area-inset-top)+0.5rem)] px-4">
+      <header className="w-full bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border border-gray-100 dark:border-gray-800 rounded-3xl shadow-lg px-4 py-3 flex justify-between items-center transition-all duration-300">
+        
+        {/* Left: Mobile Profile & Greeting */}
       <div className="flex items-center gap-3 flex-1">
         <div className="flex flex-col">
             <h1 className="hidden md:flex text-xl md:text-2xl font-bold flex-col md:flex-row md:gap-2">
@@ -253,8 +254,8 @@ const Navbar: React.FC<NavbarProps> = ({
           </div>
 
         </div>
-      </div>
-    </header>
+      </header>
+    </div>
   );
 };
 
