@@ -96,5 +96,43 @@
       "confirmBooking": "Confirmer le Rendez-vous",
       "availability": "Disponibilité",
       "fullTime": "Temps plein"
+  },
+  "settings": {
+    "manageSalon": "Gérez les paramètres de votre salon",
+    "salonInfo": "Informations du Salon",
+    "salonName": "Nom du Salon",
+    "bookingUrl": "URL de Réservation",
+    "salonLogo": "Logo du Salon",
+    "uploadLogo": "Télécharger Logo",
+    "uploading": "Téléchargement...",
+    "logoHint": "PNG, JPG jusqu'à 2MB",
+    "logoUploaded": "Logo téléchargé avec succès",
+    "logoUploadError": "Échec du téléchargement du logo",
+    "invalidImage": "Veuillez sélectionner un fichier image valide",
+    "imageTooLarge": "L'image doit être inférieure à 2MB",
+    "location": "Localisation",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "useCurrentLocation": "Utiliser ma position actuelle",
+    "locationUpdated": "Position mise à jour",
+    "locationError": "Impossible d'obtenir votre position",
+    "locationNotSupported": "La géolocalisation n'est pas supportée par votre navigateur",
+    "workingHours": "Horaires de Travail",
+    "openingTime": "Heure d'Ouverture",
+    "closingTime": "Heure de Fermeture",
+    "openDays": "Jours d'Ouverture",
+    "saving": "Enregistrement...",
+    "saveSuccess": "Paramètres enregistrés avec succès",
+    "saveError": "Échec de l'enregistrement",
+    "errorLoading": "Échec du chargement des paramètres",
+    "days": {
+      "sunday": "Dim",
+      "monday": "Lun",
+      "tuesday": "Mar",
+      "wednesday": "Mer",
+      "thursday": "Jeu",
+      "friday": "Ven",
+      "saturday": "Sam"
+    }
   }
 }

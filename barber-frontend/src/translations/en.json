@@ -95,5 +95,43 @@
       "confirmBooking": "Confirm Appointment",
       "availability": "Availability",
       "fullTime": "Full time"
+  },
+  "settings": {
+    "manageSalon": "Manage your salon settings",
+    "salonInfo": "Salon Information",
+    "salonName": "Salon Name",
+    "bookingUrl": "Booking URL",
+    "salonLogo": "Salon Logo",
+    "uploadLogo": "Upload Logo",
+    "uploading": "Uploading...",
+    "logoHint": "PNG, JPG up to 2MB",
+    "logoUploaded": "Logo uploaded successfully",
+    "logoUploadError": "Failed to upload logo",
+    "invalidImage": "Please select a valid image file",
+    "imageTooLarge": "Image must be less than 2MB",
+    "location": "Location",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "useCurrentLocation": "Use current location",
+    "locationUpdated": "Location updated",
+    "locationError": "Could not get your location",
+    "locationNotSupported": "Location is not supported by your browser",
+    "workingHours": "Working Hours",
+    "openingTime": "Opening Time",
+    "closingTime": "Closing Time",
+    "openDays": "Open Days",
+    "saving": "Saving...",
+    "saveSuccess": "Settings saved successfully",
+    "saveError": "Failed to save settings",
+    "errorLoading": "Failed to load settings",
+    "days": {
+      "sunday": "Sun",
+      "monday": "Mon",
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat"
+    }
   }
 }

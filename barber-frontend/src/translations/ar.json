@@ -77,5 +77,43 @@
       "confirmBooking": "تأكيد الحجز",
       "availability": "الأوقات المتاحة",
       "fullTime": "دوام كامل"
+  },
+  "settings": {
+    "manageSalon": "إدارة إعدادات الصالون",
+    "salonInfo": "معلومات الصالون",
+    "salonName": "اسم الصالون",
+    "bookingUrl": "رابط الحجز",
+    "salonLogo": "شعار الصالون",
+    "uploadLogo": "رفع الشعار",
+    "uploading": "جاري الرفع...",
+    "logoHint": "PNG, JPG حتى 2MB",
+    "logoUploaded": "تم رفع الشعار بنجاح",
+    "logoUploadError": "فشل رفع الشعار",
+    "invalidImage": "يرجى اختيار ملف صورة صالح",
+    "imageTooLarge": "يجب أن تكون الصورة أقل من 2MB",
+    "location": "الموقع",
+    "latitude": "خط العرض",
+    "longitude": "خط الطول",
+    "useCurrentLocation": "استخدم موقعي الحالي",
+    "locationUpdated": "تم تحديث الموقع",
+    "locationError": "تعذر الحصول على موقعك",
+    "locationNotSupported": "الموقع غير مدعوم في متصفحك",
+    "workingHours": "ساعات العمل",
+    "openingTime": "وقت الفتح",
+    "closingTime": "وقت الإغلاق",
+    "openDays": "أيام العمل",
+    "saving": "جاري الحفظ...",
+    "saveSuccess": "تم حفظ الإعدادات بنجاح",
+    "saveError": "فشل حفظ الإعدادات",
+    "errorLoading": "فشل تحميل الإعدادات",
+    "days": {
+      "sunday": "أحد",
+      "monday": "إثنين",
+      "tuesday": "ثلاثاء",
+      "wednesday": "أربعاء",
+      "thursday": "خميس",
+      "friday": "جمعة",
+      "saturday": "سبت"
+    }
   }
 }

@@ -189,7 +189,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
              {/* Mobile Profile Dropdown Menu */}
              {showProfileMenu && (
-                 <div className="absolute right-0 mt-4 w-72 md:w-80 bg-white/90 dark:bg-treservi-card-dark/95 backdrop-blur-xl rounded-[32px] shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300 ring-1 ring-black/5 z-50">
+                 <div className={`absolute mt-4 w-72 md:w-80 bg-white/90 dark:bg-treservi-card-dark/95 backdrop-blur-xl rounded-[32px] shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300 ring-1 ring-black/5 z-50 ${document.documentElement.dir === 'rtl' ? 'left-0' : 'right-0'}`}>
                      
                      <div className="p-6 pb-2 border-b border-gray-100 dark:border-gray-700/50">
                         <div className="flex items-center gap-4 mb-4">
