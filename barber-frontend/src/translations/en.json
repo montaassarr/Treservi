@@ -87,7 +87,6 @@
       "phoneNumber": "Phone Number",
       "startBooking": "Start Booking", 
       "chooseBarber": "Choose your barber",
-      "clickMap": "Click on a station map to select your barber",
       "nextStep": "Next Step",
       "selectService": "Select Services",
       "notes": "Special Note",
@@ -95,20 +94,5 @@
       "confirmBooking": "Confirm Appointment",
       "availability": "Availability",
       "fullTime": "Full time"
-  },
-  "stations": {
-    "title": "Live Salon Stations",
-    "stationManager": "Station Manager",
-    "addStation": "Add Station",
-    "stationName": "Station Name",
-    "type": "Type",
-    "assignStaff": "Assign Staff",
-    "available": "Available",
-    "busy": "Busy",
-    "types": {
-      "chair": "Barber Chair",
-      "desk": "Nail Desk",
-      "table": "Massage Table"
-    }
   }
 }

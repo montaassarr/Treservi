@@ -88,7 +88,6 @@
       "phoneNumber": "Numéro de Téléphone",
       "startBooking": "Commencer la Réservation", 
       "chooseBarber": "Choisissez votre coiffeur",
-      "clickMap": "Cliquez sur une station pour choisir",
       "nextStep": "Étape Suivante",
       "selectService": "Choisir Services",
       "notes": "Note Spéciale",
@@ -96,20 +95,5 @@
       "confirmBooking": "Confirmer le Rendez-vous",
       "availability": "Disponibilité",
       "fullTime": "Temps plein"
-  },
-  "stations": {
-    "title": "Stations du Salon en Direct",
-    "stationManager": "Gestionnaire de Stations",
-    "addStation": "Ajouter Station",
-    "stationName": "Nom de la Station",
-    "type": "Type",
-    "assignStaff": "Assigner Staff",
-    "available": "Disponible",
-    "busy": "Occupé",
-    "types": {
-      "chair": "Chaise Barbier",
-      "desk": "Table Manucure",
-      "table": "Table Massage"
-    }
   }
 }

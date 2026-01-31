@@ -73,20 +73,5 @@
     "price": "Soum",
     "duration": "Wadh'a (d9i9a)",
     "description": "Wasf"
-  },
-  "stations": {
-    "title": "Stations Mubachra",
-    "stationManager": "Moudir el Stations",
-    "addStation": "Zid Station",
-    "stationName": "Esem el Station",
-    "type": "Naw'",
-    "assignStaff": "Hatt Staff",
-    "available": "Fari8",
-    "busy": "Machghoul",
-    "types": {
-      "chair": "Korsi Hjeema",
-      "desk": "Tawlet Dhwaffar",
-      "table": "Tawlet Massage"
-    }
   }
 }

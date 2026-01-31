@@ -1,293 +1,182 @@
-# Barber Salon Management System
+# Supabase CLI (v1)
 
-## Architecture Overview
+[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main)
 
-```
-barber-frontend/     - React + TypeScript + Vite frontend
-barber-backend/      - Supabase configuration & Edge Functions
-├── supabase/
-│   ├── migrations/   - SQL database schemas
-│   └── functions/    - Edge Functions for backend operations
-```
+[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
 
-## Database Schema
+This repository contains all the functionality for Supabase CLI.
 
-### Salons Table
-```sql
-CREATE TABLE salons (
-  id UUID PRIMARY KEY,
-  name TEXT,
-  owner_email TEXT,
-  created_at TIMESTAMP,
-  updated_at TIMESTAMP
-)
-```
+- [x] Running Supabase locally
+- [x] Managing database migrations
+- [x] Creating and deploying Supabase Functions
+- [x] Generating types directly from your database schema
+- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
 
-### Staff Table
-```sql
-CREATE TABLE staff (
-  id UUID PRIMARY KEY (references auth.users),
-  full_name TEXT,
-  email TEXT UNIQUE,
-  specialty TEXT,
-  status TEXT,
-  avatar_url TEXT,
-  salon_id UUID (references salons),
-  created_at TIMESTAMP,
-  updated_at TIMESTAMP
-)
-```
+## Getting started
 
-## Row-Level Security (RLS)
+### Install the CLI
 
-All tables have RLS enabled:
-- **Owners** can only see/manage staff for their salon
-- **Staff** can only view their own profile
-- **Salon creation** restricted to authenticated users
-
-## Backend API Endpoints
-
-### Edge Functions
-
-#### 1. Create Staff
-```bash
-POST /functions/v1/create-staff
-Content-Type: application/json
-
-{
-  "fullName": "John Smith",
-  "email": "john@barbershop.com",
-  "password": "securepass123",
-  "specialty": "Haircut",
-  "salonId": "uuid-here"
-}
-```
-
-**Response:**
-```json
-{
-  "data": {
-    "id": "user-uuid",
-    "full_name": "John Smith",
-    "email": "john@barbershop.com",
-    "specialty": "Haircut",
-    "salon_id": "salon-uuid",
-    "status": "Active"
-  },
-  "message": "Staff member created successfully"
-}
-```
-
-#### 2. Reset Staff Password
-```bash
-POST /functions/v1/reset-staff-password
-Content-Type: application/json
-
-{
-  "email": "john@barbershop.com"
-}
-```
-
-## Frontend Features
-
-### Authentication
-- Real Supabase authentication for owners
-- Session persistence
-- Logout functionality
-
-### Staff Management
-- ✅ Create staff (owner only)
-- ✅ Read/View staff list
-- ✅ Update staff info
-- ✅ Delete staff
-- ✅ View staff stats (earnings, appointments)
-- ✅ Manage clients assigned to staff
-
-### UI/UX
-- Responsive grid layout
-- Compact card design to prevent text overflow
-- Dark mode support
-- Real-time status updates
-
-## Setup Instructions
-
-### 1. Start Supabase Local Environment
+Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
 
 ```bash
-# Install Supabase CLI if not already installed
-# For macOS/Linux:
-brew install supabase/tap/supabase
-
-# Start local Supabase
-cd barber-backend
-supabase start
+npm i supabase --save-dev
 ```
 
-### 2. Create Demo Owner Account
+To install the beta release channel:
 
 ```bash
-# Use Supabase Studio (http://localhost:54321)
-# Go to Auth > Users > Create new user
-# Email: owner@barbershop.com
-# Password: password123
+npm i supabase@beta --save-dev
 ```
 
-### 3. Create Salon via SQL
+When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
+
+```
+NODE_OPTIONS=--no-experimental-fetch yarn add supabase
+```
+
+> **Note**
+For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
+
+<details>
+  <summary><b>macOS</b></summary>
+
+  Available via [Homebrew](https://brew.sh). To install:
+
+  ```sh
+  brew install supabase/tap/supabase
+  ```
+
+  To install the beta release channel:
+  
+  ```sh
+  brew install supabase/tap/supabase-beta
+  brew link --overwrite supabase-beta
+  ```
+  
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Windows</b></summary>
+
+  Available via [Scoop](https://scoop.sh). To install:
+
+  ```powershell
+  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+  scoop install supabase
+  ```
+
+  To upgrade:
+
+  ```powershell
+  scoop update supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Linux</b></summary>
+
+  Available via [Homebrew](https://brew.sh) and Linux packages.
+
+  #### via Homebrew
+
+  To install:
+
+  ```sh
+  brew install supabase/tap/supabase
+  ```
+
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+
+  #### via Linux packages
+
+  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
+
+  ```sh
+  sudo apk add --allow-untrusted <...>.apk
+  ```
+
+  ```sh
+  sudo dpkg -i <...>.deb
+  ```
+
+  ```sh
+  sudo rpm -i <...>.rpm
+  ```
+
+  ```sh
+  sudo pacman -U <...>.pkg.tar.zst
+  ```
+</details>
+
+<details>
+  <summary><b>Other Platforms</b></summary>
+
+  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
+
+  ```sh
+  go install github.com/supabase/cli@latest
+  ```
+
+  Add a symlink to the binary in `$PATH` for easier access:
+
+  ```sh
+  ln -s "$(go env GOPATH)/cli" /usr/bin/supabase
+  ```
+
+  This works on other non-standard Linux distros.
+</details>
+
+<details>
+  <summary><b>Community Maintained Packages</b></summary>
+
+  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
+  To install in your working directory:
+
+  ```bash
+  pkgx install supabase
+  ```
+
+  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
+</details>
+
+### Run the CLI
 
 ```bash
-# Run in Supabase Studio Query Editor:
-INSERT INTO salons (name, owner_email) 
-VALUES ('Main Barber Shop', 'owner@barbershop.com');
+supabase bootstrap
 ```
 
-### 4. Start Frontend
+Or using npx:
 
 ```bash
-cd barber-frontend
-npm install
-npm run dev
+npx supabase bootstrap
 ```
 
-**Frontend runs on:** http://localhost:3000
+The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
 
-### 5. Login & Test
+## Docs
 
+Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
+
+## Breaking changes
+
+We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
+
+However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
+
+## Developing
+
+To run from source:
+
+```sh
+# Go >= 1.22
+go run . help
 ```
-Email: owner@barbershop.com
-Password: password123
-```
-
-Then:
-1. Navigate to Staff Management
-2. Click "Add New Staff"
-3. Create test staff members
-4. View their stats and clients
-
-## Testing Edge Functions
-
-```bash
-# Test create-staff endpoint
-curl -X POST http://localhost:54321/functions/v1/create-staff \
-  -H "Content-Type: application/json" \
-  -d '{
-    "fullName": "Jane Doe",
-    "email": "jane@barbershop.com",
-    "password": "jane123456",
-    "specialty": "Coloring",
-    "salonId": "<salon-uuid-here>"
-  }'
-```
-
-## Environment Variables
-
-### Frontend (.env.local)
-```
-VITE_SUPABASE_URL=http://127.0.0.1:54321
-VITE_SUPABASE_ANON_KEY=REDACTED
-```
-
-### Backend (config.json in Supabase)
-```
-SUPABASE_URL=http://127.0.0.1:54321
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-```
-
-## Docker Quickstart (frontend + Supabase)
-1) Copy env template and set secrets (keys signed with the same JWT secret):
-```bash
-cp .env.local.example .env.local
-# edit .env.local -> POSTGRES_PASSWORD, JWT_SECRET, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
-```
-2) Build and start everything:
-```bash
-docker compose --env-file .env.local up --build
-```
-Services:
-- Frontend: http://localhost:3000
-- Supabase gateway (auth/rest/realtime/storage): http://localhost:54321
-- Postgres: localhost:5432
-- Supabase Studio: http://localhost:54323
-
-## Supabase client env (Vite)
-- Use `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (already wired in `supabaseClient.ts` and the Dockerfile).
-- Do **not** use Next.js names (`NEXT_PUBLIC_*`) in this Vite app.
-
-## Connectivity smoke test (Tenants)
-- Component: `src/components/TestTenants.tsx`
-- Renders on the dashboard in `App.tsx`.
-- Runs `supabase.from('Tenants').select('*').limit(1)` and shows:
-  - Data row (success), or
-  - “Supabase client not initialized” (env missing), or
-  - “No rows returned…RLS may be blocking” (policy issue).
-
-## RLS debug steps (multi-tenant)
-1) Verify data exists: `select * from "Tenants" limit 1;`
-2) Compare anon vs service role:
-```bash
-curl -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" http://localhost:54321/rest/v1/Tenants?select=*&limit=1
-curl -H "apikey: $SUPABASE_ANON_KEY" http://localhost:54321/rest/v1/Tenants?select=*&limit=1
-```
-   - If service-role returns rows but anon returns empty/403, RLS is blocking.
-3) Ensure JWT claims include the tenant identifier your policies expect (e.g., `tenant_id`).
-4) Example policy pattern:
-```sql
-create policy "tenant_read" on "Tenants"
-for select using ( tenant_id::text = current_setting('request.jwt.claims', true)::json->>'tenant_id' );
-```
-
-## Troubleshooting
-
-### Staff not loading?
-- Check if Supabase is running: `supabase status`
-- Verify owner_email matches salon record
-- Check RLS policies are correct
-
-### Can't create staff?
-- Ensure owner is authenticated
-- Verify salonId exists in database
-- Check Edge Function logs: `supabase functions list`
-
-### Authentication fails?
-- Clear browser cookies
-- Check email/password in Supabase Auth
-- Verify CORS settings
-
-## Demo Data
-
-### Owner Account
-- Email: `owner@barbershop.com`
-- Password: `password123`
-- Salon: Main Barber Shop
-
-### Test Staff (created via UI)
-- Staff members auto-create with given credentials
-- Can immediately login as staff
-- View earnings and client assignments
-
-## Feature Checklist
-
-- [x] Real Supabase authentication
-- [x] Owner account creation
-- [x] Staff CRUD operations
-- [x] Edge Functions for secure staff creation
-- [x] Row-Level Security policies
-- [x] Real-time stats tracking
-- [x] Client management
-- [x] Responsive card layout
-- [x] Dark mode support
-- [x] Mock data fallback
-
-## Next Steps
-
-1. Deploy to production (Vercel for frontend, Supabase cloud for backend)
-2. Add payment integration
-3. Implement appointment booking
-4. Add email notifications
-5. Mobile app for staff members
-
-## Support
-
-For issues or questions, check:
-- Supabase logs: `supabase logs`
-- Frontend console: Browser DevTools
-- Network requests: Check Chrome DevTools Network tab
