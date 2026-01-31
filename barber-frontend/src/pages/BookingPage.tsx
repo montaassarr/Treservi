@@ -7,7 +7,7 @@ import { Step2DateTime } from '../components/booking/Step2DateTime';
 import { Step3Service } from '../components/booking/Step3Service';
 import { Step4Contact } from '../components/booking/Step4Contact';
 import { BookingState, Language, Translations, BookingStaff as Staff, BookingService as Service } from '../types';
-import { ArrowLeft, CheckCircle, MessageCircle, Globe } from 'lucide-react';
+import { ArrowLeft, CheckCircle, MessageCircle, Globe, MapPin, Navigation } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from '../services/supabaseClient';
 import { fetchStaff } from '../services/staffService';
@@ -344,6 +344,14 @@ export default function BookingPage() {
   }
 
   if (bookingCompleted) {
+    const hasCoordinates = salon?.latitude && salon?.longitude;
+    const hasAddress = salon?.address || salon?.city;
+    const googleMapsUrl = hasCoordinates 
+      ? `https://www.google.com/maps/dir/?api=1&destination=${salon?.latitude},${salon?.longitude}`
+      : hasAddress 
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([salon?.address, salon?.city, salon?.country].filter(Boolean).join(', '))}`
+        : null;
+    
     return (
       <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center p-8 text-center" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
         {/* @ts-ignore */}
@@ -356,10 +364,37 @@ export default function BookingPage() {
             <CheckCircle className="w-10 h-10 text-green-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">{t.bookingReceived}</h1>
-          <p className="text-gray-500 mb-6 leading-relaxed">
+          <p className="text-gray-500 mb-4 leading-relaxed">
             {t.bookingMessage} <b>{booking.customerPhone}</b>.
           </p>
-          <div className="flex justify-center mb-6">
+          
+          {/* Salon Address Section */}
+          {hasAddress && (
+            <div className="mb-4 p-4 bg-gray-50 rounded-2xl">
+              <div className="flex items-center justify-center gap-2 text-gray-700 mb-2">
+                <MapPin className="w-5 h-5 text-red-500" />
+                <span className="font-semibold">{lang === 'ar' ? 'العنوان' : lang === 'fr' ? 'Adresse' : 'Location'}</span>
+              </div>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                {[salon?.address, salon?.city, salon?.country].filter(Boolean).join(', ')}
+              </p>
+            </div>
+          )}
+
+          {/* Google Maps Button */}
+          {googleMapsUrl && (
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-700 transition-colors mb-4"
+            >
+              <Navigation className="w-5 h-5" />
+              {lang === 'ar' ? 'افتح خرائط جوجل' : lang === 'fr' ? 'Ouvrir Google Maps' : 'Open Google Maps'}
+            </a>
+          )}
+
+          <div className="flex justify-center mb-4">
             <MessageCircle className="w-6 h-6 text-green-500 animate-bounce" />
           </div>
           <button 

@@ -15,6 +15,11 @@ interface Salon {
   address?: string;
   city?: string;
   country?: string;
+  opening_time?: string;
+  closing_time?: string;
+  open_days?: string[];
+  latitude?: number;
+  longitude?: number;
   total_revenue: number;
   created_at: string;
   updated_at: string;

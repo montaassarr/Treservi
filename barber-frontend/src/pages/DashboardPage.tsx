@@ -6,6 +6,7 @@ import StaffDashboard from '../components/StaffDashboard';
 import Appointments from '../components/Appointments';
 import Services from '../components/Services';
 import Staff from '../components/Staff';
+import Settings from '../components/Settings';
 import BottomNavigation from '../components/BottomNavigation';
 import { useSalon } from '../context/SalonContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -390,6 +391,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           {activeTab === 'appointments' && userRole === 'owner' && <Appointments salonId={salonId} />}
           {activeTab === 'services' && userRole === 'owner' && <Services salonId={salonId} />}
           {activeTab === 'staff' && userRole === 'owner' && <Staff salonId={salonId} />}
+          {activeTab === 'settings' && userRole === 'owner' && <Settings salonId={salonId} />}
           {/* AI Assistant removed */}
         </div>
       </div>
