@@ -15,13 +15,13 @@ interface Props {
 }
 
 export const Step2DateTime: React.FC<Props> = ({ staff, selectedDate, selectedTime, bookedTimes, onDateSelect, onTimeSelect, t, lang }) => {
-  const [dateIndex, setDateIndex] = useState(0); // 0 = today, 1 = tomorrow, etc.
+  const [dateIndex, setDateIndex] = useState(0); // 0 = today, 1 = tomorrow
   
-  // Get available dates (today and next 6 days)
+  // Get available dates (today and tomorrow only)
   const getAvailableDates = () => {
     const dates = [];
     const today = new Date();
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 2; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       dates.push(date);
