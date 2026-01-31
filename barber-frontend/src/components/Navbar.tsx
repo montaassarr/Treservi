@@ -143,60 +143,19 @@ const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-4 w-96 bg-white/95 dark:bg-treservi-card-dark/95 backdrop-blur-xl rounded-[24px] shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-200 ring-1 ring-black/5 z-50">
+              <div className="absolute right-0 mt-4 w-80 bg-white/95 dark:bg-treservi-card-dark/95 backdrop-blur-xl rounded-[24px] shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-200 ring-1 ring-black/5 z-50">
                 <div className="p-4 border-b border-gray-100 dark:border-gray-700/50">
-                  <h3 className="font-bold text-sm">Appointment Notifications</h3>
+                  <h3 className="font-bold text-sm">Notifications</h3>
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {notifications.length === 0 ? (
                     <div className="p-4 text-sm text-gray-500">No new appointments.</div>
                   ) : (
-                    notifications.slice(0, 8).map((item) => (
-                      <div key={item.id} className="px-4 py-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.title}</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">{item.subtitle}</p>
-                        
-                        {/* Expanded Details */}
-                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-1 text-xs">
-                          {item.date && item.time && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">📅 Time:</span>
-                              <span className="font-medium text-gray-700 dark:text-gray-300">{item.date} at {item.time}</span>
-                            </div>
-                          )}
-                          {item.customerName && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">👤 Customer:</span>
-                              <span className="font-medium text-gray-700 dark:text-gray-300">{item.customerName}</span>
-                            </div>
-                          )}
-                          {item.customerPhone && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">📞 Phone:</span>
-                              <span className="font-medium text-gray-700 dark:text-gray-300">{item.customerPhone}</span>
-                            </div>
-                          )}
-                          {item.serviceName && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">💇 Service:</span>
-                              <span className="font-medium text-gray-700 dark:text-gray-300">{item.serviceName}</span>
-                            </div>
-                          )}
-                          {item.staffName && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">👨‍💼 Staff:</span>
-                              <span className="font-medium text-gray-700 dark:text-gray-300">{item.staffName}</span>
-                            </div>
-                          )}
-                          {item.amount && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">💰 Price:</span>
-                              <span className="font-bold text-emerald-600 dark:text-emerald-400">{item.amount}</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <p className="text-[11px] text-gray-400 mt-2">Notified: {item.timestamp}</p>
+                    notifications.slice(0, 10).map((item) => (
+                      <div key={item.id} className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">{item.title}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">{item.subtitle}</p>
+                        <p className="text-[11px] text-gray-400 mt-1">{item.timestamp}</p>
                       </div>
                     ))
                   )}

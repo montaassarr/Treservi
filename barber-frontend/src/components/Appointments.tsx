@@ -281,9 +281,10 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
         </select>
       </div>
 
-      {/* Appointments Table */}
-      <div className={`${clayCard} p-8`}>
-        <div className="overflow-x-auto">
+      {/* Appointments - Table on Desktop, Cards on Mobile */}
+      <div className={`${clayCard} p-6 md:p-8`}>
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="text-gray-400 text-sm border-b border-gray-100 dark:border-gray-800">
@@ -382,6 +383,93 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="sm:hidden space-y-3">
+          {filteredAppointments.length === 0 ? (
+            <div className="py-12 text-center">
+              <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+              <p className="text-lg font-semibold text-gray-400">No appointments</p>
+            </div>
+          ) : (
+            filteredAppointments.map(apt => (
+              <div key={apt.id} className="bg-gray-50 dark:bg-white/5 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+                {/* Header: Time, Name, Status */}
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{apt.appointment_time}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                        {apt.customer_name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{apt.customer_name}</span>
+                    </div>
+                  </div>
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${
+                      apt.status === 'Confirmed'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : apt.status === 'Pending'
+                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        : apt.status === 'Completed'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    {apt.status}
+                  </span>
+                </div>
+
+                {/* Details: Service, Staff, Phone - Vertical Stack */}
+                <div className="space-y-2 text-sm border-t border-gray-200 dark:border-gray-700 pt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 text-xs">Service</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{apt.service?.name || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 text-xs">Staff</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{apt.staff?.full_name || 'Unassigned'}</span>
+                  </div>
+                  {apt.customer_phone && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-500 text-xs">Phone</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{apt.customer_phone}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 text-xs">Date</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{apt.appointment_date}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 text-xs">Amount</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatPrice(Number(apt.amount))}</span>
+                  </div>
+                </div>
+
+                {/* Actions: Edit/Delete at Bottom */}
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => handleEdit(apt)}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors text-sm font-medium"
+                  >
+                    <Pencil size={16} />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(apt.id, apt.customer_name)}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm font-medium"
+                  >
+                    <Trash2 size={16} />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
