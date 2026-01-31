@@ -11,7 +11,7 @@ import { MoreHorizontal, ArrowUpRight, ArrowRight, Star, Plus, Pencil, Trash2, X
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../services/supabaseClient';
 import ResponsiveGrid from './ResponsiveGrid';
-import MiniCalendar from './MiniCalendar';
+import DailyScheduleView from './DailyScheduleView';
 import { Barber, Appointment, Comment, ChartData } from '../types';
 import { deleteAppointment } from '../services/appointmentService';
 import { formatPrice } from '../utils/format';
@@ -75,6 +75,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
     status: 'Pending',
     amount: ''
   });
+  const [showScheduleView, setShowScheduleView] = useState(false);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -408,8 +409,24 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
               <p className="text-gray-400 text-xs sm:text-sm mt-4 sm:mt-6 md:mt-8">{stats.bookings} {t('dashboard.newCustomers')}</p>
             </div>
 
-            {/* Mini Calendar Card */}
-            <MiniCalendar salonId={salonId} userRole="owner" userId={userId} />
+            {/* Schedule Card */}
+            <button
+              onClick={() => setShowScheduleView(true)}
+              className="relative bg-gradient-to-br from-[#FFF9F0] to-[#FFF5E6] dark:from-gray-800 dark:to-gray-900 rounded-2xl p-4 shadow-soft-glow hover:shadow-lg transition-all group border border-orange-100 dark:border-gray-700"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-[#8B7355]/10 rounded-xl p-3 group-hover:bg-[#8B7355]/20 transition-colors">
+                  <Calendar className="w-6 h-6 text-[#8B7355]" />
+                </div>
+                <div className="text-left">
+                  <p className="text-xs text-[#8B7355] font-medium">Today&apos;s Schedule</p>
+                  <p className="text-2xl font-bold text-[#1F1F1F] dark:text-white">{new Date().getDate()}</p>
+                  <p className="text-xs text-[#8B7355]">
+                    {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+            </button>
           </ResponsiveGrid>
 
           {/* Analytics Chart - Responsive Height */}
@@ -778,6 +795,16 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
             </form>
           </div>
         </div>
+      )}
+
+      {/* Daily Schedule View Modal */}
+      {showScheduleView && (
+        <DailyScheduleView
+          salonId={salonId}
+          userRole="owner"
+          userId={userId}
+          onClose={() => setShowScheduleView(false)}
+        />
       )}
     </div>
   );

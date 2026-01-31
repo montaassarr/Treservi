@@ -23,7 +23,7 @@ import { fetchServices } from '../services/serviceService';
 import { fetchStaff } from '../services/staffService';
 import { formatPrice } from '../utils/format';
 import { supabase } from '../services/supabaseClient';
-import MiniCalendar from './MiniCalendar';
+import DailyScheduleView from './DailyScheduleView';
 
 interface AppointmentsProps {
   salonId: string;
@@ -39,6 +39,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [showScheduleView, setShowScheduleView] = useState(false);
 
   const [formData, setFormData] = useState<Partial<CreateAppointmentInput>>({
     customer_name: '',
@@ -245,8 +246,14 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* Mini Calendar */}
-          <MiniCalendar salonId={salonId} userRole="owner" />
+          {/* Schedule View Button */}
+          <button
+            onClick={() => setShowScheduleView(true)}
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-br from-[#FFF9F0] to-[#FFF5E6] dark:from-gray-800 dark:to-gray-900 border border-orange-200 dark:border-gray-700 text-[#8B7355] dark:text-gray-300 font-medium hover:shadow-lg transition-all"
+          >
+            <Calendar className="w-5 h-5" />
+            <span className="hidden sm:inline">Schedule</span>
+          </button>
           
           {/* Add Button */}
           <button
@@ -691,6 +698,15 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Daily Schedule View Modal */}
+      {showScheduleView && (
+        <DailyScheduleView
+          salonId={salonId}
+          userRole="owner"
+          onClose={() => setShowScheduleView(false)}
+        />
       )}
     </div>
   );
