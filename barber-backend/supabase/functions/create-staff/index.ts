@@ -34,11 +34,59 @@ serve(async (req) => {
 
     const { fullName, email, password, specialty, salonId }: CreateStaffRequest = await req.json()
 
+    const authHeader = req.headers.get('Authorization') ?? ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
+
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: missing access token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { data: authUserData, error: userError } = await supabaseClient.auth.getUser(token)
+
+    if (userError || !authUserData?.user?.email) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: invalid access token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Validate input
     if (!fullName || !email || !password || !salonId) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { data: salonData, error: salonError } = await supabaseClient
+      .from('salons')
+      .select('id, owner_email')
+      .eq('id', salonId)
+      .maybeSingle()
+
+    if (salonError || !salonData) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid salon ID' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { data: ownerStaffData } = await supabaseClient
+      .from('staff')
+      .select('role')
+      .eq('id', authUserData.user.id)
+      .eq('salon_id', salonId)
+      .maybeSingle()
+
+    const isOwner = salonData.owner_email === authUserData.user.email || ownerStaffData?.role === 'owner'
+
+    if (!isOwner) {
+      return new Response(
+        JSON.stringify({ error: 'Access denied: only salon owners can create staff' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 

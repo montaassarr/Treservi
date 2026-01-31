@@ -31,9 +31,22 @@ export const createStaff = async (payload: CreateStaffInput) => {
       return { data: null, error: new Error('Supabase client not initialized') };
     }
 
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      return { data: null, error: sessionError };
+    }
+
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      return { data: null, error: new Error('Not authenticated. Please sign in again.') };
+    }
+
     // Call Edge Function if Supabase available
     const { data, error } = await supabase.functions.invoke('create-staff', {
       body: payload,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
 
     if (error) return { data: null, error };
