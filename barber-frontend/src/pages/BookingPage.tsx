@@ -493,6 +493,8 @@ export default function BookingPage() {
                 onTimeSelect={(t) => setBooking(prev => ({ ...prev, selectedTime: t }))}
                 t={t}
                 lang={lang}
+                openingTime={salon?.opening_time || '09:00'}
+                closingTime={salon?.closing_time || '18:00'}
               />
             )}
 

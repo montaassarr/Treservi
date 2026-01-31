@@ -12,11 +12,39 @@ interface Props {
   onTimeSelect: (time: string) => void;
   t: Translations;
   lang: string;
+  openingTime?: string;
+  closingTime?: string;
 }
 
-export const Step2DateTime: React.FC<Props> = ({ staff, selectedDate, selectedTime, bookedTimes, onDateSelect, onTimeSelect, t, lang }) => {
+export const Step2DateTime: React.FC<Props> = ({ staff, selectedDate, selectedTime, bookedTimes, onDateSelect, onTimeSelect, t, lang, openingTime = '09:00', closingTime = '18:00' }) => {
   const [dateIndex, setDateIndex] = useState(0); // 0 = today, 1 = tomorrow
   
+  // Generate time slots based on salon opening/closing hours
+  const generateTimeSlots = (start: string, end: string): string[] => {
+    const slots: string[] = [];
+    const [startHour, startMin] = start.split(':').map(Number);
+    const [endHour, endMin] = end.split(':').map(Number);
+    
+    let currentHour = startHour;
+    let currentMin = startMin;
+    
+    const endMinutes = endHour * 60 + endMin;
+    
+    while (currentHour * 60 + currentMin < endMinutes) {
+      const timeStr = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`;
+      slots.push(timeStr);
+      
+      // Add 30 minutes
+      currentMin += 30;
+      if (currentMin >= 60) {
+        currentMin = 0;
+        currentHour++;
+      }
+    }
+    
+    return slots;
+  };
+
   // Get available dates (today and tomorrow only)
   const getAvailableDates = () => {
     const dates = [];
@@ -54,11 +82,8 @@ export const Step2DateTime: React.FC<Props> = ({ staff, selectedDate, selectedTi
     ? selectedDate.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })
     : tunisNow.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' });
 
-  const timeSlots = [
-    "09:00", "09:30", "10:00", "10:30",
-    "11:00", "11:30", "13:00", "13:30",
-    "14:00", "14:30", "15:00", "15:30"
-  ];
+  // Generate time slots from salon's opening to closing time
+  const timeSlots = generateTimeSlots(openingTime, closingTime);
 
   const handleDateChange = (index: number) => {
     setDateIndex(index);
