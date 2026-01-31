@@ -158,6 +158,17 @@ const AppRoutes: React.FC = () => {
     };
   }, [fetchUserData]);
 
+  // Save current route for PWA state restoration
+  useEffect(() => {
+    const path = location.pathname;
+    // Extract salon slug from path like /hamdi-salon/dashboard
+    const match = path.match(/^\/([^\/]+)\/(dashboard|book|appointments|staff|services|settings)/);
+    if (match) {
+      const [, salonSlug, route] = match;
+      saveAppState(`/${route}`, salonSlug);
+    }
+  }, [location.pathname]);
+
   const handleLogin = useCallback(async (email: string) => {
     // This is essentially a callback for UI updates, but auth state is handled by listener
     setUserEmail(email);
@@ -192,10 +203,11 @@ const AppRoutes: React.FC = () => {
   // Auto-redirect logic for root path with salon detection (Deep Linking)
   useEffect(() => {
     const path = location.pathname;
+    const params = new URLSearchParams(location.search);
+    const isPWALaunch = params.get('source') === 'pwa' || window.matchMedia('(display-mode: standalone)').matches;
     
     // Root path - check for salon param or restore previous state
     if (path === '/') {
-      const params = new URLSearchParams(location.search);
       const deepLink = parseDeepLink(params);
       
       // If salon param in URL (from QR code), save and redirect
@@ -208,9 +220,17 @@ const AppRoutes: React.FC = () => {
       }
       
       // Try to restore previous app state (like Facebook does)
+      // This works for PWA launched from home screen
       const savedState = restoreAppState();
       if (savedState && savedState.salonSlug) {
+        console.log('[App] Restoring state to:', savedState);
         navigate(`/${savedState.salonSlug}${savedState.route}`, { replace: true });
+        return;
+      }
+      
+      // If user is authenticated and PWA, go to dashboard
+      if (isPWALaunch && isAuthenticated && !isLoadingAuth && userSalonSlug) {
+        navigate(`/${userSalonSlug}/dashboard`, { replace: true });
         return;
       }
       
