@@ -174,44 +174,47 @@ export default function BookingPage() {
         return;
       }
       
-      // Load staff and services in parallel
-      Promise.all([
-        (async () => {
-          const { data: staff, error: staffError } = await fetchStaff(salon.id);
-          if (staff) {
-            const mappedStaff: Staff[] = staff.map(s => ({
-              id: s.id,
-              name: s.full_name,
-              role: s.specialty || 'Stylist',
-              rating: 0,
-              price: 0,
-              image: s.avatar_url || getStaffAvatar(s.full_name),
-              bgColor: 'bg-gray-50', 
-              category: (s.specialty === 'Barber' || s.specialty === 'Colorist') ? s.specialty : 'Stylist'
-            }));
-            setStaffData(mappedStaff);
-          }
-          setStaffLoaded(true);
-        })(),
-        (async () => {
-          const { data: services, error: serviceError } = await fetchServices(salon.id);
-          if (services) {
-            const mappedServices: Service[] = services.map(s => ({
-              id: s.id,
-              name: s.name,
-              duration: s.duration + ' mins',
-              price: s.price,
-              description: s.description || ''
-            }));
-            setServicesData(mappedServices);
-          }
-          setServicesLoaded(true);
-        })()
-      ]).then(() => {
+      // Load staff FIRST (priority) - show to user immediately
+      try {
+        const { data: staff, error: staffError } = await fetchStaff(salon.id);
+        if (staff) {
+          const mappedStaff: Staff[] = staff.map(s => ({
+            id: s.id,
+            name: s.full_name,
+            role: s.specialty || 'Stylist',
+            rating: 0,
+            price: 0,
+            image: s.avatar_url || getStaffAvatar(s.full_name),
+            bgColor: 'bg-gray-50', 
+            category: (s.specialty === 'Barber' || s.specialty === 'Colorist') ? s.specialty : 'Stylist'
+          }));
+          setStaffData(mappedStaff);
+        }
+        setStaffLoaded(true);
+        setLoading(false); // Show UI immediately after staff loads
+      } catch (err) {
+        console.error('Error loading staff:', err);
         setLoading(false);
-      }).catch(() => {
-        setLoading(false);
-      });
+      }
+      
+      // Load services in background (not blocking UI)
+      try {
+        const { data: services, error: serviceError } = await fetchServices(salon.id);
+        if (services) {
+          const mappedServices: Service[] = services.map(s => ({
+            id: s.id,
+            name: s.name,
+            duration: s.duration + ' mins',
+            price: s.price,
+            description: s.description || ''
+          }));
+          setServicesData(mappedServices);
+        }
+        setServicesLoaded(true);
+      } catch (err) {
+        console.error('Error loading services:', err);
+        setServicesLoaded(true);
+      }
     }
 
     loadData();
@@ -338,15 +341,52 @@ export default function BookingPage() {
     setLanguage(newLang); // Sync with global context
   };
 
-  if (loading && staffData.length === 0 && servicesData.length === 0) {
+  if (loading && !staffLoaded) {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50">
-            <div className="text-center">
-              <div className="inline-block">
-                <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-gray-900"></div>
-              </div>
-              <p className="mt-6 text-gray-600 font-medium">Loading salon details...</p>
+        <div className="min-h-screen bg-[#FAFAFA] font-sans" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          {/* Header skeleton */}
+          <header className="fixed top-0 w-full z-40 bg-white/80 backdrop-blur-md px-6 py-4 flex justify-between items-center shadow-sm">
+            <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+            <div className="flex gap-2">
+              {[1, 2, 3, 4].map(s => (
+                <div key={s} className="h-2 w-2 rounded-full bg-gray-200 animate-pulse" />
+              ))}
             </div>
+            <div className="w-16 h-8 bg-gray-200 rounded-full animate-pulse" />
+          </header>
+          
+          {/* Content skeleton */}
+          <main className="pt-24 px-6 max-w-md mx-auto">
+            <div className="space-y-6">
+              {/* Title skeleton */}
+              <div className="space-y-2">
+                <div className="h-8 w-48 bg-gray-200 rounded-lg animate-pulse" />
+                <div className="h-4 w-32 bg-gray-100 rounded animate-pulse" />
+              </div>
+              
+              {/* Filter chips skeleton */}
+              <div className="flex gap-3">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="h-10 w-20 bg-gray-200 rounded-full animate-pulse" />
+                ))}
+              </div>
+              
+              {/* Staff cards skeleton */}
+              <div className="space-y-4">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="bg-white p-5 rounded-[32px] flex items-center gap-4 animate-pulse">
+                    <div className="w-16 h-16 bg-gray-200 rounded-2xl" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-5 w-32 bg-gray-200 rounded" />
+                      <div className="h-4 w-20 bg-gray-100 rounded" />
+                      <div className="h-4 w-24 bg-gray-200 rounded" />
+                    </div>
+                    <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </main>
         </div>
     );
   }
