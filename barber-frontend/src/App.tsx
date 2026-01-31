@@ -92,6 +92,23 @@ const AppRoutes: React.FC = () => {
     }
   }, []);
 
+  // Track route changes to save state for PWA restoration
+  useEffect(() => {
+    if (location.pathname !== '/' && !location.pathname.includes('/login') && !location.pathname.startsWith('/admin')) {
+      const pathParts = location.pathname.split('/');
+      // Expected format: /:salonSlug/...
+      if (pathParts.length > 1 && pathParts[1]) {
+          const possibleSlug = pathParts[1];
+          // Get the rest of the path after slug
+          const remainingPath = '/' + pathParts.slice(2).join('/');
+          
+          if (possibleSlug) {
+             saveAppState(remainingPath, possibleSlug);
+          }
+      }
+    }
+  }, [location.pathname]);
+
   useEffect(() => {
     let mounted = true;
 

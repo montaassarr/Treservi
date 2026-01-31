@@ -6,7 +6,17 @@ const STATIC_ASSETS = [
 ];
 
 // Navigation routes that should return index.html (SPA routing)
-const SPA_ROUTES = ['/book', '/dashboard', '/login', '/settings', '/appointments', '/staff', '/services'];
+const SPA_ROUTES = [
+  '/book', 
+  '/dashboard', 
+  '/login', 
+  '/settings', 
+  '/appointments', 
+  '/staff', 
+  '/services',
+  '/salon', // Catch generic salon paths
+  '/s/',     // Common short path if used
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -36,9 +46,11 @@ self.addEventListener('fetch', (event) => {
   // Handle SPA navigation - return index.html for app routes
   if (event.request.mode === 'navigate') {
     // Check if it's an app route (SPA navigation)
-    const isAppRoute = SPA_ROUTES.some(route => url.pathname.startsWith(route)) || url.pathname === '/';
+    // Return index.html for all navigation requests except those that look like files or API calls
+    const isApi = url.pathname.startsWith('/api') || url.pathname.startsWith('/supadev');
+    const isFile = url.pathname.includes('.') && !url.pathname.startsWith('/salon'); // exclude /salon in case it has dot
     
-    if (isAppRoute) {
+    if (!isApi && !isFile) {
       event.respondWith(
         fetch(event.request)
           .catch(() => caches.match('/index.html'))

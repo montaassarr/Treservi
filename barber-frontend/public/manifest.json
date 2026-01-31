@@ -2,7 +2,6 @@
   "name": "Treservi - Barber Shop Booking",
   "short_name": "Treservi",
   "description": "Fast & reliable booking for barber shops. Works offline too!",
-  "start_url": "/?source=pwa",
   "scope": "/",
   "id": "/",
   "display": "standalone",
