@@ -84,3 +84,37 @@ body {
   right: auto !important;
   left: 0 !important;
 }
+
+/* PWA Safe Area Support */
+:root {
+  --sat: env(safe-area-inset-top);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+  --sar: env(safe-area-inset-right);
+}
+
+/* Base adjustment for body */
+body {
+  padding-top: var(--sat);
+  padding-bottom: var(--sab);
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+/* Ensure full viewport height including safe areas */
+#root {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Fix fixed/sticky headers under status bar */
+.safe-top {
+  padding-top: max(var(--sat), 12px);
+}
+
+/* Fix fixed/sticky footers above home indicator */
+.safe-bottom {
+  padding-bottom: max(var(--sab), 12px);
+}
