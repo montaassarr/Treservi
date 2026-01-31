@@ -35,19 +35,27 @@ const defaultComments: Comment[] = [];
 const defaultAppointments: Appointment[] = [];
 
 interface DashboardProps {
+  salonId?: string;
+  userId?: string;
   userRole?: string;
-  // ...existing code...
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
+const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: propUserId, userRole = 'owner' }) => {
   const { t } = useLanguage();
   
   // State management
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [salonId, setSalonId] = useState<string>('');
+  const [salonId, setSalonId] = useState<string>(propSalonId || '');
+  const [userId, setUserId] = useState<string>(propUserId || '');
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<'7d' | '30d' | '90d' | '1y'>('7d');
+  
+  // Update state when props change
+  useEffect(() => {
+    if (propSalonId) setSalonId(propSalonId);
+    if (propUserId) setUserId(propUserId);
+  }, [propSalonId, propUserId]);
   
   // Data states with default values
   const [chartData, setChartData] = useState<ChartData[]>(defaultChartData);
@@ -87,6 +95,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
 
       if (userError || !userData || userData.role !== 'owner') throw new Error('Access denied: Not an owner');
       setSalonId(userData.salon_id);
+      setUserId(session.user.id);
 
       const calculateStartDate = () => {
         const now = new Date();
