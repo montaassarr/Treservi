@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Staff, Translations } from './types';
+import { BookingStaff as Staff, Translations } from '../../types';
 import { Star, ArrowUpRight, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 

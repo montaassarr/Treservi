@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Search, Globe, LogOut, Home, Calendar, Users, Settings, Briefcase, User, Info, CreditCard } from 'lucide-react';
-import { useLanguage, Language } from '../context/LanguageContext';
+import { useLanguage } from '../context/LanguageContext';
+import { Language } from '../types';
 
 interface NavbarProps {
   // Mobile Header Props

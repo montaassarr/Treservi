@@ -4,7 +4,7 @@ import fr from '../translations/fr.json';
 import tn from '../translations/tn.json';
 import ar from '../translations/ar.json';
 
-export type Language = 'en' | 'fr' | 'tn' | 'ar';
+import { Language } from '../types';
 
 const translations = {
   en,

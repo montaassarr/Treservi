@@ -1,5 +1,5 @@
 import React from 'react';
-import { Service, Translations } from './types';
+import { BookingService as Service, Translations } from '../../types';
 import { Clock, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 

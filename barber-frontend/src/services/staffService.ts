@@ -1,28 +1,13 @@
 import { supabase, hasSupabaseClient } from './supabaseClient';
 import { StaffMember, Client, CreateStaffInput, StaffStats } from '../types';
-import {
-  mockStaff,
-  mockClients,
-  mockAppointments,
-  calculateStaffStats,
-} from './mockData';
-
-// Store for mock data (simulating database)
-let staffStore = JSON.parse(JSON.stringify(mockStaff));
-let clientStore = JSON.parse(JSON.stringify(mockClients));
 
 // ============ STAFF CRUD ============
 
 export const fetchStaff = async (salonId?: string) => {
   try {
     if (!supabase || !hasSupabaseClient) {
-      // Return mock data if Supabase not available
-      return {
-        data: salonId
-          ? staffStore.filter((s: StaffMember) => s.salon_id === salonId)
-          : staffStore,
-        error: null,
-      };
+      console.error('Supabase client not initialized');
+      return { data: [], error: new Error('Supabase client not initialized') };
     }
 
     const query = supabase
@@ -36,26 +21,14 @@ export const fetchStaff = async (salonId?: string) => {
     return { data: (data as StaffMember[]) || [], error: null };
   } catch (err) {
     console.error('Error fetching staff:', err);
-    return { data: staffStore, error: err as Error };
+    return { data: [], error: err as Error };
   }
 };
 
 export const createStaff = async (payload: CreateStaffInput) => {
   try {
     if (!supabase || !hasSupabaseClient) {
-      // Create mock staff
-      const newStaff: StaffMember = {
-        id: `staff-${Date.now()}`,
-        full_name: payload.fullName,
-        email: payload.email,
-        specialty: payload.specialty,
-        status: 'Active',
-        avatar_url: `https://picsum.photos/id/${Math.floor(Math.random() * 500) + 10}/100/100`,
-        salon_id: payload.salonId || 'salon-1',
-        created_at: new Date().toISOString(),
-      };
-      staffStore.unshift(newStaff);
-      return { data: newStaff, error: null };
+      return { data: null, error: new Error('Supabase client not initialized') };
     }
 
     // Call Edge Function if Supabase available
@@ -74,11 +47,7 @@ export const createStaff = async (payload: CreateStaffInput) => {
 export const updateStaff = async (id: string, updates: Partial<StaffMember>) => {
   try {
     if (!supabase || !hasSupabaseClient) {
-      // Update mock staff
-      const idx = staffStore.findIndex((s: StaffMember) => s.id === id);
-      if (idx === -1) return { data: null, error: new Error('Staff not found') };
-      staffStore[idx] = { ...staffStore[idx], ...updates };
-      return { data: staffStore[idx], error: null };
+      return { data: null, error: new Error('Supabase client not initialized') };
     }
 
     const { data, error } = await supabase
@@ -99,9 +68,7 @@ export const updateStaff = async (id: string, updates: Partial<StaffMember>) => 
 export const deleteStaff = async (id: string) => {
   try {
     if (!supabase || !hasSupabaseClient) {
-      // Delete mock staff
-      staffStore = staffStore.filter((s: StaffMember) => s.id !== id);
-      return { data: { id }, error: null };
+      return { data: null, error: new Error('Supabase client not initialized') };
     }
 
     const { data, error } = await supabase
@@ -129,7 +96,7 @@ export const deleteStaff = async (id: string) => {
 export const resetStaffPassword = async (email: string) => {
   try {
     if (!supabase || !hasSupabaseClient) {
-      return { data: { message: 'Password reset email sent' }, error: null };
+      return { data: null, error: new Error('Supabase client not initialized') };
     }
 
     const { error } = await supabase.functions.invoke('reset-staff-password', {
@@ -149,10 +116,7 @@ export const resetStaffPassword = async (email: string) => {
 export const fetchClientsByStaff = async (staffId: string) => {
   try {
     if (!supabase || !hasSupabaseClient) {
-      return {
-        data: clientStore.filter((c: Client) => c.staff_id === staffId),
-        error: null,
-      };
+      return { data: [], error: new Error('Supabase client not initialized') };
     }
 
     const { data, error } = await supabase
@@ -165,7 +129,7 @@ export const fetchClientsByStaff = async (staffId: string) => {
   } catch (err) {
     console.error('Error fetching clients:', err);
     return {
-      data: clientStore.filter((c: Client) => c.staff_id === staffId),
+      data: [],
       error: err as Error,
     };
   }
@@ -174,12 +138,7 @@ export const fetchClientsByStaff = async (staffId: string) => {
 export const addClient = async (client: Omit<Client, 'id'>) => {
   try {
     if (!supabase || !hasSupabaseClient) {
-      const newClient: Client = {
-        ...client,
-        id: `client-${Date.now()}`,
-      };
-      clientStore.push(newClient);
-      return { data: newClient, error: null };
+      return { data: null, error: new Error('Supabase client not initialized') };
     }
 
     const { data, error } = await supabase
@@ -199,8 +158,7 @@ export const addClient = async (client: Omit<Client, 'id'>) => {
 export const deleteClient = async (clientId: string) => {
   try {
     if (!supabase || !hasSupabaseClient) {
-      clientStore = clientStore.filter((c: Client) => c.id !== clientId);
-      return { data: { id: clientId }, error: null };
+      return { data: null, error: new Error('Supabase client not initialized') };
     }
 
     const { error } = await supabase
@@ -221,8 +179,14 @@ export const deleteClient = async (clientId: string) => {
 export const getStaffStats = async (staffId: string): Promise<StaffStats> => {
   try {
     if (!supabase || !hasSupabaseClient) {
-      // Calculate from mock data
-      return calculateStaffStats(staffId);
+      // Return empty stats if Supabase not available
+       return {
+            total_earnings: 0,
+            today_earnings: 0,
+            completed_appointments: 0,
+            today_appointments: 0,
+            average_rating: 0
+        };
     }
 
     // In production, this would come from a database query or Edge Function
@@ -233,14 +197,26 @@ export const getStaffStats = async (staffId: string): Promise<StaffStats> => {
       .single();
 
     if (error) {
-      // Fallback to mock calculation
-      return calculateStaffStats(staffId);
+       // Return empty stats on error
+       return {
+            total_earnings: 0,
+            today_earnings: 0,
+            completed_appointments: 0,
+            today_appointments: 0,
+            average_rating: 0
+        };
     }
 
     return data as StaffStats;
   } catch (err) {
     console.error('Error fetching staff stats:', err);
-    return calculateStaffStats(staffId);
+    return {
+            total_earnings: 0,
+            today_earnings: 0,
+            completed_appointments: 0,
+            today_appointments: 0,
+            average_rating: 0
+        };
   }
 };
 
@@ -249,25 +225,10 @@ export const getStaffStats = async (staffId: string): Promise<StaffStats> => {
 export const staffLogin = async (email: string, password: string) => {
   try {
     if (!supabase || !hasSupabaseClient) {
-      // Mock login - find staff by email
-      const staff = staffStore.find(
-        (s: StaffMember) => s.email === email && s.status === 'Active'
-      );
-      if (!staff) {
         return {
           data: null,
-          error: new Error('Invalid email or staff is inactive'),
+          error: new Error('Supabase client not initialized'),
         };
-      }
-
-      // In production, verify password hash
-      return {
-        data: {
-          staff,
-          token: `mock-token-${staff.id}`,
-        },
-        error: null,
-      };
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({

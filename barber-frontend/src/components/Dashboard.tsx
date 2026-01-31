@@ -15,6 +15,8 @@ import { Barber, Appointment, Comment, ChartData } from '../types';
 import { deleteAppointment } from '../services/appointmentService';
 import { formatPrice } from '../utils/format';
 import { DashboardSkeleton } from './SkeletonLoader';
+import { fetchServices } from '../services/serviceService';
+import { Service } from '../types';
 
 // Default/placeholder data while loading
 const defaultChartData: ChartData[] = [
@@ -30,17 +32,6 @@ const defaultChartData: ChartData[] = [
 const defaultTopBarbers: Barber[] = [];
 const defaultComments: Comment[] = [];
 const defaultAppointments: Appointment[] = [];
-
-// Service Price Table - Now using numbers for consistency
-const SERVICE_MENU = [
-  { name: 'Classic Cut', price: 30.0 },
-  { name: 'Fade & Beard Trim', price: 45.0 },
-  { name: 'Hair Styling', price: 55.0 },
-  { name: 'Hot Towel Shave', price: 35.0 },
-  { name: 'Kids Cut', price: 25.0 },
-  { name: 'Hair Coloring', price: 70.0 },
-  { name: 'Beard Sculpting', price: 25.0 },
-];
 
 interface DashboardProps {
   userRole?: string;
@@ -63,6 +54,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
   const [topBarbers, setTopBarbers] = useState<Barber[]>(defaultTopBarbers);
   const [comments, setComments] = useState<Comment[]>(defaultComments);
   const [appointments, setAppointments] = useState<Appointment[]>(defaultAppointments);
+  const [servicesList, setServicesList] = useState<Service[]>([]);
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -182,7 +174,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                 id: s.id,
                 name: s.full_name,
                 avatarUrl: s.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.full_name)}&background=random`,
-                rating: 5.0, // Placeholder
+                rating: 0, // No rating data in appointments
                 earnings: formatPrice(staffStats[s.id]?.revenue || 0),
                 clientCount: staffStats[s.id]?.clients.size || 0
             })).sort((a, b) => {
@@ -215,6 +207,10 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
           }));
           setAppointments(transformedAppointments);
         }
+
+        // Fetch Services for Modal
+        const { data: servicesData } = await fetchServices(userData.salon_id);
+        if (servicesData) setServicesList(servicesData);
 
         setIsLoadingData(false);
       } catch (error: any) {
@@ -280,8 +276,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
     setEditingId(null);
     setFormData({
       customerName: '',
-      service: SERVICE_MENU[0].name,
-      amount: formatPrice(SERVICE_MENU[0].price),
+      service: servicesList.length > 0 ? servicesList[0].name : '',
+      amount: servicesList.length > 0 ? formatPrice(servicesList[0].price) : '',
       time: '09:00 AM',
       status: 'Pending',
     });
@@ -313,7 +309,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
 
   const handleServiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const serviceName = e.target.value;
-    const service = SERVICE_MENU.find(s => s.name === serviceName);
+    const service = servicesList.find(s => s.name === serviceName);
     setFormData({
         ...formData,
         service: serviceName,
@@ -635,8 +631,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
                       className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all appearance-none cursor-pointer min-h-[48px] text-base sm:text-sm"
                     >
                       <option value="" disabled>Select Service</option>
-                      {SERVICE_MENU.map((s, idx) => (
-                        <option key={idx} value={s.name}>{s.name} ({formatPrice(s.price)})</option>
+                      {servicesList.map((s) => (
+                        <option key={s.name} value={s.name}>{s.name} ({formatPrice(s.price)})</option>
                       ))}
                     </select>
                   </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookingState, Translations } from './types';
+import { BookingState, Translations } from '../../types';
 import { Calendar, Clock, AlertCircle } from 'lucide-react';
 
 interface Props {

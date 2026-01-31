@@ -5,7 +5,7 @@ import { Step1Specialist } from '../components/booking/Step1Specialist';
 import { Step2DateTime } from '../components/booking/Step2DateTime';
 import { Step3Service } from '../components/booking/Step3Service';
 import { Step4Contact } from '../components/booking/Step4Contact';
-import { BookingState, Language, Translations, Staff, Service } from '../components/booking/types';
+import { BookingState, Language, Translations, BookingStaff as Staff, BookingService as Service } from '../types';
 import { ArrowLeft, CheckCircle, MessageCircle, Globe } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from '../services/supabaseClient';
@@ -96,6 +96,33 @@ const translations: Record<Language, Translations> = {
     bookingMessage: "سنرسل رسالة واتساب إلى",
     done: "إنهاء",
     from: "من"
+  },
+  tn: {
+    greeting: "Marhba bik fi Salon Hamdi",
+    subtitle: "Ahjez rendez-vous mte3ek el jay.",
+    filters: { all: "El Kol", barber: "Halleqin", colorist: "Sabbegh", stylist: "Styliste" },
+    todaySchedule: "Awqat Lyoum",
+    availableSlots: "Awqat fergha",
+    live: "Live",
+    date: "Date",
+    time: "Waqt",
+    chooseService: "Ekhtar Service",
+    optionalNotes: "Eb3athli note ken t7eb (Optional)",
+    notesPlaceholder: "e.g. Degrade, barbe...",
+    bookingSummary: "Résumé",
+    yourDetails: "Ma3loumetek",
+    fullName: "Issem wo laqab",
+    phoneNumber: "Noumrou telifoun",
+    whatsappConfirm: "Bech nab3thoulek confirmation 3al WhatsApp.",
+    invalidPhone: "Noumrou ghalet",
+    specialist: "Specialiste",
+    service: "Service",
+    confirmBooking: "Confirm l'booking",
+    continue: "Kammel",
+    bookingReceived: "Wsol l'booking!",
+    bookingMessage: "Bech nab3thoulek message WhatsApp 3la",
+    done: "C'est bon",
+    from: "Men"
   }
 };
 
@@ -111,7 +138,7 @@ export default function BookingPage() {
   
   useEffect(() => {
     if (language) {
-      if (['en', 'fr', 'ar'].includes(language)) {
+      if (['en', 'fr', 'ar', 'tn'].includes(language)) {
          setLang(language as Language);
       }
     }
@@ -143,14 +170,16 @@ export default function BookingPage() {
       // Fetch Staff
       const { data: staff, error: staffError } = await fetchStaff(salon.id);
       if (staff) {
+        // TODO: specific stats fetching for ratings would go here. 
+        // For now, we initialize with DB data only, avoiding fake numbers.
         const mappedStaff: Staff[] = staff.map(s => ({
           id: s.id,
           name: s.full_name,
           role: s.specialty || 'Stylist',
-          rating: 4.8, // Mock
-          price: 20, // Mock base price
-          image: s.avatar_url || 'https://i.pravatar.cc/150?u=' + s.id,
-          bgColor: 'bg-gray-50', // Mock
+          rating: 0, // Default to 0 until we fetch real stats
+          price: 0,  // Variable pricing or service-dependent
+          image: s.avatar_url || '', // Don't use pravatar if no image
+          bgColor: 'bg-gray-50', 
           category: (s.specialty === 'Barber' || s.specialty === 'Colorist') ? s.specialty : 'Stylist'
         }));
         setStaffData(mappedStaff);
@@ -227,6 +256,7 @@ export default function BookingPage() {
     let newLang: Language = 'en';
     if (lang === 'en') newLang = 'fr';
     else if (lang === 'fr') newLang = 'ar';
+    else if (lang === 'ar') newLang = 'tn';
     else newLang = 'en';
     
     setLang(newLang);
