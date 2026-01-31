@@ -52,8 +52,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     if (savedNotifications) {
       try {
         const parsed = JSON.parse(savedNotifications);
-        setNotifications(parsed);
-        setNotificationCount(parsed.length);
+        if (parsed && parsed.length > 0) {
+          setNotifications(parsed);
+          setNotificationCount(parsed.length);
+          // Add IDs to seenAppointmentsRef to prevent duplicates
+          parsed.forEach((notif: any) => {
+            if (notif.id) seenAppointmentsRef.current.add(notif.id);
+          });
+        }
       } catch (e) {
         console.error('Failed to parse saved notifications:', e);
       }
@@ -176,19 +182,59 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
     const bootstrapNotifications = async () => {
       if (hasBootstrappedNotifications) return;
-      const query = supabase
-        .from('appointments')
-        .select('id')
-        .order('created_at', { ascending: false })
-        .limit(20);
+      
+      // Only bootstrap if no notifications in localStorage
+      if (notifications.length > 0) {
+        setHasBootstrappedNotifications(true);
+        return;
+      }
+      
+      try {
+        const query = supabase
+          .from('appointments')
+          .select(`
+            *,
+            staff:staff_id(full_name),
+            service:service_id(name, price)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(3);
 
-      const { data } = userRole === 'owner'
-        ? await query.eq('salon_id', salonId)
-        : await query.eq('staff_id', userId);
+        const { data } = userRole === 'owner'
+          ? await query.eq('salon_id', salonId)
+          : await query.eq('staff_id', userId);
 
-      (data || []).forEach((apt: any) => {
-        if (apt?.id) seenAppointmentsRef.current.add(apt.id);
-      });
+        if (data && data.length > 0) {
+          const bootstrappedNotifications = data.map((apt: any) => {
+            seenAppointmentsRef.current.add(apt.id);
+            
+            const staffName = (apt.staff as any)?.full_name || 'Unassigned';
+            const serviceName = (apt.service as any)?.name || 'Service';
+            const amount = (apt.service as any)?.price ? `${(apt.service as any).price} DT` : (apt.amount || 'N/A');
+            
+            return {
+              id: apt.id,
+              title: `New appointment${apt.customer_name ? ` • ${apt.customer_name}` : ''}`,
+              subtitle: `${serviceName} • ${staffName} • ${apt.appointment_date || ''} ${apt.appointment_time || ''}`.trim(),
+              timestamp: new Date(apt.created_at).toLocaleString(),
+              staffName,
+              serviceName,
+              amount,
+              date: apt.appointment_date,
+              time: apt.appointment_time,
+              customerName: apt.customer_name,
+              customerPhone: apt.customer_phone,
+              customerEmail: apt.customer_email
+            };
+          });
+          
+          setNotifications(bootstrappedNotifications);
+          setNotificationCount(bootstrappedNotifications.length);
+        }
+      } catch (error) {
+        console.error('Error bootstrapping notifications:', error);
+      }
+      
       setHasBootstrappedNotifications(true);
     };
 
