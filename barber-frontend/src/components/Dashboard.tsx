@@ -798,6 +798,16 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
           </div>
         </div>
       )}
+
+      {/* Daily Schedule View Modal */}
+      {showScheduleView && (
+        <DailyScheduleView 
+          salonId={salonId} 
+          userRole="owner" 
+          userId={userId}
+          onClose={() => setShowScheduleView(false)} 
+        />
+      )}
     </div>
   );
 };
