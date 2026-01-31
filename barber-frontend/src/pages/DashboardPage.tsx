@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import Dashboard from '../components/Dashboard';
@@ -9,6 +9,8 @@ import Staff from '../components/Staff';
 import BottomNavigation from '../components/BottomNavigation';
 import { useSalon } from '../context/SalonContext';
 import { Sparkles } from 'lucide-react';
+import { supabase } from '../services/supabaseClient';
+import { QRCodeCanvas } from 'qrcode.react';
 
 interface DashboardPageProps {
   salonId: string;
@@ -30,6 +32,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; subtitle: string; timestamp: string }>>([]);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   // Update page title with salon name
   useEffect(() => {
@@ -49,6 +53,64 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [activeTab]);
+
+  const bookingUrl = useMemo(() => {
+    if (!salonSlug) return '';
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/${salonSlug}/book`;
+  }, [salonSlug]);
+
+  const playNotification = () => {
+    try {
+      const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = 880;
+      gain.gain.value = 0.05;
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.2);
+    } catch {
+      // Ignore audio errors
+    }
+    if (navigator.vibrate) {
+      navigator.vibrate(200);
+    }
+  };
+
+  useEffect(() => {
+    if (!supabase || !salonId || !userId) return;
+
+    const channel = supabase
+      .channel('notifications-appointments')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'appointments',
+        filter: userRole === 'owner'
+          ? `salon_id=eq.${salonId}`
+          : `staff_id=eq.${userId}`,
+      }, (payload) => {
+        const appointment = payload.new as any;
+        const title = `New appointment${appointment?.customer_name ? ` • ${appointment.customer_name}` : ''}`;
+        const subtitle = `${appointment?.appointment_date || ''} ${appointment?.appointment_time || ''}`.trim();
+        const timestamp = new Date().toLocaleString();
+
+        setNotifications((prev) => [
+          { id: appointment.id || `${Date.now()}`, title, subtitle, timestamp },
+          ...prev,
+        ]);
+        setNotificationCount((prev) => prev + 1);
+        playNotification();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [salonId, userId, userRole]);
 
   const toggleTheme = () => setIsDarkMode((prev) => !prev);
 
@@ -91,11 +153,30 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             setActiveTab={setActiveTab}
             salonName={salon?.name || 'Salon'}
             userName={staffName || 'User'}
+            notificationCount={notificationCount}
+            notifications={notifications}
+            onNotificationsOpen={() => setNotificationCount(0)}
           />
       </div>
 
         {/* Main Content - scrollable with bottom padding for mobile nav */}
         <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 py-4 md:py-6 pb-24 md:pb-6">
+          {bookingUrl && userRole === 'owner' && (
+            <div className="mb-6 bg-white dark:bg-treservi-card-dark rounded-[28px] p-5 border border-gray-100 dark:border-gray-800 shadow-soft-glow">
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Booking QR Code</h3>
+                  <p className="text-sm text-gray-500">Share this link for online booking.</p>
+                  <a href={bookingUrl} className="text-sm text-emerald-600 break-all" target="_blank" rel="noreferrer">
+                    {bookingUrl}
+                  </a>
+                </div>
+                <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
+                  <QRCodeCanvas value={bookingUrl} size={120} />
+                </div>
+              </div>
+            </div>
+          )}
           {shouldShowOwnerDashboard && <Dashboard salonId={salonId} userId={userId} />}
           {shouldShowStaffDashboard && <StaffDashboard salonId={salonId} staffId={userId} staffName={staffName} />}
           {activeTab === 'appointments' && userRole === 'owner' && <Appointments salonId={salonId} />}
