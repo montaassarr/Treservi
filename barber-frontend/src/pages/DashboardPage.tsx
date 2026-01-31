@@ -350,7 +350,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* Main Content Area - Responsive */}
       <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header - visible on all screens (modified Navbar for mobile) */}
-      <div className="sticky top-0 z-30">
+      <div className="sticky top-0 z-30 pointer-events-none">
           <Navbar
             isDarkMode={isDarkMode}
             toggleTheme={toggleTheme}
@@ -375,7 +375,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       </div>
 
         {/* Main Content - scrollable with bottom padding for mobile nav */}
-        <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 py-4 md:py-6 pb-24 md:pb-6">
+        <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 pt-[calc(env(safe-area-inset-top)+6.5rem)] md:pt-6 pb-32 md:pb-6">
           {bookingUrl && userRole === 'owner' && (
             <div className="mb-6 bg-white dark:bg-treservi-card-dark rounded-[28px] p-5 border border-gray-100 dark:border-gray-800 shadow-soft-glow">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
