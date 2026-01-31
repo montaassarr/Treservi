@@ -63,25 +63,81 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   }, [salonSlug]);
 
   const playNotification = () => {
+    // Vibration
     if (navigator.vibrate) {
-      navigator.vibrate(200);
+      navigator.vibrate([200, 100, 200]);
     }
+    
+    // Play notification sound
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 800; // Frequency in Hz
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.5);
   };
 
   useEffect(() => {
     if (!supabase || !salonId || !userId) return;
 
-    const addNotification = (appointment: any) => {
+    const addNotification = async (appointment: any) => {
       const appointmentId = appointment?.id || `${Date.now()}`;
       if (seenAppointmentsRef.current.has(appointmentId)) return;
       seenAppointmentsRef.current.add(appointmentId);
 
+      // Fetch full appointment details
+      let staffName = 'Unassigned';
+      let serviceName = 'Service';
+      let amount = 'N/A';
+      
+      try {
+        const { data } = await supabase
+          .from('appointments')
+          .select(`
+            *,
+            staff:staff_id(full_name),
+            service:service_id(name, price)
+          `)
+          .eq('id', appointmentId)
+          .single();
+        
+        if (data) {
+          staffName = (data.staff as any)?.full_name || 'Unassigned';
+          serviceName = (data.service as any)?.name || 'Service';
+          amount = (data.service as any)?.price ? `${(data.service as any).price} DT` : (data.amount || 'N/A');
+        }
+      } catch (error) {
+        console.error('Error fetching appointment details:', error);
+      }
+
       const title = `New appointment${appointment?.customer_name ? ` • ${appointment.customer_name}` : ''}`;
-      const subtitle = `${appointment?.appointment_date || ''} ${appointment?.appointment_time || ''}`.trim();
+      const subtitle = `${serviceName} • ${staffName} • ${appointment?.appointment_date || ''} ${appointment?.appointment_time || ''}`.trim();
       const timestamp = new Date().toLocaleString();
 
       setNotifications((prev) => [
-        { id: appointmentId, title, subtitle, timestamp },
+        { 
+          id: appointmentId, 
+          title, 
+          subtitle, 
+          timestamp,
+          staffName,
+          serviceName,
+          amount,
+          date: appointment?.appointment_date,
+          time: appointment?.appointment_time,
+          customerName: appointment?.customer_name,
+          customerPhone: appointment?.customer_phone,
+          customerEmail: appointment?.customer_email
+        },
         ...prev,
       ]);
       setNotificationCount((prev) => prev + 1);
