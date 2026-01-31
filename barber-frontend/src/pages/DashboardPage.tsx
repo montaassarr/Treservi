@@ -38,6 +38,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [notificationCount, setNotificationCount] = useState(0);
   const seenAppointmentsRef = useRef<Set<string>>(new Set());
   const [hasBootstrappedNotifications, setHasBootstrappedNotifications] = useState(false);
+  const [hasReadNotifications, setHasReadNotifications] = useState(false);
+  const isLiveRef = useRef(false); // Track if we're receiving live updates (not bootstrap)
 
   // Update page title with salon name
   useEffect(() => {
@@ -49,16 +51,25 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   // Load notifications from localStorage on mount
   useEffect(() => {
     const savedNotifications = localStorage.getItem('dashboard_notifications');
+    const savedReadState = localStorage.getItem('dashboard_notifications_read');
+    
     if (savedNotifications) {
       try {
         const parsed = JSON.parse(savedNotifications);
         if (parsed && parsed.length > 0) {
           setNotifications(parsed);
-          setNotificationCount(parsed.length);
           // Add IDs to seenAppointmentsRef to prevent duplicates
           parsed.forEach((notif: any) => {
             if (notif.id) seenAppointmentsRef.current.add(notif.id);
           });
+          
+          // Only show count if not marked as read
+          if (savedReadState === 'true') {
+            setNotificationCount(0);
+            setHasReadNotifications(true);
+          } else {
+            setNotificationCount(parsed.length);
+          }
         }
       } catch (e) {
         console.error('Failed to parse saved notifications:', e);
@@ -176,8 +187,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         // Keep only 3 most recent
         return newNotifications.slice(0, 3);
       });
-      setNotificationCount((prev) => Math.min(prev + 1, 3));
-      playNotification();
+      
+      // Only play sound and increment count for LIVE updates (not bootstrap/refresh)
+      if (isLiveRef.current) {
+        setNotificationCount((prev) => Math.min(prev + 1, 3));
+        setHasReadNotifications(false);
+        localStorage.setItem('dashboard_notifications_read', 'false');
+        playNotification();
+      }
     };
 
     const bootstrapNotifications = async () => {
@@ -250,14 +267,21 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           ? `salon_id=eq.${salonId}`
           : `staff_id=eq.${userId}`,
       }, (payload) => {
+        // Mark as live mode - this is a real-time update, not bootstrap
+        isLiveRef.current = true;
         addNotification(payload.new as any);
       })
       .subscribe();
 
+    // After bootstrap completes, mark as live mode for polling
+    setTimeout(() => {
+      isLiveRef.current = true;
+    }, 2000);
+
     const polling = setInterval(async () => {
       const query = supabase
         .from('appointments')
-        .select('id, customer_name, appointment_date, appointment_time')
+        .select('id, customer_name, appointment_date, appointment_time, created_at')
         .order('created_at', { ascending: false })
         .limit(5);
 
@@ -265,7 +289,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         ? await query.eq('salon_id', salonId)
         : await query.eq('staff_id', userId);
 
-      (data || []).forEach((apt: any) => addNotification(apt));
+      // Only process appointments created in the last 60 seconds (truly new)
+      const now = Date.now();
+      (data || []).forEach((apt: any) => {
+        const createdAt = new Date(apt.created_at).getTime();
+        const isNew = now - createdAt < 60000; // Less than 60 seconds old
+        if (isNew) addNotification(apt);
+      });
     }, 30000);
 
     return () => {
@@ -327,7 +357,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             userName={staffName || 'User'}
             notificationCount={notificationCount}
             notifications={notifications}
-            onNotificationsOpen={() => setNotificationCount(0)}
+            onNotificationsOpen={() => {
+              setNotificationCount(0);
+              setHasReadNotifications(true);
+              localStorage.setItem('dashboard_notifications_read', 'true');
+            }}
             currentLanguage={language}
             onLanguageToggle={toggleLanguage}
           />

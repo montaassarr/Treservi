@@ -409,23 +409,25 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
               <p className="text-gray-400 text-xs sm:text-sm mt-4 sm:mt-6 md:mt-8">{stats.bookings} {t('dashboard.newCustomers')}</p>
             </div>
 
-            {/* Schedule Card */}
+            {/* Schedule Card - Matching style with other cards */}
             <button
               onClick={() => setShowScheduleView(true)}
-              className="relative bg-gradient-to-br from-[#FFF9F0] to-[#FFF5E6] dark:from-gray-800 dark:to-gray-900 rounded-2xl p-4 shadow-soft-glow hover:shadow-lg transition-all group border border-orange-100 dark:border-gray-700"
+              className="bg-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow relative overflow-hidden text-left hover:shadow-lg transition-all"
             >
-              <div className="flex items-center gap-3">
-                <div className="bg-[#8B7355]/10 rounded-xl p-3 group-hover:bg-[#8B7355]/20 transition-colors">
-                  <Calendar className="w-6 h-6 text-[#8B7355]" />
+              <div className="flex justify-between items-start mb-4 sm:mb-6">
+                <div>
+                  <h3 className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium mb-1">{t('dashboard.todaySchedule') || "Today's Schedule"}</h3>
+                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+                    {new Date().getDate()}
+                  </div>
                 </div>
-                <div className="text-left">
-                  <p className="text-xs text-[#8B7355] font-medium">Today&apos;s Schedule</p>
-                  <p className="text-2xl font-bold text-[#1F1F1F] dark:text-white">{new Date().getDate()}</p>
-                  <p className="text-xs text-[#8B7355]">
-                    {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                  </p>
-                </div>
+                <span className="flex items-center gap-1 text-treservi-accent bg-green-50 dark:bg-green-900/20 px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold">
+                  {new Date().toLocaleDateString('en-US', { weekday: 'short' })}
+                </span>
               </div>
+              <p className="text-gray-400 text-xs sm:text-sm mt-4 sm:mt-6 md:mt-8">
+                {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </p>
             </button>
           </ResponsiveGrid>
 
@@ -795,16 +797,6 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
             </form>
           </div>
         </div>
-      )}
-
-      {/* Daily Schedule View Modal */}
-      {showScheduleView && (
-        <DailyScheduleView
-          salonId={salonId}
-          userRole="owner"
-          userId={userId}
-          onClose={() => setShowScheduleView(false)}
-        />
       )}
     </div>
   );
