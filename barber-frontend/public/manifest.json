@@ -56,6 +56,19 @@
   ],
   "shortcuts": [
     {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your salon dashboard",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%2310b981' width='96' height='96'/><text x='50%' y='50%' font-size='50' font-weight='bold' fill='white' text-anchor='middle' dy='.3em'>D</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
       "name": "Book Appointment",
       "short_name": "Book",
       "description": "Quickly book your next appointment",

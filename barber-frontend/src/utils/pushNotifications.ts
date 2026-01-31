@@ -57,7 +57,7 @@ export const subscribeToPush = async (): Promise<PushSubscription | null> => {
       // Subscribe to push
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource
       });
     }
     
@@ -112,10 +112,9 @@ export const showLocalNotification = async (
     await registration.showNotification(title, {
       icon: '/icon-192.png',
       badge: '/icon-72.png',
-      vibrate: [200, 100, 200],
       requireInteraction: false,
       ...notificationOptions
-    });
+    } as NotificationOptions);
   } catch (error) {
     // Fallback to regular Notification API
     if (playSound) {
