@@ -171,12 +171,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             customerPhone: appointment?.customer_phone,
             customerEmail: appointment?.customer_email
           },
-          ...prev,
+          ...prev.filter(n => n.id !== appointmentId), // Remove duplicates
         ];
-        // Limit to 3 upcoming appointments
+        // Keep only 3 most recent
         return newNotifications.slice(0, 3);
       });
-      setNotificationCount((prev) => prev + 1);
+      setNotificationCount((prev) => Math.min(prev + 1, 3));
       playNotification();
     };
 

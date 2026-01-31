@@ -11,6 +11,7 @@ import { MoreHorizontal, ArrowUpRight, ArrowRight, Star, Plus, Pencil, Trash2, X
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../services/supabaseClient';
 import ResponsiveGrid from './ResponsiveGrid';
+import MiniCalendar from './MiniCalendar';
 import { Barber, Appointment, Comment, ChartData } from '../types';
 import { deleteAppointment } from '../services/appointmentService';
 import { formatPrice } from '../utils/format';
@@ -354,7 +355,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
         <div className="lg:col-span-2 space-y-5 sm:space-y-7 md:space-y-9">
           
           {/* Top Row Stats - Responsive Cards */}
-          <ResponsiveGrid mobile={1} tablet={2} desktop={2} gap="gap-2 sm:gap-3 md:gap-4">
+          <ResponsiveGrid mobile={1} tablet={2} desktop={3} gap="gap-2 sm:gap-3 md:gap-4">
             
             {/* Total Bookings Card */}
             <div className="bg-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow relative overflow-hidden group">
@@ -397,6 +398,9 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
               </div>
               <p className="text-gray-400 text-xs sm:text-sm mt-4 sm:mt-6 md:mt-8">{stats.bookings} {t('dashboard.newCustomers')}</p>
             </div>
+
+            {/* Mini Calendar Card */}
+            <MiniCalendar salonId={salonId} userRole="owner" userId={userId} />
           </ResponsiveGrid>
 
           {/* Analytics Chart - Responsive Height */}

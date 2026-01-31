@@ -23,6 +23,7 @@ import { fetchServices } from '../services/serviceService';
 import { fetchStaff } from '../services/staffService';
 import { formatPrice } from '../utils/format';
 import { supabase } from '../services/supabaseClient';
+import MiniCalendar from './MiniCalendar';
 
 interface AppointmentsProps {
   salonId: string;
@@ -236,21 +237,29 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
 
   return (
     <div className="p-6 lg:p-10 w-full max-w-[1600px] mx-auto space-y-6">
-      {/* Header */}
+      {/* Header with Mini Calendar */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
+        <div className="flex-1">
           <p className="text-sm text-gray-500">Manage Bookings</p>
           <h1 className="text-3xl font-black tracking-tight">Appointments</h1>
         </div>
-        <button
-          onClick={handleAddNew}
-          className="group inline-flex items-center gap-3 px-5 py-3 rounded-full text-white font-bold bg-gradient-to-br from-[#3ad061] to-[#1e9c46] shadow-[0_20px_50px_rgba(0,0,0,0.15)] hover:scale-105 active:scale-95 transition-transform"
-        >
-          <span className="relative inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/20 shadow-inner shadow-white/30">
-            <Plus className="w-5 h-5 text-white drop-shadow" />
-          </span>
-          New Appointment
-        </button>
+        
+        <div className="flex items-center gap-3">
+          {/* Mini Calendar */}
+          <MiniCalendar salonId={salonId} userRole="owner" />
+          
+          {/* Add Button */}
+          <button
+            onClick={handleAddNew}
+            className="group inline-flex items-center gap-3 px-5 py-3 rounded-full text-white font-bold bg-gradient-to-br from-[#3ad061] to-[#1e9c46] shadow-[0_20px_50px_rgba(0,0,0,0.15)] hover:scale-105 active:scale-95 transition-transform"
+          >
+            <span className="relative inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/20 shadow-inner shadow-white/30">
+              <Plus className="w-5 h-5 text-white drop-shadow" />
+            </span>
+            <span className="hidden sm:inline">New Appointment</span>
+            <span className="sm:hidden">New</span>
+          </button>
+        </div>
       </div>
 
       {/* Alerts */}
