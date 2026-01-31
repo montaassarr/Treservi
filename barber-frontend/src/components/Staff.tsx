@@ -28,6 +28,7 @@ import {
   fetchClientsByStaff,
 } from '../services/staffService';
 import { formatPrice } from '../utils/format';
+import { getStaffAvatar, getCustomerAvatar } from '../utils/avatarGenerator';
 
 interface StaffProps {
   salonId?: string;
@@ -271,14 +272,12 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
                   }`}
                 >
                   {/* Avatar */}
-                  <div className="relative w-14 h-14 rounded-[20px] bg-gradient-to-br from-gray-100 via-white to-gray-300 shadow-[6px_10px_18px_rgba(0,0,0,0.12)] flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {member.avatar_url ? (
-                      <img src={member.avatar_url} alt={member.full_name} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-lg font-black text-gray-700">
-                        {member.full_name.charAt(0)}
-                      </span>
-                    )}
+                  <div className="relative w-14 h-14 rounded-[20px] bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100 shadow-[6px_10px_18px_rgba(0,0,0,0.12)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <img 
+                      src={member.avatar_url || getStaffAvatar(member.full_name)} 
+                      alt={member.full_name} 
+                      className="w-full h-full object-cover" 
+                    />
                     <div className="absolute inset-0 rounded-[20px] shadow-inner shadow-white/50" />
                   </div>
 

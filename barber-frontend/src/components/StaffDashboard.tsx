@@ -25,6 +25,7 @@ import {
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../services/supabaseClient';
 import { Appointment, AppointmentData, Service, CreateAppointmentInput } from '../types';
+import { getCustomerAvatar } from '../utils/avatarGenerator';
 import {
   fetchTodayAppointments,
   fetchUpcomingAppointments,
@@ -141,7 +142,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
       const mapped = (upcomingRes.data || []).map((apt: any) => ({
         id: apt.id,
         customerName: apt.customer_name,
-        customerAvatar: apt.customer_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.customer_name)}&background=random`,
+        customerAvatar: apt.customer_avatar || getCustomerAvatar(apt.customer_name),
         service: apt.service?.name || 'Unknown Service',
         time: apt.appointment_time?.slice(0, 5) || '00:00',
         status: apt.status,

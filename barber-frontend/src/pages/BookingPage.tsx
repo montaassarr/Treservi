@@ -14,6 +14,7 @@ import { fetchStaff } from '../services/staffService';
 import { fetchServices } from '../services/serviceService';
 import { createAppointment } from '../services/appointmentService';
 import { useNavigate } from 'react-router-dom';
+import { getStaffAvatar } from '../utils/avatarGenerator';
 
 // Translations taken from hamdi-salon
 const translations: Record<Language, Translations> = {
@@ -184,7 +185,7 @@ export default function BookingPage() {
               role: s.specialty || 'Stylist',
               rating: 0,
               price: 0,
-              image: s.avatar_url || '',
+              image: s.avatar_url || getStaffAvatar(s.full_name),
               bgColor: 'bg-gray-50', 
               category: (s.specialty === 'Barber' || s.specialty === 'Colorist') ? s.specialty : 'Stylist'
             }));

@@ -18,6 +18,7 @@ import { formatPrice } from '../utils/format';
 import { DashboardSkeleton } from './SkeletonLoader';
 import { fetchServices } from '../services/serviceService';
 import { Service } from '../types';
+import { getStaffAvatar, getCustomerAvatar } from '../utils/avatarGenerator';
 
 // Default/placeholder data while loading
 const defaultChartData: ChartData[] = [
@@ -180,7 +181,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
             const rankedStaff = staffData.map((s: any) => ({
                 id: s.id,
                 name: s.full_name,
-                avatarUrl: s.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.full_name)}&background=random`,
+                avatarUrl: s.avatar_url || getStaffAvatar(s.full_name),
                 rating: 0, // No rating data in appointments
                 earnings: formatPrice(staffStats[s.id]?.revenue || 0),
                 clientCount: staffStats[s.id]?.clients.size || 0
@@ -206,7 +207,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
           const transformedAppointments: Appointment[] = listData.map((apt: any) => ({
             id: apt.id,
             customerName: apt.customer_name,
-            customerAvatar: apt.customer_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.customer_name)}&background=random`,
+            customerAvatar: apt.customer_avatar || getCustomerAvatar(apt.customer_name),
             service: 'Service', // Join fetching usually better, keeping simple for now
             time: apt.appointment_time || '00:00',
             status: apt.status,

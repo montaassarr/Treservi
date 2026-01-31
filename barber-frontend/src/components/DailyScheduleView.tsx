@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Clock, User } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
+import { getStaffAvatar } from '../utils/avatarGenerator';
 
 interface Appointment {
   id: string;
@@ -402,22 +403,15 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
                                 <div
                                   className={`w-10 h-10 rounded-full border-2 ${
                                     isNext ? 'border-[#1F1F1F]' : 'border-white'
-                                  } flex items-center justify-center ${
-                                    isNext ? 'bg-gray-700' : 'bg-orange-100'
+                                  } flex items-center justify-center overflow-hidden ${
+                                    isNext ? 'bg-gray-700' : 'bg-gradient-to-br from-blue-100 to-purple-100'
                                   }`}
                                 >
-                                  {apt.staff?.avatar_url ? (
-                                    <img
-                                      src={apt.staff.avatar_url}
-                                      alt={apt.staff.full_name}
-                                      className="w-full h-full rounded-full object-cover"
-                                    />
-                                  ) : (
-                                    <User
-                                      size={18}
-                                      className={isNext ? 'text-gray-400' : 'text-[#8B7355]'}
-                                    />
-                                  )}
+                                  <img
+                                    src={apt.staff?.avatar_url || getStaffAvatar(apt.staff?.full_name || 'Staff')}
+                                    alt={apt.staff?.full_name || 'Staff'}
+                                    className="w-full h-full rounded-full object-cover"
+                                  />
                                 </div>
                               </div>
                             </div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, Search, Globe, LogOut, Home, Calendar, Users, Settings, Briefcase, User, Info, CreditCard } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { Language } from '../types';
+import { getOwnerAvatar, getStaffAvatar } from '../utils/avatarGenerator';
 
 interface NavbarProps {
   // Mobile Header Props
@@ -96,6 +97,7 @@ const Navbar: React.FC<NavbarProps> = ({
       { icon: Calendar, label: 'Appointments', tab: 'appointments' },
       { icon: Briefcase, label: 'Services', tab: 'services' },
       { icon: Users, label: 'Staff', tab: 'staff' },
+      { icon: Settings, label: 'Settings', tab: 'settings' },
     ]
   : [
       { icon: Home, label: 'Home', tab: 'dashboard' },
@@ -176,9 +178,9 @@ const Navbar: React.FC<NavbarProps> = ({
                onClick={() => setShowProfileMenu(!showProfileMenu)}
                className="relative focus:outline-none"
              >
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-blue-100 to-purple-100">
                     <img 
-                        src={`https://ui-avatars.com/api/?name=${userName}&background=10b981&color=fff`} 
+                        src={userRole === 'owner' ? getOwnerAvatar(userName) : getStaffAvatar(userName)} 
                         alt="Profile" 
                         className="w-full h-full object-cover"
                     />
@@ -191,8 +193,8 @@ const Navbar: React.FC<NavbarProps> = ({
                      
                      <div className="p-6 pb-2 border-b border-gray-100 dark:border-gray-700/50">
                         <div className="flex items-center gap-4 mb-4">
-                             <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-treservi-accent padding-1">
-                                <img src={`https://ui-avatars.com/api/?name=${userName}&background=10b981&color=fff`} alt="Profile" className="w-full h-full object-cover" />
+                             <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-treservi-accent padding-1 bg-gradient-to-br from-blue-100 to-purple-100">
+                                <img src={userRole === 'owner' ? getOwnerAvatar(userName) : getStaffAvatar(userName)} alt="Profile" className="w-full h-full object-cover" />
                              </div>
                              <div>
                                  <h3 className="font-bold text-lg dark:text-white">{userName}</h3>
