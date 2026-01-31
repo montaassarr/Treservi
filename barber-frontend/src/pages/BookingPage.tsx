@@ -146,6 +146,8 @@ export default function BookingPage() {
 
   const [bookingCompleted, setBookingCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [staffLoaded, setStaffLoaded] = useState(false);
+  const [servicesLoaded, setServicesLoaded] = useState(false);
   const [staffData, setStaffData] = useState<Staff[]>([]);
   const [servicesData, setServicesData] = useState<Service[]>([]);
   const [bookedTimes, setBookedTimes] = useState<string[]>([]);
@@ -165,41 +167,49 @@ export default function BookingPage() {
 
   useEffect(() => {
     async function loadData() {
-      if (!salon?.id) return;
-      setLoading(true);
-      
-      // Fetch Staff
-      const { data: staff, error: staffError } = await fetchStaff(salon.id);
-      if (staff) {
-        // TODO: specific stats fetching for ratings would go here. 
-        // For now, we initialize with DB data only, avoiding fake numbers.
-        const mappedStaff: Staff[] = staff.map(s => ({
-          id: s.id,
-          name: s.full_name,
-          role: s.specialty || 'Stylist',
-          rating: 0, // Default to 0 until we fetch real stats
-          price: 0,  // Variable pricing or service-dependent
-          image: s.avatar_url || '', // Don't use pravatar if no image
-          bgColor: 'bg-gray-50', 
-          category: (s.specialty === 'Barber' || s.specialty === 'Colorist') ? s.specialty : 'Stylist'
-        }));
-        setStaffData(mappedStaff);
-      }
-
-      // Fetch Services
-      const { data: services, error: serviceError } = await fetchServices(salon.id);
-      if (services) {
-        const mappedServices: Service[] = services.map(s => ({
-          id: s.id,
-          name: s.name,
-          duration: s.duration + ' mins',
-          price: s.price,
-          description: s.description || ''
-        }));
-        setServicesData(mappedServices);
+      if (!salon?.id) {
+        setLoading(false);
+        return;
       }
       
-      setLoading(false);
+      // Load staff and services in parallel
+      Promise.all([
+        (async () => {
+          const { data: staff, error: staffError } = await fetchStaff(salon.id);
+          if (staff) {
+            const mappedStaff: Staff[] = staff.map(s => ({
+              id: s.id,
+              name: s.full_name,
+              role: s.specialty || 'Stylist',
+              rating: 0,
+              price: 0,
+              image: s.avatar_url || '',
+              bgColor: 'bg-gray-50', 
+              category: (s.specialty === 'Barber' || s.specialty === 'Colorist') ? s.specialty : 'Stylist'
+            }));
+            setStaffData(mappedStaff);
+          }
+          setStaffLoaded(true);
+        })(),
+        (async () => {
+          const { data: services, error: serviceError } = await fetchServices(salon.id);
+          if (services) {
+            const mappedServices: Service[] = services.map(s => ({
+              id: s.id,
+              name: s.name,
+              duration: s.duration + ' mins',
+              price: s.price,
+              description: s.description || ''
+            }));
+            setServicesData(mappedServices);
+          }
+          setServicesLoaded(true);
+        })()
+      ]).then(() => {
+        setLoading(false);
+      }).catch(() => {
+        setLoading(false);
+      });
     }
 
     loadData();
@@ -311,10 +321,15 @@ export default function BookingPage() {
     setLanguage(newLang); // Sync with global context
   };
 
-  if (loading) {
+  if (loading && staffData.length === 0 && servicesData.length === 0) {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50">
+            <div className="text-center">
+              <div className="inline-block">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-gray-900"></div>
+              </div>
+              <p className="mt-6 text-gray-600 font-medium">Loading salon details...</p>
+            </div>
         </div>
     );
   }
