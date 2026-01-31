@@ -39,7 +39,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [showScheduleView, setShowScheduleView] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const [formData, setFormData] = useState<Partial<CreateAppointmentInput>>({
     customer_name: '',
@@ -67,7 +67,62 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
       if (servicesRes.error) throw servicesRes.error;
       if (staffRes.error) throw staffRes.error;
 
-      setAppointments(appointmentsRes.data || []);
+      const loadedAppointments = appointmentsRes.data || [];
+      
+      // Auto-complete past appointments
+      const now = new Date();
+      const today = now.toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' });
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      
+      const appointmentsToComplete: string[] = [];
+      
+      loadedAppointments.forEach((apt: AppointmentData) => {
+        // Skip if already completed or cancelled
+        if (apt.status === 'Completed' || apt.status === 'Cancelled') return;
+        
+        const aptDate = apt.appointment_date;
+        const aptTime = apt.appointment_time;
+        
+        // Check if appointment is in the past
+        if (aptDate < today) {
+          // Past date - should be completed
+          appointmentsToComplete.push(apt.id);
+        } else if (aptDate === today && aptTime) {
+          // Same day - check time
+          const [hours, minutes] = aptTime.split(':').map(Number);
+          // Add service duration (default 30 mins) to appointment time
+          const serviceDuration = apt.service?.duration || 30;
+          const endMinutes = hours * 60 + minutes + serviceDuration;
+          const currentTotalMinutes = currentHour * 60 + currentMinute;
+          
+          if (endMinutes < currentTotalMinutes) {
+            // Appointment time + duration has passed
+            appointmentsToComplete.push(apt.id);
+          }
+        }
+      });
+      
+      // Update appointments to Completed in the database
+      if (appointmentsToComplete.length > 0 && supabase) {
+        await Promise.all(
+          appointmentsToComplete.map(id => 
+            supabase
+              .from('appointments')
+              .update({ status: 'Completed' })
+              .eq('id', id)
+          )
+        );
+        
+        // Update local state
+        loadedAppointments.forEach((apt: AppointmentData) => {
+          if (appointmentsToComplete.includes(apt.id)) {
+            apt.status = 'Completed';
+          }
+        });
+      }
+
+      setAppointments(loadedAppointments);
       setServices(servicesRes.data || []);
       setStaff(staffRes.data || []);
     } catch (err: any) {
@@ -246,13 +301,15 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* Schedule View Button */}
+          {/* Calendar Button - Same style as New button */}
           <button
-            onClick={() => setShowScheduleView(true)}
-            className="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-br from-[#FFF9F0] to-[#FFF5E6] dark:from-gray-800 dark:to-gray-900 border border-orange-200 dark:border-gray-700 text-[#8B7355] dark:text-gray-300 font-medium hover:shadow-lg transition-all"
+            onClick={() => setShowCalendar(true)}
+            className="group inline-flex items-center gap-3 px-5 py-3 rounded-full text-white font-bold bg-gradient-to-br from-[#8B7355] to-[#6B5545] shadow-[0_20px_50px_rgba(0,0,0,0.15)] hover:scale-105 active:scale-95 transition-transform"
           >
-            <Calendar className="w-5 h-5" />
-            <span className="hidden sm:inline">Schedule</span>
+            <span className="relative inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/20 shadow-inner shadow-white/30">
+              <Calendar className="w-5 h-5 text-white drop-shadow" />
+            </span>
+            <span className="hidden sm:inline">Calendar</span>
           </button>
           
           {/* Add Button */}
@@ -700,12 +757,12 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
         </div>
       )}
 
-      {/* Daily Schedule View Modal */}
-      {showScheduleView && (
-        <DailyScheduleView
-          salonId={salonId}
-          userRole="owner"
-          onClose={() => setShowScheduleView(false)}
+      {/* Calendar View Modal */}
+      {showCalendar && (
+        <DailyScheduleView 
+          salonId={salonId} 
+          userRole="owner" 
+          onClose={() => setShowCalendar(false)} 
         />
       )}
     </div>

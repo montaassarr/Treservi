@@ -201,37 +201,38 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
         className="absolute inset-0 bg-black/30 backdrop-blur-sm"
       />
 
-      {/* Main Container */}
+      {/* Main Container - Full screen on mobile, modal on desktop */}
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
+        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 20 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="relative w-full max-w-4xl h-[90vh] mx-4 rounded-[32px] overflow-hidden shadow-2xl"
+        className="relative w-full h-full sm:max-w-4xl sm:h-[90vh] sm:mx-4 sm:rounded-[32px] rounded-t-[32px] overflow-hidden shadow-2xl"
         style={{
           background: 'linear-gradient(180deg, #FFF9F0 0%, #FFF5E6 100%)',
         }}
       >
-        {/* Header */}
-        <div className="relative z-10 px-6 py-5 flex items-center justify-between">
+        {/* Header - Compact on mobile */}
+        <div className="relative z-10 px-3 sm:px-6 py-4 sm:py-5 flex items-center justify-between gap-2">
           {/* Yesterday Pill */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigateDay(-1)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white rounded-full shadow-md shadow-orange-900/5 text-[#8B7355] font-medium text-sm hover:shadow-lg transition-shadow"
+            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-white rounded-full shadow-md shadow-orange-900/5 text-[#8B7355] font-medium text-xs sm:text-sm hover:shadow-lg transition-shadow"
           >
-            <ChevronLeft size={16} />
-            {getYesterdayLabel()}
+            <ChevronLeft size={14} className="sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">{getYesterdayLabel()}</span>
+            <span className="sm:hidden">Prev</span>
           </motion.button>
 
           {/* Current Date */}
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-[#1F1F1F] tracking-tight">
+          <div className="text-center flex-1">
+            <h2 className="text-lg sm:text-2xl font-bold text-[#1F1F1F] tracking-tight">
               {formatDateHeader(currentDate)}
             </h2>
             {isToday(currentDate) && (
-              <span className="text-xs text-[#8B7355] font-medium">Today</span>
+              <span className="text-[10px] sm:text-xs text-[#8B7355] font-medium">Today</span>
             )}
           </div>
 
@@ -240,10 +241,11 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigateDay(1)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white rounded-full shadow-md shadow-orange-900/5 text-[#8B7355] font-medium text-sm hover:shadow-lg transition-shadow"
+            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-white rounded-full shadow-md shadow-orange-900/5 text-[#8B7355] font-medium text-xs sm:text-sm hover:shadow-lg transition-shadow"
           >
-            {getTomorrowLabel()}
-            <ChevronRight size={16} />
+            <span className="hidden sm:inline">{getTomorrowLabel()}</span>
+            <span className="sm:hidden">Next</span>
+            <ChevronRight size={14} className="sm:w-4 sm:h-4" />
           </motion.button>
         </div>
 
@@ -265,7 +267,7 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.2}
           onDragEnd={handleDragEnd}
-          className="h-[calc(100%-80px)] overflow-y-auto overflow-x-hidden px-6 pb-6"
+          className="h-[calc(100%-80px)] overflow-y-auto overflow-x-hidden px-2 sm:px-6 pb-20 sm:pb-6"
         >
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
@@ -292,9 +294,9 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
                     style={{ top: idx * 80 }}
                   >
                     {/* Time Label */}
-                    <div className="w-20 flex-shrink-0 pr-4 text-right">
+                    <div className="w-14 sm:w-20 flex-shrink-0 pr-2 sm:pr-4 text-right">
                       <span
-                        className="text-sm text-[#8B7355] font-medium"
+                        className="text-xs sm:text-sm text-[#8B7355] font-medium"
                         style={{ fontFamily: 'Georgia, serif' }}
                       >
                         {slot.label}
@@ -307,7 +309,7 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
                 ))}
 
                 {/* Appointments Area */}
-                <div className="absolute left-20 right-0 top-0" style={{ minHeight: '960px' }}>
+                <div className="absolute left-14 sm:left-20 right-0 top-0" style={{ minHeight: '960px' }}>
                   {loading ? (
                     <div className="flex items-center justify-center h-40">
                       <div className="animate-spin rounded-full h-10 w-10 border-4 border-orange-200 border-t-[#8B7355]" />
@@ -434,7 +436,7 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="absolute left-20 right-4 flex items-center z-10"
+                    className="absolute left-14 sm:left-20 right-2 sm:right-4 flex items-center z-10"
                     style={{
                       top: (() => {
                         const now = new Date();
@@ -455,23 +457,23 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
         </motion.div>
 
         {/* Bottom Stats Bar */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#FFF5E6] to-transparent">
-          <div className="flex justify-center gap-8">
+        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-[#FFF5E6] via-[#FFF5E6] to-transparent pt-8">
+          <div className="flex justify-center gap-4 sm:gap-8">
             <div className="text-center">
-              <p className="text-2xl font-bold text-[#1F1F1F]">{appointments.length}</p>
-              <p className="text-xs text-[#8B7355]">Appointments</p>
+              <p className="text-xl sm:text-2xl font-bold text-[#1F1F1F]">{appointments.length}</p>
+              <p className="text-[10px] sm:text-xs text-[#8B7355]">Appointments</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">
+              <p className="text-xl sm:text-2xl font-bold text-green-600">
                 {appointments.filter((a) => a.status === 'Confirmed').length}
               </p>
-              <p className="text-xs text-[#8B7355]">Confirmed</p>
+              <p className="text-[10px] sm:text-xs text-[#8B7355]">Confirmed</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-[#1F1F1F]">
+              <p className="text-xl sm:text-2xl font-bold text-[#1F1F1F]">
                 {appointments.reduce((sum, a) => sum + (a.amount || 0), 0)} DT
               </p>
-              <p className="text-xs text-[#8B7355]">Revenue</p>
+              <p className="text-[10px] sm:text-xs text-[#8B7355]">Revenue</p>
             </div>
           </div>
         </div>
