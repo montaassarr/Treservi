@@ -104,7 +104,7 @@ const Navbar: React.FC<NavbarProps> = ({
     ];
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 px-4 md:px-6 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 md:pt-4 md:pb-4 flex justify-between items-center transition-colors duration-300">
+    <header className="sticky top-0 z-30 w-full bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 px-4 md:px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-3 md:pt-4 md:pb-4 flex justify-between items-center transition-colors duration-300 shadow-sm">
       
       {/* Left: Mobile Profile & Greeting */}
       <div className="flex items-center gap-3 flex-1">
