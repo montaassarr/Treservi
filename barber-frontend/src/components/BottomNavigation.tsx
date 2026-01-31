@@ -27,7 +27,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({
     ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-[#121212]/95 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 pb-safe-area pt-2 px-6 md:hidden shadow-lg safe-area-inset-bottom h-24">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-[#121212]/95 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 px-6 md:hidden shadow-lg h-auto">
       <div className="flex justify-between items-center max-w-md mx-auto relative">
         
         {/* Navigation Items (Left & Right of FAB) */}

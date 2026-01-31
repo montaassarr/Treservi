@@ -95,7 +95,7 @@ body {
 
 /* Base adjustment for body */
 body {
-  padding-top: var(--sat);
+  /* padding-top: var(--sat);  <-- Removed to prevent double padding with fixed headers */
   padding-bottom: var(--sab);
   min-height: 100vh;
   min-height: -webkit-fill-available;
