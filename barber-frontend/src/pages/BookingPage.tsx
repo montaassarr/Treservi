@@ -471,38 +471,40 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen bg-[#FAFAFA] font-sans text-gray-900 pb-32" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <header className="fixed top-0 w-full z-40 bg-white/80 backdrop-blur-md px-6 py-4 flex justify-between items-center shadow-sm">
-        {booking.step > 1 ? (
-          <button onClick={prevStep} className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition">
-            <ArrowLeft className={`w-6 h-6 text-gray-900 ${lang === 'ar' ? 'rotate-180' : ''}`} />
-          </button>
-        ) : (
-          <div className="w-10" /> // Spacer
-        )}
-        
-        {/* Progress Dots */}
-        <div className="flex gap-2">
-          {[1, 2, 3, 4].map(s => (
-            <div 
-              key={s} 
-              className={`h-2 rounded-full transition-all duration-300 ${booking.step >= s ? 'w-6 bg-gray-900' : 'w-2 bg-gray-200'}`} 
-            />
-          ))}
-        </div>
+      <header className="fixed top-0 w-full z-40 pt-[calc(env(safe-area-inset-top)+1rem)] px-6 bg-white/80 backdrop-blur-xl transition-all duration-300">
+        <div className="flex justify-between items-center h-16 max-w-md mx-auto">
+          {booking.step === 1 ? (
+            <div className="w-10" /> // Spacer
+          ) : (
+            <button onClick={prevStep} className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition">
+              <ArrowLeft className={`w-6 h-6 text-gray-900 ${lang === 'ar' ? 'rotate-180' : ''}`} />
+            </button>
+          )}
+          
+          {/* Progress Dots */}
+          <div className="flex gap-2">
+            {[1, 2, 3, 4].map(s => (
+              <div 
+                key={s} 
+                className={`h-2 rounded-full transition-all duration-300 ${booking.step >= s ? 'w-6 bg-gray-900' : 'w-2 bg-gray-200'}`} 
+              />
+            ))}
+          </div>
 
-        <div className="flex gap-2">
-          <button 
-            onClick={toggleLanguage}
-            className="flex items-center gap-1 py-1.5 px-3 rounded-full bg-gray-100 hover:bg-gray-200 transition text-sm font-bold text-gray-700"
-          >
-            <Globe className="w-4 h-4" />
-            <span className="uppercase">{lang}</span>
-          </button>
+          <div className="flex items-center gap-3">
+             <button 
+               onClick={toggleLang}
+               className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-bold shadow-lg shadow-gray-200 active:scale-95 transition-all"
+             >
+                <Globe size={16} />
+                <span>{lang.toUpperCase()}</span>
+             </button>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="pt-24 px-6 max-w-md mx-auto">
+      <main className="pt-[calc(env(safe-area-inset-top)+7rem)] px-6 max-w-md mx-auto pb-32">
         <AnimatePresence mode="wait">
           {/* @ts-ignore */}
           <motion.div
