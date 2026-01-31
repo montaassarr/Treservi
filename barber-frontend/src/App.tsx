@@ -188,24 +188,53 @@ const AppRoutes: React.FC = () => {
     }
   }, [navigate, isSuperAdmin, userSalonSlug]);
 
-  // Auto-redirect logic
+  // Auto-redirect logic for root path with salon detection
   useEffect(() => {
-    if (isAuthenticated && !isLoadingAuth) {
-      const path = location.pathname;
+    const path = location.pathname;
+    
+    // Root path - check for salon param or use stored salon
+    if (path === '/') {
+      const params = new URLSearchParams(location.search);
+      const salonParam = params.get('salon');
       
-      // If super admin and on generic pages or salon pages, might want to redirect (optional)
-      // But mainly: if we have a slug and user is owner, ensure they are on correct dashboard
+      // If salon param in URL, save it
+      if (salonParam) {
+        localStorage.setItem('lastSalonSlug', salonParam);
+        // Redirect to booking page without params
+        navigate(`/${salonParam}/book`, { replace: true });
+        return;
+      }
+      
+      // Check if we have a stored salon from previous visit
+      const storedSalon = localStorage.getItem('lastSalonSlug');
+      if (storedSalon) {
+        navigate(`/${storedSalon}/book`, { replace: true });
+        return;
+      }
+      
+      // If user is authenticated, show dashboard
+      if (isAuthenticated && !isLoadingAuth && userSalonSlug) {
+        navigate(`/${userSalonSlug}/dashboard`, { replace: true });
+        return;
+      }
+    }
+    
+    // Authenticated users redirect
+    if (isAuthenticated && !isLoadingAuth) {
+      // If super admin and on generic pages or salon pages
+      if (isSuperAdmin && (path === '/' || path.endsWith('/login'))) {
+          navigate('/admin/dashboard', { replace: true });
+          return;
+      }
+      
       if (userSalonSlug && !isSuperAdmin) {
          if (path === '/' || path.endsWith('/login')) {
              navigate(`/${userSalonSlug}/dashboard`, { replace: true });
+             return;
          }
       }
-      
-      if (isSuperAdmin && (path === '/admin/login' || path === '/')) {
-          navigate('/admin/dashboard', { replace: true });
-      }
     }
-  }, [isAuthenticated, isLoadingAuth, userSalonSlug, isSuperAdmin, location.pathname, navigate]);
+  }, [isAuthenticated, isLoadingAuth, userSalonSlug, isSuperAdmin, location.pathname, location.search, navigate]);
 
   return (
     <Routes>

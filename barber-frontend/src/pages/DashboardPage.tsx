@@ -59,7 +59,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const bookingUrl = useMemo(() => {
     if (!salonSlug) return '';
     if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/${salonSlug}/book`;
+    return `${window.location.origin}/?salon=${salonSlug}`;
   }, [salonSlug]);
 
   const playNotification = () => {
