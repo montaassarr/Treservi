@@ -528,7 +528,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userRole = 'owner' }) => {
             </div>
 
             {/* Mobile Card View - Visible on Mobile Only */}
-            <div className="sm:hidden space-y-3">
+            <div className="sm:hidden space-y-4">
               {appointments.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <p className="text-sm">{t('appointments.noAppointments') || 'No appointments'}</p>

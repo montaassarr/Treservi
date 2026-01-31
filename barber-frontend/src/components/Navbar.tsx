@@ -36,6 +36,8 @@ interface NavbarProps {
   isMobileMenuOpen: boolean;
   setIsMobileMenuOpen: (isOpen: boolean) => void;
   onLogout: () => void;
+  currentLanguage?: string;
+  onLanguageToggle?: () => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ 
@@ -51,7 +53,9 @@ const Navbar: React.FC<NavbarProps> = ({
   onNotificationsOpen,
   isDarkMode, 
   toggleTheme,
-  onLogout
+  onLogout,
+  currentLanguage = 'en',
+  onLanguageToggle
 }) => {
   const [showLanguage, setShowLanguage] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -60,14 +64,16 @@ const Navbar: React.FC<NavbarProps> = ({
   const notificationRef = useRef<HTMLDivElement>(null);
   const langRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { language, setLanguage, t } = useLanguage();
+  const { t } = useLanguage();
 
   // If onLogout is not passed (shouldn't happen in new App.tsx), use fallback
   const handleLogout = onLogout || (async () => {
     // Fallback if needed
     console.error("onLogout prop missing in Navbar");
     navigate('/');
-  });  const handleClickOutside = useCallback((event: MouseEvent) => {
+  });
+  
+  const handleClickOutside = useCallback((event: MouseEvent) => {
     if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
       setShowProfileMenu(false);
     }
@@ -220,8 +226,11 @@ const Navbar: React.FC<NavbarProps> = ({
 
                          {/* Language & Currency */}
                          <div className="grid grid-cols-2 gap-2">
-                             <button className="flex items-center justify-center gap-2 p-3 bg-gray-50 dark:bg-white/5 rounded-2xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium">
-                                 <Globe size={16} /> {language.toUpperCase()}
+                             <button 
+                                onClick={onLanguageToggle}
+                                className="flex items-center justify-center gap-2 p-3 bg-gray-50 dark:bg-white/5 rounded-2xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium"
+                             >
+                                 <Globe size={16} /> {currentLanguage.toUpperCase()}
                              </button>
                              <button className="flex items-center justify-center gap-2 p-3 bg-gray-50 dark:bg-white/5 rounded-2xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm font-medium">
                                  <CreditCard size={16} /> DT

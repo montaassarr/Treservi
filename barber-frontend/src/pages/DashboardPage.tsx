@@ -8,6 +8,7 @@ import Services from '../components/Services';
 import Staff from '../components/Staff';
 import BottomNavigation from '../components/BottomNavigation';
 import { useSalon } from '../context/SalonContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Sparkles } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -28,6 +29,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   onLogout 
 }) => {
   const { salon, salonSlug } = useSalon(); // Access salon context
+  const { language, setLanguage } = useLanguage(); // Add language context
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
@@ -43,6 +45,25 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       document.title = `${salon.name} - Dashboard | Reservi`;
     }
   }, [salon]);
+
+  // Load notifications from localStorage on mount
+  useEffect(() => {
+    const savedNotifications = localStorage.getItem('dashboard_notifications');
+    if (savedNotifications) {
+      try {
+        const parsed = JSON.parse(savedNotifications);
+        setNotifications(parsed);
+        setNotificationCount(parsed.length);
+      } catch (e) {
+        console.error('Failed to parse saved notifications:', e);
+      }
+    }
+  }, []);
+
+  // Save notifications to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('dashboard_notifications', JSON.stringify(notifications));
+  }, [notifications]);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -209,6 +230,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const toggleTheme = () => setIsDarkMode((prev) => !prev);
 
+  const toggleLanguage = () => {
+    let newLang: 'en' | 'fr' | 'ar' | 'tn' = 'en';
+    if (language === 'en') newLang = 'fr';
+    else if (language === 'fr') newLang = 'ar';
+    else if (language === 'ar') newLang = 'tn';
+    else newLang = 'en';
+    
+    setLanguage(newLang);
+  };
+
   // Force staff to dashboard only
   useEffect(() => {
     if (userRole === 'staff' && activeTab !== 'dashboard') {
@@ -251,6 +282,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             notificationCount={notificationCount}
             notifications={notifications}
             onNotificationsOpen={() => setNotificationCount(0)}
+            currentLanguage={language}
+            onLanguageToggle={toggleLanguage}
           />
       </div>
 
