@@ -233,22 +233,29 @@ export default function BookingPage() {
       }
 
       const dateKey = booking.selectedDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' });
+      console.log('Loading booked times for date:', dateKey, 'staff:', booking.selectedStaff.id);
+      
       const { data, error } = await supabase
         .from('appointments')
         .select('appointment_time, status')
         .eq('salon_id', salon.id)
         .eq('staff_id', booking.selectedStaff.id)
         .eq('appointment_date', dateKey)
-        .neq('status', 'Cancelled');
+        .in('status', ['Confirmed', 'Pending', 'confirmed', 'pending']);
 
-      if (error || !data) {
+      if (error) {
+        console.error('Error loading booked times:', error);
         setBookedTimes([]);
         return;
       }
 
-      const times = data
+      console.log('Booked appointments:', data);
+      
+      const times = (data || [])
         .map((item: any) => (item.appointment_time || '').slice(0, 5))
         .filter((time: string) => Boolean(time));
+      
+      console.log('Booked times:', times);
       setBookedTimes(times);
     };
 
