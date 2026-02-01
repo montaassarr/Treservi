@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import Dashboard from '../components/Dashboard';
@@ -8,9 +8,13 @@ import Services from '../components/Services';
 import Staff from '../components/Staff';
 import Settings from '../components/Settings';
 import BottomNavigation from '../components/BottomNavigation';
+import NotificationToast from '../components/NotificationToast';
 import { useSalon } from '../context/SalonContext';
 import { useLanguage } from '../context/LanguageContext';
-import { useNotificationManager } from '../hooks/useNotificationManager';
+import { useAppBadge } from '../hooks/useAppBadge';
+import { usePushNotifications } from '../hooks/usePushNotifications';
+import { useRealtimeNotifications, RealtimeNotification } from '../hooks/useRealtimeNotifications';
+import { supabase } from '../services/supabaseClient';
 import { QRCodeCanvas } from 'qrcode.react';
 
 interface DashboardPageProps {
@@ -28,32 +32,126 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   staffName,
   onLogout
 }) => {
-  const { salon, salonSlug } = useSalon();
-  const { language, setLanguage } = useLanguage();
+  const { salon, salonSlug } = useSalon(); // Access salon context
+  const { language, setLanguage } = useLanguage(); // Add language context
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isAIOpen, setIsAIOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; subtitle: string; timestamp: string }>>([]);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [currentToastNotification, setCurrentToastNotification] = useState<RealtimeNotification | null>(null);
+  const seenAppointmentsRef = useRef<Set<string>>(new Set());
+  const [hasBootstrappedNotifications, setHasBootstrappedNotifications] = useState(false);
+  const [hasReadNotifications, setHasReadNotifications] = useState(false);
+  const isLiveRef = useRef(false); // Track if we're receiving live updates (not bootstrap)
 
-  // iOS-Safe notification management (extracted to custom hook)
+  // Initialize app badge hook with Supabase sync
   const {
-    notifications,
-    notificationCount,
-    markAsRead,
-  } = useNotificationManager({
-    salonId,
+    updateBadge,
+    clearBadge,
+    hasPermission,
+    isSupported,
+    refreshBadgeFromDB,
+    badgeCount
+  } = useAppBadge({
+    autoRequestPermission: true,
+    userId: userId,
+    salonId: salonId,
+    userRole: userRole
+  });
+
+  const { subscribeToPush } = usePushNotifications();
+
+  // Setup Real-time Notifications (iOS-compatible via WebSocket)
+  const { isSubscribed: isRealtimeSubscribed } = useRealtimeNotifications({
     userId,
+    salonId,
     userRole,
     enabled: true,
+    onNotification: (notification) => {
+      // Show toast notification (works on iOS)
+      setCurrentToastNotification(notification);
+      
+      // Increment notification count
+      setNotificationCount(prev => prev + 1);
+      
+      // Add to notifications list for navbar dropdown
+      setNotifications((prev) => [
+        {
+          id: notification.id,
+          title: notification.title,
+          subtitle: notification.body,
+          timestamp: new Date().toLocaleString()
+        },
+        ...prev
+      ]);
+
+      // Update app badge
+      updateBadge(notificationCount + 1);
+    },
+    onError: (error) => {
+      console.error('Realtime notification error:', error);
+    }
   });
+
+  // Subscribe to Push Notifications (deferred to not block initial render)
+  useEffect(() => {
+    if (!userId) return;
+    const timer = setTimeout(() => {
+      subscribeToPush(userId).catch(() => { });
+    }, 2000); // Delay 2 seconds after mount
+    return () => clearTimeout(timer);
+  }, [userId, subscribeToPush, updateBadge, notificationCount]);
 
   // Update page title with salon name
   useEffect(() => {
     if (salon?.name) {
       document.title = `${salon.name} - Dashboard | Reservi`;
     }
-  }, [salon?.name]);
+  }, [salon]);
 
-  // Dark mode toggle
+  // Load notifications from localStorage on mount
+  useEffect(() => {
+    const savedNotifications = localStorage.getItem('dashboard_notifications');
+    const savedReadState = localStorage.getItem('dashboard_notifications_read');
+
+    if (savedNotifications) {
+      try {
+        const parsed = JSON.parse(savedNotifications);
+        if (parsed && parsed.length > 0) {
+          setNotifications(parsed);
+          // Add IDs to seenAppointmentsRef to prevent duplicates
+          parsed.forEach((notif: any) => {
+            if (notif.id) seenAppointmentsRef.current.add(notif.id);
+          });
+
+          // Only show count if not marked as read
+          if (savedReadState === 'true') {
+            setNotificationCount(0);
+            setHasReadNotifications(true);
+          } else {
+            setNotificationCount(parsed.length);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse saved notifications:', e);
+      }
+    }
+  }, []);
+
+  // Save notifications to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('dashboard_notifications', JSON.stringify(notifications));
+  }, [notifications]);
+
+  // Update app badge when notification count changes
+  useEffect(() => {
+    if (hasPermission && isSupported) {
+      updateBadge(notificationCount);
+    }
+  }, [notificationCount, hasPermission, isSupported, updateBadge]);
+
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -62,7 +160,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     }
   }, [isDarkMode]);
 
-  // Close mobile menu on tab change
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [activeTab]);
@@ -72,6 +169,191 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     if (typeof window === 'undefined') return '';
     return `${window.location.origin}/?salon=${salonSlug}&ref=qr_code&route=/book`;
   }, [salonSlug]);
+
+  const playNotification = () => {
+    // Vibration
+    if (navigator.vibrate) {
+      navigator.vibrate([200, 100, 200]);
+    }
+
+    // Play notification sound - simple beep
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.value = 1000; // Higher frequency for faster response
+      oscillator.type = 'sine';
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+      // Silently fail if audio context not available
+      console.log('Audio notification not supported');
+    }
+  };
+
+  useEffect(() => {
+    if (!supabase || !salonId || !userId) return;
+
+    const addNotification = async (appointment: any) => {
+      const appointmentId = appointment?.id || `${Date.now()}`;
+      if (seenAppointmentsRef.current.has(appointmentId)) return;
+      seenAppointmentsRef.current.add(appointmentId);
+
+      // Fetch full appointment details
+      let staffName = 'Unassigned';
+      let serviceName = 'Service';
+      let amount = 'N/A';
+
+      try {
+        const { data } = await supabase
+          .from('appointments')
+          .select(`
+            *,
+            staff:staff_id(full_name),
+            service:service_id(name, price)
+          `)
+          .eq('id', appointmentId)
+          .single();
+
+        if (data) {
+          staffName = (data.staff as any)?.full_name || 'Unassigned';
+          serviceName = (data.service as any)?.name || 'Service';
+          amount = (data.service as any)?.price ? `${(data.service as any).price} DT` : (data.amount || 'N/A');
+        }
+      } catch (error) {
+        console.error('Error fetching appointment details:', error);
+      }
+
+      const title = `New appointment${appointment?.customer_name ? ` • ${appointment.customer_name}` : ''}`;
+      const subtitle = `${serviceName} • ${staffName} • ${appointment?.appointment_date || ''} ${appointment?.appointment_time || ''}`.trim();
+      const timestamp = new Date().toLocaleString();
+
+      setNotifications((prev) => {
+        const newNotifications = [
+          {
+            id: appointmentId,
+            title,
+            subtitle,
+            timestamp,
+            staffName,
+            serviceName,
+            amount,
+            date: appointment?.appointment_date,
+            time: appointment?.appointment_time,
+            customerName: appointment?.customer_name,
+            customerPhone: appointment?.customer_phone,
+            customerEmail: appointment?.customer_email
+          },
+          ...prev.filter(n => n.id !== appointmentId), // Remove duplicates
+        ];
+        // Keep last 10 notifications (no hardcoded limit)
+        return newNotifications.slice(0, 10);
+      });
+
+      // Only play sound and increment count for LIVE updates (not bootstrap/refresh)
+      if (isLiveRef.current) {
+        setNotificationCount((prev) => prev + 1); // No cap
+        setHasReadNotifications(false);
+        localStorage.setItem('dashboard_notifications_read', 'false');
+        playNotification();
+        // Badge auto-updates via useAppBadge hook's realtime subscription
+      }
+    };
+
+    const bootstrapNotifications = async () => {
+      if (hasBootstrappedNotifications) return;
+
+      // Only bootstrap if no notifications in localStorage
+      if (notifications.length > 0) {
+        setHasBootstrappedNotifications(true);
+        return;
+      }
+
+      try {
+        // 1. Fetch the items for the dropdown (Limit 10 is fine for UI list)
+        const query = supabase
+          .from('appointments')
+          .select(`
+            *,
+            staff:staff_id(full_name),
+            service:service_id(name, price)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        const { data } = userRole === 'owner'
+          ? await query.eq('salon_id', salonId)
+          : await query.eq('staff_id', userId);
+
+        if (data && data.length > 0) {
+          const bootstrappedNotifications = data.map((apt: any) => {
+            seenAppointmentsRef.current.add(apt.id);
+
+            const staffName = (apt.staff as any)?.full_name || 'Unassigned';
+            const serviceName = (apt.service as any)?.name || 'Service';
+            const amount = (apt.service as any)?.price ? `${(apt.service as any).price} DT` : (apt.amount || 'N/A');
+
+            return {
+              id: apt.id,
+              title: `New appointment${apt.customer_name ? ` • ${apt.customer_name}` : ''}`,
+              subtitle: `${serviceName} • ${staffName} • ${apt.appointment_date || ''} ${apt.appointment_time || ''}`.trim(),
+              timestamp: new Date(apt.created_at).toLocaleString(),
+              staffName,
+              serviceName,
+              amount,
+              date: apt.appointment_date,
+              time: apt.appointment_time,
+              customerName: apt.customer_name,
+              customerPhone: apt.customer_phone,
+              customerEmail: apt.customer_email,
+              isRead: apt.is_read // Store read status
+            };
+          });
+
+          setNotifications(bootstrappedNotifications);
+        }
+
+        // Don't set notification count on bootstrap - only from live updates
+        setNotificationCount(0);
+
+      } catch (error) {
+        console.error('Error bootstrapping notifications:', error);
+      }
+
+      setHasBootstrappedNotifications(true);
+    };
+
+    bootstrapNotifications();
+
+    // Realtime subscription is sufficient, removing duplicate polling
+    const channel = supabase
+      .channel('notifications-appointments')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'appointments',
+        filter: userRole === 'owner'
+          ? `salon_id=eq.${salonId}`
+          : `staff_id=eq.${userId}`,
+      }, (payload) => {
+        // Mark as live mode - this is a real-time update
+        isLiveRef.current = true;
+        addNotification(payload.new as any);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [salonId, userId, userRole, hasBootstrappedNotifications]);
 
   const toggleTheme = () => setIsDarkMode((prev) => !prev);
 
@@ -97,6 +379,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   return (
     <div className={`flex h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-treservi-bg-dark' : 'bg-treservi-bg-light'}`}>
+      {/* Real-time Notification Toast (iOS & Desktop Compatible) */}
+      <NotificationToast
+        notification={currentToastNotification}
+        onDismiss={() => setCurrentToastNotification(null)}
+        duration={5000}
+      />
+
       {/* Sidebar - Desktop Only */}
       <div className="hidden lg:block h-screen sticky top-0 z-40 bg-white dark:bg-black/20 backdrop-blur-md">
         <Sidebar
@@ -126,7 +415,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             userName={staffName || 'User'}
             notificationCount={notificationCount}
             notifications={notifications}
-            onNotificationsOpen={markAsRead}
+            onNotificationsOpen={async () => {
+              // Instagram-style: clear badge and mark as read
+              setNotificationCount(0);
+              setHasReadNotifications(true);
+              localStorage.setItem('dashboard_notifications_read', 'true');
+              await clearBadge();
+
+              // Refresh badge count from DB
+              if (refreshBadgeFromDB) {
+                await refreshBadgeFromDB();
+              }
+            }}
             currentLanguage={language}
             onLanguageToggle={toggleLanguage}
           />
