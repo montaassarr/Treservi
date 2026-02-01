@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import Dashboard from '../components/Dashboard';
@@ -10,7 +10,7 @@ import Settings from '../components/Settings';
 import BottomNavigation from '../components/BottomNavigation';
 import { useSalon } from '../context/SalonContext';
 import { useLanguage } from '../context/LanguageContext';
-import { supabase } from '../services/supabaseClient';
+import { useNotificationManager } from '../hooks/useNotificationManager';
 import { QRCodeCanvas } from 'qrcode.react';
 
 interface DashboardPageProps {
@@ -33,13 +33,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; subtitle: string; timestamp: string }>>([]);
-  const [notificationCount, setNotificationCount] = useState(0);
-  
-  // Refs to track state without causing re-renders
-  const seenAppointmentsRef = useRef<Set<string>>(new Set());
-  const isInitializedRef = useRef(false);
-  const channelRef = useRef<any>(null);
+
+  // iOS-Safe notification management (extracted to custom hook)
+  const {
+    notifications,
+    notificationCount,
+    markAsRead,
+  } = useNotificationManager({
+    salonId,
+    userId,
+    userRole,
+    enabled: true,
+  });
 
   // Update page title with salon name
   useEffect(() => {
@@ -86,105 +91,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       setActiveTab('dashboard');
     }
   }, [userRole, activeTab]);
-  useEffect(() => {
-    if (isInitializedRef.current) return;
-    
-    try {
-      const saved = localStorage.getItem('dashboard_notifications');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed?.length > 0) {
-          setNotifications(parsed);
-          parsed.forEach((n: any) => {
-            if (n.id) seenAppointmentsRef.current.add(n.id);
-          });
-          setNotificationCount(parsed.length);
-        }
-      }
-    } catch (e) {
-      // Silently fail on iOS Safari localStorage issues
-    }
-    
-    isInitializedRef.current = true;
-  }, []);
-
-  // iOS-Safe: Setup real-time notifications (deferred with proper cleanup)
-  useEffect(() => {
-    if (!supabase || !salonId || !userId || isInitializedRef.current === false) return;
-
-    const setupNotifications = async () => {
-      try {
-        // Setup real-time subscription (iOS-safe, no bootstrap)
-        const channel = supabase
-          .channel(`notifications-${salonId}-${userId}`)
-          .on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'appointments',
-            filter: userRole === 'owner'
-              ? `salon_id=eq.${salonId}`
-              : `staff_id=eq.${userId}`,
-          }, async (payload) => {
-            const apt = payload.new as any;
-            if (!apt?.id || seenAppointmentsRef.current.has(apt.id)) return;
-            seenAppointmentsRef.current.add(apt.id);
-
-            // Fetch appointment details safely
-            try {
-              const { data } = await supabase
-                .from('appointments')
-                .select('staff:staff_id(full_name), service:service_id(name, price)')
-                .eq('id', apt.id)
-                .single();
-
-              const staffName = (data?.staff as any)?.full_name || 'Unassigned';
-              const serviceName = (data?.service as any)?.name || 'Service';
-              
-              setNotifications((prev) => {
-                const updated = [
-                  {
-                    id: apt.id,
-                    title: `New appointment${apt.customer_name ? ` • ${apt.customer_name}` : ''}`,
-                    subtitle: `${serviceName} • ${staffName}`,
-                    timestamp: new Date().toLocaleString(),
-                  },
-                  ...prev.filter(n => n.id !== apt.id),
-                ].slice(0, 10);
-                
-                // Persist to localStorage
-                try {
-                  localStorage.setItem('dashboard_notifications', JSON.stringify(updated));
-                } catch (e) {
-                  // Silently fail on iOS localStorage quota
-                }
-                
-                return updated;
-              });
-
-              setNotificationCount((prev) => prev + 1);
-            } catch (err) {
-              // Silently handle fetch errors
-            }
-          })
-          .subscribe((status) => {
-            if (status === 'SUBSCRIBED') {
-              channelRef.current = channel;
-            }
-          });
-      } catch (err) {
-        // Silently fail on subscription errors (iOS may not support all features)
-      }
-    };
-
-    setupNotifications();
-
-    return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
-    };
-  }, [salonId, userId, userRole]);
 
   const shouldShowOwnerDashboard = activeTab === 'dashboard' && userRole === 'owner';
   const shouldShowStaffDashboard = activeTab === 'dashboard' && userRole === 'staff';
@@ -220,10 +126,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             userName={staffName || 'User'}
             notificationCount={notificationCount}
             notifications={notifications}
-            onNotificationsOpen={() => {
-              // Clear notification count when opened
-              setNotificationCount(0);
-            }}
+            onNotificationsOpen={markAsRead}
             currentLanguage={language}
             onLanguageToggle={toggleLanguage}
           />
