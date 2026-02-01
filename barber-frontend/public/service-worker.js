@@ -80,16 +80,22 @@ self.addEventListener('fetch', (event) => {
 
 // Handle push notifications
 self.addEventListener('push', (event) => {
+  let data = {};
+
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    // Fallback for text-only payloads
+    data = { body: event.data ? event.data.text() : 'You have a new appointment!' };
+  }
+
+  const title = data.title || 'New Appointment';
   const options = {
-    body: event.data ? event.data.text() : 'You have a new appointment!',
-    icon: '/icon-192.png',
+    body: data.body,
+    icon: data.icon || '/icon-192.png',
     badge: '/icon-72.png',
     vibrate: [200, 100, 200],
-    data: {
-      dateOfArrival: Date.now(),
-      primaryKey: 1,
-      url: '/'
-    },
+    data: data.data || { url: '/' },
     actions: [
       {
         action: 'view',
@@ -104,8 +110,16 @@ self.addEventListener('push', (event) => {
     ]
   };
 
+  // Update App Badge count from payload if present
+  if (data.badge && 'setAppBadge' in navigator) {
+    const badgeCount = parseInt(data.badge);
+    if (!isNaN(badgeCount)) {
+      navigator.setAppBadge(badgeCount).catch(err => console.error('Failed to set badge', err));
+    }
+  }
+
   event.waitUntil(
-    self.registration.showNotification('New Appointment', options)
+    self.registration.showNotification(title, options)
   );
 });
 
@@ -113,11 +127,32 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  if (event.action === 'view') {
-    event.waitUntil(
-      clients.openWindow('/')
-    );
-  }
+  if (event.action === 'close') return;
+
+  const urlToOpen = event.notification.data.url || '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // Check if there is already a window for this app open
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        // If url matches or just bringing app to foreground
+        if ('focus' in client) {
+          if (client.url.includes(urlToOpen)) {
+            return client.focus();
+          }
+          // Optional: navigate client to url if different?
+          // For now, just focusing is good, but if we want to navigate:
+          // client.navigate(urlToOpen);
+        }
+      }
+
+      // If no window is open, open a new one
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
 });
 
 // Badge API support - update badge count

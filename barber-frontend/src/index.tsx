@@ -17,8 +17,8 @@ root.render(
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      // Ignore registration errors
+    navigator.serviceWorker.register('/service-worker.js').catch((err) => {
+      console.error('Service Worker registration failed:', err);
     });
   });
 }

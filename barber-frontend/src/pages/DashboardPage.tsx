@@ -1,16 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
-import Dashboard from '../components/Dashboard';
-import StaffDashboard from '../components/StaffDashboard';
-import Appointments from '../components/Appointments';
-import Services from '../components/Services';
-import Staff from '../components/Staff';
-import Settings from '../components/Settings';
+const Dashboard = React.lazy(() => import('../components/Dashboard'));
+const StaffDashboard = React.lazy(() => import('../components/StaffDashboard'));
+const Appointments = React.lazy(() => import('../components/Appointments'));
+const Services = React.lazy(() => import('../components/Services'));
+const Staff = React.lazy(() => import('../components/Staff'));
+const Settings = React.lazy(() => import('../components/Settings'));
 import BottomNavigation from '../components/BottomNavigation';
 import { useSalon } from '../context/SalonContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAppBadge } from '../hooks/useAppBadge';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { Sparkles } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -23,12 +24,12 @@ interface DashboardPageProps {
   onLogout: () => void;
 }
 
-const DashboardPage: React.FC<DashboardPageProps> = ({ 
-  salonId, 
-  userId, 
-  userRole, 
-  staffName, 
-  onLogout 
+const DashboardPage: React.FC<DashboardPageProps> = ({
+  salonId,
+  userId,
+  userRole,
+  staffName,
+  onLogout
 }) => {
   const { salon, salonSlug } = useSalon(); // Access salon context
   const { language, setLanguage } = useLanguage(); // Add language context
@@ -44,19 +45,28 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const isLiveRef = useRef(false); // Track if we're receiving live updates (not bootstrap)
 
   // Initialize app badge hook with Supabase sync
-  const { 
-    updateBadge, 
-    clearBadge, 
-    hasPermission, 
-    isSupported, 
+  const {
+    updateBadge,
+    clearBadge,
+    hasPermission,
+    isSupported,
     refreshBadgeFromDB,
-    badgeCount 
-  } = useAppBadge({ 
+    badgeCount
+  } = useAppBadge({
     autoRequestPermission: true,
     userId: userId,
     salonId: salonId,
     userRole: userRole
   });
+
+  const { subscribeToPush } = usePushNotifications();
+
+  // Subscribe to Push Notifications
+  useEffect(() => {
+    if (userId) {
+      subscribeToPush(userId).catch(err => console.error('Push subscription failed:', err));
+    }
+  }, [userId, subscribeToPush]);
 
   // Update page title with salon name
   useEffect(() => {
@@ -69,7 +79,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   useEffect(() => {
     const savedNotifications = localStorage.getItem('dashboard_notifications');
     const savedReadState = localStorage.getItem('dashboard_notifications_read');
-    
+
     if (savedNotifications) {
       try {
         const parsed = JSON.parse(savedNotifications);
@@ -79,7 +89,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           parsed.forEach((notif: any) => {
             if (notif.id) seenAppointmentsRef.current.add(notif.id);
           });
-          
+
           // Only show count if not marked as read
           if (savedReadState === 'true') {
             setNotificationCount(0);
@@ -129,22 +139,22 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     if (navigator.vibrate) {
       navigator.vibrate([200, 100, 200]);
     }
-    
+
     // Play notification sound - simple beep
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
-      
+
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
-      
+
       oscillator.frequency.value = 1000; // Higher frequency for faster response
       oscillator.type = 'sine';
-      
+
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      
+
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.3);
     } catch (error) {
@@ -165,7 +175,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       let staffName = 'Unassigned';
       let serviceName = 'Service';
       let amount = 'N/A';
-      
+
       try {
         const { data } = await supabase
           .from('appointments')
@@ -176,7 +186,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           `)
           .eq('id', appointmentId)
           .single();
-        
+
         if (data) {
           staffName = (data.staff as any)?.full_name || 'Unassigned';
           serviceName = (data.service as any)?.name || 'Service';
@@ -192,10 +202,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
       setNotifications((prev) => {
         const newNotifications = [
-          { 
-            id: appointmentId, 
-            title, 
-            subtitle, 
+          {
+            id: appointmentId,
+            title,
+            subtitle,
             timestamp,
             staffName,
             serviceName,
@@ -211,7 +221,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         // Keep last 10 notifications (no hardcoded limit)
         return newNotifications.slice(0, 10);
       });
-      
+
       // Only play sound and increment count for LIVE updates (not bootstrap/refresh)
       if (isLiveRef.current) {
         setNotificationCount((prev) => prev + 1); // No cap
@@ -224,13 +234,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
     const bootstrapNotifications = async () => {
       if (hasBootstrappedNotifications) return;
-      
+
       // Only bootstrap if no notifications in localStorage
       if (notifications.length > 0) {
         setHasBootstrappedNotifications(true);
         return;
       }
-      
+
       try {
         const query = supabase
           .from('appointments')
@@ -249,11 +259,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         if (data && data.length > 0) {
           const bootstrappedNotifications = data.map((apt: any) => {
             seenAppointmentsRef.current.add(apt.id);
-            
+
             const staffName = (apt.staff as any)?.full_name || 'Unassigned';
             const serviceName = (apt.service as any)?.name || 'Service';
             const amount = (apt.service as any)?.price ? `${(apt.service as any).price} DT` : (apt.amount || 'N/A');
-            
+
             return {
               id: apt.id,
               title: `New appointment${apt.customer_name ? ` • ${apt.customer_name}` : ''}`,
@@ -269,19 +279,20 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               customerEmail: apt.customer_email
             };
           });
-          
+
           setNotifications(bootstrappedNotifications);
           setNotificationCount(bootstrappedNotifications.length);
         }
       } catch (error) {
         console.error('Error bootstrapping notifications:', error);
       }
-      
+
       setHasBootstrappedNotifications(true);
     };
 
     bootstrapNotifications();
 
+    // Realtime subscription is sufficient, removing duplicate polling
     const channel = supabase
       .channel('notifications-appointments')
       .on('postgres_changes', {
@@ -292,40 +303,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           ? `salon_id=eq.${salonId}`
           : `staff_id=eq.${userId}`,
       }, (payload) => {
-        // Mark as live mode - this is a real-time update, not bootstrap
+        // Mark as live mode - this is a real-time update
         isLiveRef.current = true;
         addNotification(payload.new as any);
       })
       .subscribe();
 
-    // After bootstrap completes, mark as live mode for polling
-    setTimeout(() => {
-      isLiveRef.current = true;
-    }, 2000);
-
-    const polling = setInterval(async () => {
-      const query = supabase
-        .from('appointments')
-        .select('id, customer_name, appointment_date, appointment_time, created_at')
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      const { data } = userRole === 'owner'
-        ? await query.eq('salon_id', salonId)
-        : await query.eq('staff_id', userId);
-
-      // Only process appointments created in the last 60 seconds (truly new)
-      const now = Date.now();
-      (data || []).forEach((apt: any) => {
-        const createdAt = new Date(apt.created_at).getTime();
-        const isNew = now - createdAt < 60000; // Less than 60 seconds old
-        if (isNew) addNotification(apt);
-      });
-    }, 30000);
-
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(polling);
     };
   }, [salonId, userId, userRole, hasBootstrappedNotifications]);
 
@@ -337,7 +322,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     else if (language === 'fr') newLang = 'ar';
     else if (language === 'ar') newLang = 'tn';
     else newLang = 'en';
-    
+
     setLanguage(newLang);
   };
 
@@ -367,8 +352,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* Main Content Area - Responsive */}
       <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Header - visible on all screens (modified Navbar for mobile) */}
-      <div className="sticky top-0 z-30 pointer-events-none">
+        {/* Header - visible on all screens (modified Navbar for mobile) */}
+        <div className="sticky top-0 z-30 pointer-events-none">
           <Navbar
             isDarkMode={isDarkMode}
             toggleTheme={toggleTheme}
@@ -387,7 +372,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               setNotificationCount(0);
               setHasReadNotifications(true);
               await clearBadge();
-              
+
               // Refresh badge count from DB
               if (refreshBadgeFromDB) {
                 await refreshBadgeFromDB();
@@ -396,7 +381,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             currentLanguage={language}
             onLanguageToggle={toggleLanguage}
           />
-      </div>
+        </div>
 
         {/* Main Content - scrollable with bottom padding for mobile nav */}
         <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 pt-[calc(env(safe-area-inset-top)+5rem)] md:pt-6 pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-6">
@@ -416,23 +401,29 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               </div>
             </div>
           )}
-          {shouldShowOwnerDashboard && <Dashboard salonId={salonId} userId={userId} />}
-          {shouldShowStaffDashboard && <StaffDashboard salonId={salonId} staffId={userId} staffName={staffName} />}
-          {activeTab === 'appointments' && userRole === 'owner' && <Appointments salonId={salonId} />}
-          {activeTab === 'services' && userRole === 'owner' && <Services salonId={salonId} />}
-          {activeTab === 'staff' && userRole === 'owner' && <Staff salonId={salonId} />}
-          {activeTab === 'settings' && userRole === 'owner' && <Settings salonId={salonId} />}
+          <React.Suspense fallback={
+            <div className="flex items-center justify-center h-full w-full">
+              <div className="w-8 h-8 border-2 border-gray-200 border-t-emerald-500 rounded-full animate-spin"></div>
+            </div>
+          }>
+            {shouldShowOwnerDashboard && <Dashboard salonId={salonId} userId={userId} />}
+            {shouldShowStaffDashboard && <StaffDashboard salonId={salonId} staffId={userId} staffName={staffName} />}
+            {activeTab === 'appointments' && userRole === 'owner' && <Appointments salonId={salonId} />}
+            {activeTab === 'services' && userRole === 'owner' && <Services salonId={salonId} />}
+            {activeTab === 'staff' && userRole === 'owner' && <Staff salonId={salonId} />}
+            {activeTab === 'settings' && userRole === 'owner' && <Settings salonId={salonId} />}
+          </React.Suspense>
           {/* AI Assistant removed */}
         </div>
       </div>
 
       {/* FAB - AI Assistant (Removed as per request) */}
-      
+
       {/* AI Modal (Removed as per request) */}
 
 
       {/* Bottom Navigation - Mobile Only */}
-      <BottomNavigation 
+      <BottomNavigation
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         userRole={userRole}
