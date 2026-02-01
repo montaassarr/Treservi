@@ -94,17 +94,18 @@ const AppRoutes: React.FC = () => {
 
   // Track route changes to save state for PWA restoration
   useEffect(() => {
-    if (location.pathname !== '/' && !location.pathname.includes('/login') && !location.pathname.startsWith('/admin')) {
-      const pathParts = location.pathname.split('/');
-      // Expected format: /:salonSlug/...
-      if (pathParts.length > 1 && pathParts[1]) {
-          const possibleSlug = pathParts[1];
-          // Get the rest of the path after slug
-          const remainingPath = '/' + pathParts.slice(2).join('/');
-          
-          if (possibleSlug) {
-             saveAppState(remainingPath, possibleSlug);
-          }
+    if (location.pathname === '/' || location.pathname.includes('/login') || location.pathname.startsWith('/admin')) {
+      return; // Skip saving state for these paths
+    }
+    
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    // Expected format: /salonSlug/route
+    if (pathParts.length >= 2) {
+      const possibleSlug = pathParts[0];
+      const route = '/' + pathParts.slice(1).join('/');
+      
+      if (possibleSlug) {
+        saveAppState(route, possibleSlug);
       }
     }
   }, [location.pathname]);
@@ -178,8 +179,8 @@ const AppRoutes: React.FC = () => {
   // Save current route for PWA state restoration
   useEffect(() => {
     const path = location.pathname;
-    // Extract salon slug from path like /hamdi-salon/dashboard
-    const match = path.match(/^\/([^\/]+)\/(dashboard|book|appointments|staff|services|settings)/);
+    // Extract salon slug from path like /hamdi/dashboard (not /hamdi-salon/dashboard)
+    const match = path.match(/^\/([^\/]+)\/(dashboard|book|appointments|staff|services|settings)$/);
     if (match) {
       const [, salonSlug, route] = match;
       saveAppState(`/${route}`, salonSlug);
@@ -304,50 +305,48 @@ const AppRoutes: React.FC = () => {
         </SalonProvider>
       } />
 
-      {/* Salon Routes Wrapper */}
-      <Route path="/:salonSlug/*" element={
+      {/* Salon Login - Direct route without nesting */}
+      <Route path="/:salonSlug/login" element={
         <SalonProvider>
-          <Routes>
-            {/* Salon Login */}
-            <Route path="login" element={
-               isAuthenticated && userSalonSlug ? (
-                 <Navigate to={`/${userSalonSlug}/dashboard`} replace />
-               ) : (
-                 <LoginPage onLogin={handleLogin} isLoadingAuth={isLoadingAuth} />
-               )
-            } />
-
-            {/* Salon Dashboard */}
-            <Route path="dashboard" element={
-              <ProtectedRoute
-                isAuthenticated={isAuthenticated}
-                isLoadingAuth={isLoadingAuth}
-                userSalonSlug={userSalonSlug}
-                requireAuth={true}
-                isSuperAdmin={isSuperAdmin}
-              >
-                  <DashboardPage 
-                    salonId={salonId} 
-                    userId={userId}
-                    userRole={userRole}
-                    staffName={staffName}
-                    onLogout={handleLogout} 
-                  />
-              </ProtectedRoute>
-            } />
-
-            {/* Public Booking Page */}
-            <Route path="book" element={
-               <div className="w-full h-screen bg-[#FAFAFA] overflow-y-auto no-scrollbar">
-                 <BookingPage />
-               </div>
-            } />
-            
-            <Route path="*" element={<Navigate to="/404" replace />} />
-          </Routes>
+          {isAuthenticated && userSalonSlug ? (
+            <Navigate to={`/${userSalonSlug}/dashboard`} replace />
+          ) : (
+            <LoginPage onLogin={handleLogin} isLoadingAuth={isLoadingAuth} />
+          )}
         </SalonProvider>
       } />
 
+      {/* Salon Dashboard - Direct route without nesting */}
+      <Route path="/:salonSlug/dashboard" element={
+        <SalonProvider>
+          <ProtectedRoute
+            isAuthenticated={isAuthenticated}
+            isLoadingAuth={isLoadingAuth}
+            userSalonSlug={userSalonSlug}
+            requireAuth={true}
+            isSuperAdmin={isSuperAdmin}
+          >
+            <DashboardPage 
+              salonId={salonId} 
+              userId={userId}
+              userRole={userRole}
+              staffName={staffName}
+              onLogout={handleLogout} 
+            />
+          </ProtectedRoute>
+        </SalonProvider>
+      } />
+
+      {/* Public Booking Page - Direct route without nesting */}
+      <Route path="/:salonSlug/book" element={
+        <SalonProvider>
+          <div className="w-full h-screen bg-[#FAFAFA] overflow-y-auto no-scrollbar">
+            <BookingPage />
+          </div>
+        </SalonProvider>
+      } />
+
+      {/* 404 Routes */}
       <Route path="/404" element={<NotFoundPage />} />
       <Route path="*" element={<Navigate to="/404" replace />} />
     </Routes>
