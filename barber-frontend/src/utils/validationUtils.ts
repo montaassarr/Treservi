@@ -9,6 +9,7 @@
  *   - Telecom Tunisia: 71, 72, 73, 74
  *   - Ooredoo: 50, 51, 52, 53
  *   - Orange: 20, 21, 22, 23
+ *   - Other Carriers: 90-99
  * 
  * @param phone - The phone number to validate (can include spaces/hyphens)
  * @returns true if valid Tunisian number, false otherwise
@@ -22,6 +23,11 @@ export const isValidTunisianPhone = (phone: string): boolean => {
   
   // Check if starts with valid Tunisian carrier prefix
   const prefix = cleaned.substring(0, 2);
+  const firstDigit = parseInt(prefix[0]);
+  const fullPrefix = parseInt(prefix);
+  
+  // Valid ranges:
+  // 71-74 (Telecom), 50-53 (Ooredoo), 20-23 (Orange), 90-99 (Other carriers)
   const validPrefixes = [
     // Telecom Tunisia
     '71', '72', '73', '74',
@@ -31,7 +37,10 @@ export const isValidTunisianPhone = (phone: string): boolean => {
     '20', '21', '22', '23'
   ];
   
-  return validPrefixes.includes(prefix);
+  // Check standard carriers or 90-99 range
+  const isValidPrefix = validPrefixes.includes(prefix) || (fullPrefix >= 90 && fullPrefix <= 99);
+  
+  return isValidPrefix;
 };
 
 /**
@@ -71,8 +80,8 @@ export const getTunisianPhoneErrorMessage = (phone: string): string => {
   
   const carrier = Object.entries(carrierMap).find(([key]) => key === prefix)?.[1];
   
-  if (!carrier) {
-    return `Invalid prefix "${prefix}". Must start with: 71-74 (Telecom), 50-53 (Ooredoo), or 20-23 (Orange)`;
+  if (!carrier && !(parseInt(prefix) >= 90 && parseInt(prefix) <= 99)) {
+    return `Invalid prefix "${prefix}". Must start with: 71-74 (Telecom), 50-53 (Ooredoo), 20-23 (Orange), or 90-99 (Other)`;
   }
   
   return 'Invalid phone number';
