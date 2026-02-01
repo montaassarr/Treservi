@@ -1,18 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
-const Dashboard = React.lazy(() => import('../components/Dashboard'));
-const StaffDashboard = React.lazy(() => import('../components/StaffDashboard'));
-const Appointments = React.lazy(() => import('../components/Appointments'));
-const Services = React.lazy(() => import('../components/Services'));
-const Staff = React.lazy(() => import('../components/Staff'));
-const Settings = React.lazy(() => import('../components/Settings'));
+import Dashboard from '../components/Dashboard';
+import StaffDashboard from '../components/StaffDashboard';
+import Appointments from '../components/Appointments';
+import Services from '../components/Services';
+import Staff from '../components/Staff';
+import Settings from '../components/Settings';
 import BottomNavigation from '../components/BottomNavigation';
 import { useSalon } from '../context/SalonContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAppBadge } from '../hooks/useAppBadge';
 import { usePushNotifications } from '../hooks/usePushNotifications';
-import { Sparkles } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { QRCodeCanvas } from 'qrcode.react';
 
@@ -61,11 +60,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const { subscribeToPush } = usePushNotifications();
 
-  // Subscribe to Push Notifications
+  // Subscribe to Push Notifications (deferred to not block initial render)
   useEffect(() => {
-    if (userId) {
-      subscribeToPush(userId).catch(err => console.error('Push subscription failed:', err));
-    }
+    if (!userId) return;
+    const timer = setTimeout(() => {
+      subscribeToPush(userId).catch(() => { });
+    }, 2000); // Delay 2 seconds after mount
+    return () => clearTimeout(timer);
   }, [userId, subscribeToPush]);
 
   // Update page title with salon name
@@ -415,19 +416,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               </div>
             </div>
           )}
-          <React.Suspense fallback={
-            <div className="flex items-center justify-center h-full w-full">
-              <div className="w-8 h-8 border-2 border-gray-200 border-t-emerald-500 rounded-full animate-spin"></div>
-            </div>
-          }>
-            {shouldShowOwnerDashboard && <Dashboard salonId={salonId} userId={userId} />}
-            {shouldShowStaffDashboard && <StaffDashboard salonId={salonId} staffId={userId} staffName={staffName} />}
-            {activeTab === 'appointments' && userRole === 'owner' && <Appointments salonId={salonId} />}
-            {activeTab === 'services' && userRole === 'owner' && <Services salonId={salonId} />}
-            {activeTab === 'staff' && userRole === 'owner' && <Staff salonId={salonId} />}
-            {activeTab === 'settings' && userRole === 'owner' && <Settings salonId={salonId} />}
-          </React.Suspense>
-          {/* AI Assistant removed */}
+          {shouldShowOwnerDashboard && <Dashboard salonId={salonId} userId={userId} />}
+          {shouldShowStaffDashboard && <StaffDashboard salonId={salonId} staffId={userId} staffName={staffName} />}
+          {activeTab === 'appointments' && userRole === 'owner' && <Appointments salonId={salonId} />}
+          {activeTab === 'services' && userRole === 'owner' && <Services salonId={salonId} />}
+          {activeTab === 'staff' && userRole === 'owner' && <Staff salonId={salonId} />}
+          {activeTab === 'settings' && userRole === 'owner' && <Settings salonId={salonId} />}
         </div>
       </div>
 
