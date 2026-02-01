@@ -163,11 +163,11 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
   const isNextAppointment = (apt: Appointment) => {
     const now = new Date();
     if (!isToday(currentDate)) return false;
-    
+
     const [hours, minutes] = apt.appointment_time.split(':').map(Number);
     const aptTime = new Date(currentDate);
     aptTime.setHours(hours, minutes, 0, 0);
-    
+
     return aptTime > now && appointments.findIndex(a => {
       const [h, m] = a.appointment_time.split(':').map(Number);
       const t = new Date(currentDate);
@@ -202,13 +202,13 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
         className="absolute inset-0 bg-black/30 backdrop-blur-sm"
       />
 
-      {/* Main Container - Full screen on mobile, modal on desktop */}
+      {/* Main Container - Proper sizing on all devices */}
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="relative w-full h-[85vh] sm:h-auto sm:max-w-4xl sm:h-[90vh] mx-4 my-[calc(env(safe-area-inset-top)+2rem)] mb-[calc(env(safe-area-inset-bottom)+5rem)] sm:my-0 sm:mx-4 rounded-[32px] overflow-hidden shadow-2xl"
+        className="relative w-[calc(100%-2rem)] max-w-lg sm:max-w-xl md:max-w-2xl h-[80vh] max-h-[700px] rounded-[24px] sm:rounded-[32px] overflow-hidden shadow-2xl"
         style={{
           background: 'linear-gradient(180deg, #FFF9F0 0%, #FFF5E6 100%)',
         }}
@@ -342,11 +342,10 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: idx * 0.05 }}
-                          className={`absolute left-2 right-4 rounded-3xl overflow-hidden shadow-lg ${
-                            isNext
+                          className={`absolute left-2 right-4 rounded-3xl overflow-hidden shadow-lg ${isNext
                               ? 'bg-[#1F1F1F] text-white shadow-orange-900/20'
                               : 'bg-white text-[#1F1F1F] shadow-orange-900/5'
-                          }`}
+                            }`}
                           style={{
                             top: topPosition,
                             height: height,
@@ -360,17 +359,15 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
                                 {apt.customer_name}
                               </h4>
                               <p
-                                className={`text-sm mt-1 truncate ${
-                                  isNext ? 'text-gray-300' : 'text-[#8B7355]'
-                                }`}
+                                className={`text-sm mt-1 truncate ${isNext ? 'text-gray-300' : 'text-[#8B7355]'
+                                  }`}
                               >
                                 {apt.service?.name || 'Service'} • {duration} min
                               </p>
                               {height > 80 && (
                                 <p
-                                  className={`text-xs mt-2 ${
-                                    isNext ? 'text-gray-400' : 'text-[#A89880]'
-                                  }`}
+                                  className={`text-xs mt-2 ${isNext ? 'text-gray-400' : 'text-[#A89880]'
+                                    }`}
                                 >
                                   {apt.appointment_time.slice(0, 5)} -{' '}
                                   {(() => {
@@ -390,22 +387,19 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
                             <div className="flex items-center gap-2">
                               {apt.amount && (
                                 <span
-                                  className={`text-sm font-bold ${
-                                    isNext ? 'text-green-400' : 'text-green-600'
-                                  }`}
+                                  className={`text-sm font-bold ${isNext ? 'text-green-400' : 'text-green-600'
+                                    }`}
                                 >
                                   {apt.amount} DT
                                 </span>
                               )}
-                              
+
                               {/* Staff Avatar */}
                               <div className="flex -space-x-2">
                                 <div
-                                  className={`w-10 h-10 rounded-full border-2 ${
-                                    isNext ? 'border-[#1F1F1F]' : 'border-white'
-                                  } flex items-center justify-center overflow-hidden ${
-                                    isNext ? 'bg-gray-700' : 'bg-gradient-to-br from-blue-100 to-purple-100'
-                                  }`}
+                                  className={`w-10 h-10 rounded-full border-2 ${isNext ? 'border-[#1F1F1F]' : 'border-white'
+                                    } flex items-center justify-center overflow-hidden ${isNext ? 'bg-gray-700' : 'bg-gradient-to-br from-blue-100 to-purple-100'
+                                    }`}
                                 >
                                   <img
                                     src={apt.staff?.avatar_url || getStaffAvatar(apt.staff?.full_name || 'Staff')}
