@@ -286,17 +286,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           setNotifications(bootstrappedNotifications);
         }
 
-        // 2. Fetch the ACTUAL unread count (separate from the list limit)
-        const countQuery = supabase
-          .from('appointments')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_read', false); // Only count unread
-
-        const { count } = userRole === 'owner'
-          ? await countQuery.eq('salon_id', salonId)
-          : await countQuery.eq('staff_id', userId);
-
-        setNotificationCount(count || 0);
+        // Don't set notification count on bootstrap - only from live updates
+        setNotificationCount(0);
 
       } catch (error) {
         console.error('Error bootstrapping notifications:', error);
@@ -386,6 +377,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               // Instagram-style: clear badge and mark as read
               setNotificationCount(0);
               setHasReadNotifications(true);
+              localStorage.setItem('dashboard_notifications_read', 'true');
               await clearBadge();
 
               // Refresh badge count from DB
