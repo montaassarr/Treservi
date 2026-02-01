@@ -76,39 +76,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     }
   }, [salon]);
 
-  // Load notifications from localStorage on mount
+  // Initialize notifications - start with empty, let real-time handle updates
   useEffect(() => {
-    const savedNotifications = localStorage.getItem('dashboard_notifications');
-    const savedReadState = localStorage.getItem('dashboard_notifications_read');
-
-    if (savedNotifications) {
-      try {
-        const parsed = JSON.parse(savedNotifications);
-        if (parsed && parsed.length > 0) {
-          setNotifications(parsed);
-          // Add IDs to seenAppointmentsRef to prevent duplicates
-          parsed.forEach((notif: any) => {
-            if (notif.id) seenAppointmentsRef.current.add(notif.id);
-          });
-
-          // Only show count if not marked as read
-          if (savedReadState === 'true') {
-            setNotificationCount(0);
-            setHasReadNotifications(true);
-          } else {
-            setNotificationCount(parsed.length);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to parse saved notifications:', e);
-      }
-    }
+    // Clear any old notification data from localStorage to prevent old badge count
+    localStorage.removeItem('dashboard_notifications');
+    localStorage.removeItem('dashboard_notifications_read');
+    setNotificationCount(0);
   }, []);
 
-  // Save notifications to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('dashboard_notifications', JSON.stringify(notifications));
-  }, [notifications]);
+  // Notifications are handled via Supabase real-time, no need to persist to localStorage
 
   // Update app badge when notification count changes
   useEffect(() => {
@@ -286,8 +262,17 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           setNotifications(bootstrappedNotifications);
         }
 
-        // Don't set notification count on bootstrap - only from live updates
-        setNotificationCount(0);
+        // 2. Fetch the ACTUAL unread count (separate from the list limit)
+        const countQuery = supabase
+          .from('appointments')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_read', false); // Only count unread
+
+        const { count } = userRole === 'owner'
+          ? await countQuery.eq('salon_id', salonId)
+          : await countQuery.eq('staff_id', userId);
+
+        setNotificationCount(count || 0);
 
       } catch (error) {
         console.error('Error bootstrapping notifications:', error);
@@ -377,7 +362,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               // Instagram-style: clear badge and mark as read
               setNotificationCount(0);
               setHasReadNotifications(true);
-              localStorage.setItem('dashboard_notifications_read', 'true');
               await clearBadge();
 
               // Refresh badge count from DB

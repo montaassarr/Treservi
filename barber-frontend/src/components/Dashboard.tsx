@@ -447,7 +447,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                 <option value="1y">Last Year</option>
               </select>
             </div>
-            <div className="w-full h-[200px] sm:h-[240px] md:h-[320px]">
+            <div className="w-full h-[200px] sm:h-[240px] md:h-[320px] min-h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }} onMouseMove={(state) => {
                   if (state.isTooltipActive) setActiveIndex(state.activeTooltipIndex ?? null);

@@ -25,20 +25,18 @@ export const usePushNotifications = () => {
   };
 
   const subscribeToPush = useCallback(async (userId: string) => {
+    // Silently skip on unsupported browsers/platforms (especially iOS)
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      console.warn('Push messaging is not supported');
       return false;
     }
 
     if (!VAPID_PUBLIC_KEY) {
-      console.error('VAPID Public Key is missing');
       return false;
     }
 
     try {
-      // Don't spam requestPermission if already denied
+      // Don't request permission if already denied
       if (Notification.permission === 'denied') {
-        console.warn('Notifications blocked by user');
         return false;
       }
 
@@ -61,8 +59,7 @@ export const usePushNotifications = () => {
               applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
            });
         } catch (subError: any) {
-           // Provide clearer error if VAPID is the issue
-           console.error('PushManager Subscription failed:', subError);
+           // Silently fail on mobile/unsupported platforms
            return false;
         }
       }
