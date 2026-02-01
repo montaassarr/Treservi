@@ -433,7 +433,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
           </ResponsiveGrid>
 
           {/* Analytics Chart - Responsive Height */}
-          <div className="bg-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow h-[280px] sm:h-[320px] md:h-[400px] min-h-[240px] flex flex-col">
+          <div className="bg-white dark:bg-treservi-card-dark rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-4 sm:p-6 md:p-8 shadow-soft-glow flex flex-col">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-0 mb-4 sm:mb-6">
               <h3 className="font-bold text-base sm:text-lg md:text-xl">{t('dashboard.bookingAnalytics')}</h3>
               <select
@@ -447,7 +447,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                 <option value="1y">Last Year</option>
               </select>
             </div>
-            <div className="flex-1 w-full min-h-[200px]">
+            <div className="w-full h-[200px] sm:h-[240px] md:h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }} onMouseMove={(state) => {
                   if (state.isTooltipActive) setActiveIndex(state.activeTooltipIndex ?? null);

@@ -42,40 +42,55 @@ self.addEventListener('activate', (event) => {
 });
 
 // Fetch event - serve from cache, fallback to network
+// Fetch event - Efficient caching strategy
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return cached response
-        if (response) {
-          return response;
+  const url = new URL(event.request.url);
+
+  // 1. IGNORE: Non-GET, API calls, Chrome Extensions, Supabase
+  if (
+    event.request.method !== 'GET' ||
+    url.protocol.startsWith('chrome-extension') ||
+    url.hostname.includes('supabase.co') ||
+    url.pathname.startsWith('/api/')
+  ) {
+    return;
+  }
+
+  // 2. CACHE-FIRST for Static Assets (Images, Fonts, Scripts)
+  if (
+    url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|woff|woff2)$/)
+  ) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
         }
-
-        // Clone the request
-        const fetchRequest = event.request.clone();
-
-        return fetch(fetchRequest).then((response) => {
-          // Check if valid response
+        return fetch(event.request).then((response) => {
+          // Don't cache bad responses
           if (!response || response.status !== 200 || response.type !== 'basic') {
             return response;
           }
-
-          // Clone the response
           const responseToCache = response.clone();
-
-          // Cache the new response
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
           return response;
-        }).catch(() => {
-          // Network failed, try to return offline page
-          return caches.match('/offline.html');
         });
       })
-  );
+    );
+    return;
+  }
+
+  // 3. NETWORK-FIRST for HTML/Navigation (ensures fresh content)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => {
+          return caches.match('/offline.html');
+        })
+    );
+    return;
+  }
 });
 
 // Handle push notifications
