@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookingState, Translations } from '../../types';
 import { Calendar, Clock, AlertCircle } from 'lucide-react';
+import { isValidTunisianPhone, getTunisianPhoneErrorMessage } from '../../utils/validationUtils';
 
 interface Props {
   bookingData: BookingState;
@@ -11,9 +12,10 @@ interface Props {
 }
 
 export const Step4Contact: React.FC<Props> = ({ bookingData, onNameChange, onPhoneChange, t, lang }) => {
-  // Simple validation: Ensure phone is numeric and at least 8 digits
-  const isPhoneValid = /^\d{8,}$/.test(bookingData.customerPhone.replace(/\D/g, ''));
+  // Validate Tunisian phone number: 8 digits with valid carrier prefix
+  const isPhoneValid = bookingData.customerPhone.length === 0 || isValidTunisianPhone(bookingData.customerPhone);
   const showPhoneError = bookingData.customerPhone.length > 0 && !isPhoneValid;
+  const phoneErrorMessage = showPhoneError ? getTunisianPhoneErrorMessage(bookingData.customerPhone) : null;
 
   // Locale for date
   const locale = lang === 'ar' ? 'ar-TN' : lang === 'fr' ? 'fr-FR' : 'en-US';
@@ -90,7 +92,7 @@ export const Step4Contact: React.FC<Props> = ({ bookingData, onNameChange, onPho
               <label className="text-sm font-medium text-gray-700 ml-1">{t.phoneNumber}</label>
               {showPhoneError && (
                 <span className="text-xs text-red-500 font-medium flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {t.invalidPhone}
+                  <AlertCircle className="w-3 h-3" /> {phoneErrorMessage || t.invalidPhone}
                 </span>
               )}
             </div>

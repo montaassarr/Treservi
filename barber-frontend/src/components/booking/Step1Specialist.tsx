@@ -76,7 +76,6 @@ export const Step1Specialist: React.FC<Props> = ({ onSelect, staffList, t, selec
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">{staff.name}</h3>
                   <p className="text-gray-500 text-sm font-medium">{staff.role}</p>
-                  <p className="text-gray-900 font-bold mt-1 text-sm">{t.from} {staff.price} DT</p>
                 </div>
               </div>
               

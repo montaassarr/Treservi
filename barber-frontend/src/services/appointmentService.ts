@@ -305,3 +305,131 @@ export async function getStaffAppointmentStats(staffId: string) {
     return { data: null, error: err };
   }
 }
+
+/**
+ * Check if user is attempting to double-book the same slot
+ * @param salonId - Salon ID
+ * @param staffId - Staff member ID
+ * @param phone - Customer phone (with special chars removed)
+ * @param appointmentDate - Date of appointment (YYYY-MM-DD)
+ * @param appointmentTime - Time of appointment (HH:MM)
+ */
+export async function checkDuplicateBooking(
+  salonId: string,
+  staffId: string,
+  phone: string,
+  appointmentDate: string,
+  appointmentTime: string
+) {
+  if (!supabase) {
+    return { isDuplicate: false, error: new Error('Supabase client not initialized') };
+  }
+
+  try {
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('id, customer_phone, staff_id, appointment_date, appointment_time, status')
+      .eq('salon_id', salonId)
+      .eq('staff_id', staffId)
+      .eq('appointment_date', appointmentDate)
+      .eq('appointment_time', appointmentTime)
+      .in('status', ['Pending', 'Confirmed']); // Only check active bookings
+
+    if (error) {
+      return { isDuplicate: false, error };
+    }
+
+    // Check if this phone number has already booked this exact slot
+    const hasDuplicate = data?.some(apt => 
+      apt.customer_phone.replace(/\D/g, '') === cleanPhone
+    );
+
+    return { isDuplicate: hasDuplicate || false, error: null };
+  } catch (err: any) {
+    return { isDuplicate: false, error: err };
+  }
+}
+
+/**
+ * Check if a specific slot is already booked by anyone
+ * @param salonId - Salon ID
+ * @param staffId - Staff member ID
+ * @param appointmentDate - Date of appointment (YYYY-MM-DD)
+ * @param appointmentTime - Time of appointment (HH:MM)
+ */
+export async function checkSlotAvailability(
+  salonId: string,
+  staffId: string,
+  appointmentDate: string,
+  appointmentTime: string
+) {
+  if (!supabase) {
+    return { isAvailable: true, error: new Error('Supabase client not initialized') };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('id, status')
+      .eq('salon_id', salonId)
+      .eq('staff_id', staffId)
+      .eq('appointment_date', appointmentDate)
+      .eq('appointment_time', appointmentTime)
+      .in('status', ['Pending', 'Confirmed']); // Only check active bookings
+
+    if (error) {
+      return { isAvailable: true, error };
+    }
+
+    // If any confirmed/pending booking exists, slot is taken
+    const isAvailable = !data || data.length === 0;
+
+    return { isAvailable, error: null };
+  } catch (err: any) {
+    return { isAvailable: true, error: err };
+  }
+}
+
+/**
+ * Check for spam bookings by same phone number within time window
+ * @param phone - Customer phone
+ * @param salonId - Salon ID
+ * @param windowMinutes - Time window in minutes (default: 60)
+ * @param maxBookings - Max bookings allowed in window (default: 3)
+ */
+export async function checkSpamBookings(
+  phone: string,
+  salonId: string,
+  windowMinutes: number = 60,
+  maxBookings: number = 3
+) {
+  if (!supabase) {
+    return { isSpam: false, recentCount: 0, error: new Error('Supabase client not initialized') };
+  }
+
+  try {
+    const cleanPhone = phone.replace(/\D/g, '');
+    const timeWindow = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('id, created_at')
+      .eq('salon_id', salonId)
+      .like('customer_phone', `%${cleanPhone}%`)
+      .gte('created_at', timeWindow)
+      .in('status', ['Pending', 'Confirmed']);
+
+    if (error) {
+      return { isSpam: false, recentCount: 0, error };
+    }
+
+    const recentCount = data?.length || 0;
+    const isSpam = recentCount >= maxBookings;
+
+    return { isSpam, recentCount, error: null };
+  } catch (err: any) {
+    return { isSpam: false, recentCount: 0, error: err };
+  }
+}

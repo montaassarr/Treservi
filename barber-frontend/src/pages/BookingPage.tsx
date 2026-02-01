@@ -12,9 +12,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from '../services/supabaseClient';
 import { fetchStaff } from '../services/staffService';
 import { fetchServices } from '../services/serviceService';
-import { createAppointment } from '../services/appointmentService';
+import { createAppointment, checkDuplicateBooking, checkSlotAvailability, checkSpamBookings } from '../services/appointmentService';
 import { useNavigate } from 'react-router-dom';
 import { getStaffAvatar } from '../utils/avatarGenerator';
+import { isValidTunisianPhone } from '../utils/validationUtils';
 
 // Translations taken from hamdi-salon
 const translations: Record<Language, Translations> = {
@@ -298,9 +299,35 @@ export default function BookingPage() {
       if (!salon?.id) return;
       
       try {
-        // Create actual appointment
+        // Step 1: Validate phone is Tunisian
+        if (!isValidTunisianPhone(booking.customerPhone)) {
+          alert('Please enter a valid Tunisian phone number (8 digits from Telecom, Ooredoo, or Orange)');
+          return;
+        }
+
+        // Step 2: Check for spam bookings (max 3 bookings per hour)
+        const { isSpam, recentCount } = await checkSpamBookings(booking.customerPhone, salon.id, 60, 3);
+        if (isSpam) {
+          alert(`Too many bookings in a short time. You have made ${recentCount} bookings in the last hour. Please try again later.`);
+          return;
+        }
+
+        // Step 3: Check if slot is already taken
         const appointmentDate = booking.selectedDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' });
-        
+        const { isAvailable } = await checkSlotAvailability(salon.id, booking.selectedStaff.id, appointmentDate, booking.selectedTime);
+        if (!isAvailable) {
+          alert('Sorry, this slot was just booked by someone else. Please choose another time.');
+          return;
+        }
+
+        // Step 4: Check if this phone already has a booking at this exact time with this staff
+        const { isDuplicate } = await checkDuplicateBooking(salon.id, booking.selectedStaff.id, booking.customerPhone, appointmentDate, booking.selectedTime);
+        if (isDuplicate) {
+          alert('You have already booked this appointment!');
+          return;
+        }
+
+        // All validations passed - create appointment
         await createAppointment({
           salon_id: salon.id,
           staff_id: booking.selectedStaff.id,
@@ -323,9 +350,8 @@ export default function BookingPage() {
   };
 
   const isPhoneValid = (phone: string) => {
-    // Basic check: only numbers, min length 8
-    const cleanPhone = phone.replace(/\D/g, '');
-    return cleanPhone.length >= 8;
+    // Validate Tunisian phone: 8 digits with valid carrier
+    return isValidTunisianPhone(phone);
   };
 
   const isStepValid = () => {
