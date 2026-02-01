@@ -36,6 +36,12 @@ export const usePushNotifications = () => {
     }
 
     try {
+      // Don't spam requestPermission if already denied
+      if (Notification.permission === 'denied') {
+        console.warn('Notifications blocked by user');
+        return false;
+      }
+
       const permissionResult = await Notification.requestPermission();
       setPermission(permissionResult);
 
@@ -48,16 +54,17 @@ export const usePushNotifications = () => {
       // Check existing subscription
       let subscription = await registration.pushManager.getSubscription();
       
-      if (subscription) {
-        // Check if we need to resubscribe? 
-        // For now, assume existing subscription is fine, but we should make sure it's in DB.
-        // If we want to force resubscribe, we'd unsubscribe first.
-        console.log('Already subscribed via PushManager');
-      } else {
-        subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-        });
+      if (!subscription) {
+        try {
+           subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+           });
+        } catch (subError: any) {
+           // Provide clearer error if VAPID is the issue
+           console.error('PushManager Subscription failed:', subError);
+           return false;
+        }
       }
 
       setIsSubscribed(true);
@@ -79,15 +86,20 @@ export const usePushNotifications = () => {
         }, { onConflict: 'endpoint' });
 
       if (error) {
-        console.error('Failed to save push subscription:', error);
+        // Ignore duplicate key errors if logic somehow causes them, but here we use upsert
+        console.error('Failed to save push subscription to DB:', error);
         return false;
       }
 
-      console.log('Push subscription saved successfully');
       return true;
 
-    } catch (error) {
-      console.error('Failed to subscribe to push:', error);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        // User closed the prompt or operation cancelled
+        console.log('Push subscription aborted');
+      } else {
+        console.error('Failed to subscribe to push:', error);
+      }
       return false;
     }
   }, []);

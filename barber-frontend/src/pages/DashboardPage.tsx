@@ -242,6 +242,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       }
 
       try {
+        // 1. Fetch the items for the dropdown (Limit 10 is fine for UI list)
         const query = supabase
           .from('appointments')
           .select(`
@@ -250,7 +251,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             service:service_id(name, price)
           `)
           .order('created_at', { ascending: false })
-          .limit(10); // Load more initial notifications
+          .limit(10);
 
         const { data } = userRole === 'owner'
           ? await query.eq('salon_id', salonId)
@@ -276,13 +277,26 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               time: apt.appointment_time,
               customerName: apt.customer_name,
               customerPhone: apt.customer_phone,
-              customerEmail: apt.customer_email
+              customerEmail: apt.customer_email,
+              isRead: apt.is_read // Store read status
             };
           });
 
           setNotifications(bootstrappedNotifications);
-          setNotificationCount(bootstrappedNotifications.length);
         }
+
+        // 2. Fetch the ACTUAL unread count (separate from the list limit)
+        const countQuery = supabase
+          .from('appointments')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_read', false); // Only count unread
+
+        const { count } = userRole === 'owner'
+          ? await countQuery.eq('salon_id', salonId)
+          : await countQuery.eq('staff_id', userId);
+
+        setNotificationCount(count || 0);
+
       } catch (error) {
         console.error('Error bootstrapping notifications:', error);
       }
