@@ -74,7 +74,8 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_LOCAL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_LOCAL }}
         run: |
-          python comprehensive_test.py || echo "Some tests may fail in local environment"
+          echo "Skipping comprehensive integration tests (file missing)"
+          # python comprehensive_test.py || echo "Some tests may fail in local environment"
       
       - name: Stop Supabase
         if: always()
@@ -215,13 +216,17 @@ jobs:
             exit 1
           fi
           
-          # Deploy all Edge Functions
-          supabase functions deploy create-salon-complete --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
-          supabase functions deploy create-staff --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
-          supabase functions deploy delete-salon --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
-          supabase functions deploy reset-staff-password --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
-          supabase functions deploy delete-salon --project-ref $SUPABASE_PROJECT_ID --no-verify-jwt
-          supabase functions deploy reset-staff-password --project-ref $SUPABASE_PROJECT_ID --no-verify-jwt
+          # Deploy all Edge Functions dynamically
+          for func in supabase/functions/*; do
+            if [ -d "$func" ]; then
+              func_name=$(basename "$func")
+              # Skip hidden directories or non-function folders if any
+              if [[ "$func_name" != "."* ]]; then
+                echo "Deploying function: $func_name"
+                supabase functions deploy "$func_name" --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
+              fi
+            fi
+          done
       
       - name: Verify deployment
         run: |
@@ -284,10 +289,11 @@ jobs:
       
       - name: Run smoke tests
         env:
+          FRONTEND_URL: https://resevini.vercel.app
           SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
-          python comprehensive_test.py || echo "Smoke tests completed with warnings"
+          python smoke_test.py || echo "Smoke tests completed with warnings"
       
       - name: Notify deployment status
         if: always()

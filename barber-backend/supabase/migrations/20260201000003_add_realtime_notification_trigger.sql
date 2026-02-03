@@ -4,13 +4,13 @@ returns trigger as $$
 begin
   -- Call the edge function to send realtime notifications
   -- This is async via pg_net, so it won't block the INSERT
-  select net.http_post(
+  PERFORM net.http_post(
     url := current_setting('app.supabase_url') || '/functions/v1/realtime-notification',
     body := jsonb_build_object(
       'record', row_to_json(new)
     ),
     headers := jsonb_object_agg('Authorization', 'Bearer ' || current_setting('app.supabase_service_role_key'))
-  ) into null;
+  );
   
   return new;
 end;
