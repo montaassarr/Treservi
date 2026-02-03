@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  Tooltip, 
-  Cell 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  Tooltip,
+  Cell
 } from 'recharts';
-import { MoreHorizontal, ArrowUpRight, Plus, Pencil, Trash2, X, Store, User, DollarSign, Mail, AlertCircle } from 'lucide-react';
+import { MoreHorizontal, ArrowUpRight, Plus, Pencil, Trash2, X, Store, User, DollarSign, Mail, AlertCircle, LogOut } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import ResponsiveGrid from './ResponsiveGrid';
 import { formatPrice } from '../utils/format';
@@ -16,7 +16,7 @@ interface SalonStats {
   id: string;
   name: string;
   slug: string;
-  owner_email: string; 
+  owner_email: string;
   status: 'active' | 'suspended' | 'cancelled';
   subscription_plan: string;
   total_revenue: number;
@@ -39,7 +39,11 @@ interface FormData {
   status: 'active' | 'suspended' | 'cancelled';
 }
 
-const SuperAdminDashboard: React.FC = () => {
+interface SuperAdminDashboardProps {
+  onLogout?: () => void;
+}
+
+const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogout }) => {
   const [globalStats, setGlobalStats] = useState({
     total_salons: 0,
     active_salons: 0,
@@ -47,7 +51,7 @@ const SuperAdminDashboard: React.FC = () => {
     total_appointments: 0,
     total_staff: 0
   });
-  
+
   const [salons, setSalons] = useState<SalonStats[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -108,7 +112,7 @@ const SuperAdminDashboard: React.FC = () => {
 
       const totalRevenue = richSalons.reduce((acc, s) => acc + (s.total_revenue || 0), 0);
       const activeCnt = richSalons.filter(s => s.status === 'active').length;
-      
+
       setGlobalStats({
         total_salons: richSalons.length,
         active_salons: activeCnt,
@@ -133,7 +137,7 @@ const SuperAdminDashboard: React.FC = () => {
 
     try {
       setIsSaving(true);
-      
+
       // Use RPC function directly (bypasses edge function issues)
       const { data, error } = await supabase.rpc('delete_salon_by_super_admin', {
         p_salon_id: salonId
@@ -159,8 +163,8 @@ const SuperAdminDashboard: React.FC = () => {
   };
 
   const handleBulkDeleteTestSalons = async () => {
-    const testSalons = salons.filter(s => 
-      s.slug !== 'hamdisalon' && 
+    const testSalons = salons.filter(s =>
+      s.slug !== 'hamdisalon' &&
       (s.slug.includes('test-salon') || s.slug.includes('salon-'))
     );
 
@@ -233,8 +237,8 @@ const SuperAdminDashboard: React.FC = () => {
         if (error) throw error;
         setSuccess('Salon updated successfully');
       } else {
-      // CREATE: Use Edge Function for atomic creation
-      const { data, error } = await supabase.functions.invoke('create-salon-complete', {
+        // CREATE: Use Edge Function for atomic creation
+        const { data, error } = await supabase.functions.invoke('create-salon-complete', {
           body: {
             salonName: formData.name,
             salonSlug: formData.slug,
@@ -242,29 +246,29 @@ const SuperAdminDashboard: React.FC = () => {
             ownerEmail: formData.owner_email,
             ownerPassword: formData.owner_password,
           }
-      });
+        });
 
-      if (error) {
-        // Parse error message
-        let errorMsg = error.message;
-        try {
-          // If error has a context with response, try to parse JSON
-          if (error instanceof Error && 'context' in error) {
-             const response = (error as any).context as Response;
-             if (response && typeof response.json === 'function') {
+        if (error) {
+          // Parse error message
+          let errorMsg = error.message;
+          try {
+            // If error has a context with response, try to parse JSON
+            if (error instanceof Error && 'context' in error) {
+              const response = (error as any).context as Response;
+              if (response && typeof response.json === 'function') {
                 const body = await response.json();
                 if (body && body.error) {
-                   errorMsg = body.error;
+                  errorMsg = body.error;
                 }
-             }
-          }
-        } catch (e) {
+              }
+            }
+          } catch (e) {
             console.warn("Failed to parse error response:", e);
+          }
+          throw new Error(errorMsg || 'Failed to create salon');
         }
-        throw new Error(errorMsg || 'Failed to create salon');
-      }
 
-      setSuccess('Salon created successfully');
+        setSuccess('Salon created successfully');
       }
 
       setIsModalOpen(false);
@@ -330,9 +334,9 @@ const SuperAdminDashboard: React.FC = () => {
       }
 
       const { data, error } = await supabase.functions.invoke('reset-staff-password', {
-        body: { 
-          staffId: ownerStaff.id, 
-          newPassword: newPassword 
+        body: {
+          staffId: ownerStaff.id,
+          newPassword: newPassword
         }
       });
 
@@ -351,7 +355,24 @@ const SuperAdminDashboard: React.FC = () => {
 
   return (
     <div className="p-3 sm:p-4 md:p-6 lg:p-10 w-full max-w-[1600px] mx-auto space-y-4 sm:space-y-6 md:space-y-8 relative">
-      
+
+      {/* Header with Logout */}
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Super Admin Dashboard</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Platform Management</p>
+        </div>
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full font-bold shadow-lg transition-all hover:scale-105"
+          >
+            <LogOut size={18} />
+            Logout
+          </button>
+        )}
+      </div>
+
       {/* Messages */}
       {success && (
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-4 flex items-start gap-3">
@@ -359,7 +380,7 @@ const SuperAdminDashboard: React.FC = () => {
           <p className="text-sm text-green-800 dark:text-green-200">{success}</p>
         </div>
       )}
-      
+
       {success === null && error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -372,44 +393,44 @@ const SuperAdminDashboard: React.FC = () => {
           <ResponsiveGrid mobile={1} tablet={2} desktop={3} gap="gap-4 sm:gap-6 md:gap-8">
             <div className="bg-white dark:bg-treservi-card-dark rounded-[24px] p-4 sm:p-6 md:p-8 shadow-soft-glow relative overflow-hidden">
               <div className="flex justify-between items-start mb-4">
-                 <div>
-                    <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Total Salons</h3>
-                    <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-                        {globalStats.total_salons}
-                    </div>
-                 </div>
-                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-full text-blue-500">
-                    <Store size={24} />
-                 </div>
+                <div>
+                  <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Total Salons</h3>
+                  <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+                    {globalStats.total_salons}
+                  </div>
+                </div>
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-full text-blue-500">
+                  <Store size={24} />
+                </div>
               </div>
               <p className="text-gray-400 text-sm">{globalStats.active_salons} Active</p>
             </div>
 
             <div className="bg-white dark:bg-treservi-card-dark rounded-[24px] p-4 sm:p-6 md:p-8 shadow-soft-glow relative overflow-hidden">
-               <div className="flex justify-between items-start mb-4">
-                 <div>
-                    <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Total Revenue</h3>
-                    <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-                        {formatPrice(globalStats.total_revenue)}
-                    </div>
-                 </div>
-                 <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-full text-green-500">
-                    <DollarSign size={24} />
-                 </div>
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Total Revenue</h3>
+                  <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+                    {formatPrice(globalStats.total_revenue)}
+                  </div>
+                </div>
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-full text-green-500">
+                  <DollarSign size={24} />
+                </div>
               </div>
             </div>
 
             <div className="bg-white dark:bg-treservi-card-dark rounded-[24px] p-4 sm:p-6 md:p-8 shadow-soft-glow relative overflow-hidden">
-               <div className="flex justify-between items-start mb-4">
-                 <div>
-                    <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Total Staff</h3>
-                    <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-                        {globalStats.total_staff}
-                    </div>
-                 </div>
-                 <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-full text-purple-500">
-                    <User size={24} />
-                 </div>
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Total Staff</h3>
+                  <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+                    {globalStats.total_staff}
+                  </div>
+                </div>
+                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-full text-purple-500">
+                  <User size={24} />
+                </div>
               </div>
             </div>
           </ResponsiveGrid>
@@ -419,10 +440,10 @@ const SuperAdminDashboard: React.FC = () => {
               <h3 className="font-bold text-xl">Tenant Management</h3>
               <div className="flex gap-2">
                 <button onClick={handleBulkDeleteTestSalons} disabled={isSaving} className="flex items-center gap-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-4 py-2 rounded-full font-bold shadow-neon-glow transition-all">
-                     <Trash2 size={18} /> Delete Test Salons
+                  <Trash2 size={18} /> Delete Test Salons
                 </button>
                 <button onClick={() => openModal()} disabled={isSaving} className="flex items-center gap-2 bg-treservi-accent hover:bg-green-600 disabled:opacity-50 text-white px-4 py-2 rounded-full font-bold shadow-neon-glow transition-all">
-                     <Plus size={18} /> Add Tenant
+                  <Plus size={18} /> Add Tenant
                 </button>
               </div>
             </div>
@@ -447,11 +468,10 @@ const SuperAdminDashboard: React.FC = () => {
                       <td className="py-4 text-gray-500">/{salon.slug}</td>
                       <td className="py-4 text-gray-500">{salon.owner_email}</td>
                       <td className="py-4">
-                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                            salon.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                         }`}>
-                             {salon.status}
-                         </span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${salon.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                          {salon.status}
+                        </span>
                       </td>
                       <td className="py-4 text-right font-bold">{salon.staff_count}</td>
                       <td className="py-4 pr-4 text-right rounded-r-2xl">
@@ -476,142 +496,142 @@ const SuperAdminDashboard: React.FC = () => {
         </div>
       </div>
 
-       {/* Reset Password Modal */}
-       {isResetPasswordModalOpen && selectedSalonForReset && (
+      {/* Reset Password Modal */}
+      {isResetPasswordModalOpen && selectedSalonForReset && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-treservi-card-dark w-full max-w-md rounded-[32px] shadow-2xl p-8 animate-in zoom-in duration-200">
-             <div className="flex justify-between items-center mb-6">
-               <h2 className="text-2xl font-bold">Reset Owner Password</h2>
-               <button disabled={isSaving} onClick={() => setIsResetPasswordModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-50">
-                 <X size={20} />
-               </button>
-             </div>
-             <div className="space-y-4">
-                <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-2xl">
-                  <p className="text-sm text-orange-800 dark:text-orange-200 mb-2"><strong>Salon:</strong> {selectedSalonForReset.name}</p>
-                  <p className="text-sm text-orange-800 dark:text-orange-200 mb-2"><strong>Owner Email:</strong> {selectedSalonForReset.owner_email}</p>
-                  <p className="text-sm text-orange-800 dark:text-orange-200"><strong>URL:</strong> /{selectedSalonForReset.slug}</p>
-                </div>
-                <div>
-                   <label className="text-sm text-gray-500 ml-2">New Password</label>
-                   <input 
-                      type="text" 
-                      required 
-                      minLength={6}
-                      disabled={isSaving}
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      placeholder="Enter new password (min 6 chars)"
-                      className="w-full bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
-                   />
-                </div>
-                <button 
-                  disabled={isSaving || !newPassword}
-                  onClick={handleResetPassword}
-                  className="w-full bg-treservi-accent disabled:opacity-50 text-white py-3 rounded-full font-bold shadow-neon-glow hover:scale-105 transition-transform"
-                >
-                    {isSaving ? 'Resetting...' : 'Reset Password'}
-                </button>
-             </div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Reset Owner Password</h2>
+              <button disabled={isSaving} onClick={() => setIsResetPasswordModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-50">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-2xl">
+                <p className="text-sm text-orange-800 dark:text-orange-200 mb-2"><strong>Salon:</strong> {selectedSalonForReset.name}</p>
+                <p className="text-sm text-orange-800 dark:text-orange-200 mb-2"><strong>Owner Email:</strong> {selectedSalonForReset.owner_email}</p>
+                <p className="text-sm text-orange-800 dark:text-orange-200"><strong>URL:</strong> /{selectedSalonForReset.slug}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500 ml-2">New Password</label>
+                <input
+                  type="text"
+                  required
+                  minLength={6}
+                  disabled={isSaving}
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="Enter new password (min 6 chars)"
+                  className="w-full bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
+                />
+              </div>
+              <button
+                disabled={isSaving || !newPassword}
+                onClick={handleResetPassword}
+                className="w-full bg-treservi-accent disabled:opacity-50 text-white py-3 rounded-full font-bold shadow-neon-glow hover:scale-105 transition-transform"
+              >
+                {isSaving ? 'Resetting...' : 'Reset Password'}
+              </button>
+            </div>
           </div>
         </div>
-       )}
+      )}
 
-       {/* Edit/Add Modal */}
-       {isModalOpen && (
+      {/* Edit/Add Modal */}
+      {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-treservi-card-dark w-full max-w-md rounded-[32px] shadow-2xl p-8 animate-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
-             <div className="flex justify-between items-center mb-6">
-               <h2 className="text-2xl font-bold">{editingId ? 'Edit Tenant' : 'Add Tenant'}</h2>
-               <button disabled={isSaving} onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-50">
-                 <X size={20} />
-               </button>
-             </div>
-             <form onSubmit={handleSaveSalon} className="space-y-4">
-                <div>
-                   <label className="text-sm text-gray-500 ml-2 block mb-1">Salon Name *</label>
-                   <input 
-                      type="text" 
-                      required 
-                      disabled={isSaving}
-                      value={formData.name}
-                      onChange={e => setFormData({...formData, name: e.target.value})}
-                      className="w-full bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
-                   />
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">{editingId ? 'Edit Tenant' : 'Add Tenant'}</h2>
+              <button disabled={isSaving} onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-50">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveSalon} className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-500 ml-2 block mb-1">Salon Name *</label>
+                <input
+                  type="text"
+                  required
+                  disabled={isSaving}
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-500 ml-2 block mb-1">Slug / URL *</label>
+                <div className="flex items-center">
+                  <span className="text-gray-500 mr-2">/</span>
+                  <input
+                    type="text"
+                    required
+                    disabled={isSaving}
+                    value={formData.slug}
+                    onChange={e => setFormData({ ...formData, slug: e.target.value.toLowerCase() })}
+                    className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
+                  />
                 </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500 ml-2 block mb-1">Owner Name *</label>
+                <input
+                  type="text"
+                  required
+                  disabled={isSaving || !!editingId}
+                  value={formData.owner_name}
+                  onChange={e => setFormData({ ...formData, owner_name: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-500 ml-2 block mb-1">Owner Email *</label>
+                <input
+                  type="email"
+                  required
+                  disabled={isSaving || !!editingId}
+                  value={formData.owner_email}
+                  onChange={e => setFormData({ ...formData, owner_email: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
+                />
+              </div>
+              {!editingId && (
                 <div>
-                   <label className="text-sm text-gray-500 ml-2 block mb-1">Slug / URL *</label>
-                   <div className="flex items-center">
-                      <span className="text-gray-500 mr-2">/</span>
-                      <input 
-                         type="text" 
-                         required 
-                         disabled={isSaving}
-                         value={formData.slug}
-                         onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase()})}
-                         className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
-                      />
-                   </div>
+                  <label className="text-sm text-gray-500 ml-2 block mb-1">Owner Password * (min 6 chars)</label>
+                  <input
+                    type="password"
+                    required
+                    disabled={isSaving}
+                    minLength={6}
+                    value={formData.owner_password || ''}
+                    onChange={e => setFormData({ ...formData, owner_password: e.target.value })}
+                    className="w-full bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
+                  />
                 </div>
+              )}
+              {editingId && (
                 <div>
-                   <label className="text-sm text-gray-500 ml-2 block mb-1">Owner Name *</label>
-                   <input 
-                      type="text" 
-                      required 
-                      disabled={isSaving || !!editingId}
-                      value={formData.owner_name}
-                      onChange={e => setFormData({...formData, owner_name: e.target.value})}
-                      className="w-full bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
-                   />
+                  <label className="text-sm text-gray-500 ml-2 block mb-1">Status *</label>
+                  <select
+                    required
+                    disabled={isSaving}
+                    value={formData.status}
+                    onChange={e => setFormData({ ...formData, status: e.target.value as any })}
+                    className="w-full bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
+                  >
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
                 </div>
-                <div>
-                   <label className="text-sm text-gray-500 ml-2 block mb-1">Owner Email *</label>
-                   <input 
-                      type="email" 
-                      required 
-                      disabled={isSaving || !!editingId}
-                      value={formData.owner_email}
-                      onChange={e => setFormData({...formData, owner_email: e.target.value})}
-                      className="w-full bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
-                   />
-                </div>
-                {!editingId && (
-                  <div>
-                     <label className="text-sm text-gray-500 ml-2 block mb-1">Owner Password * (min 6 chars)</label>
-                     <input 
-                        type="password" 
-                        required 
-                        disabled={isSaving}
-                        minLength={6}
-                        value={formData.owner_password || ''}
-                        onChange={e => setFormData({...formData, owner_password: e.target.value})}
-                        className="w-full bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
-                     />
-                  </div>
-                )}
-                {editingId && (
-                  <div>
-                     <label className="text-sm text-gray-500 ml-2 block mb-1">Status *</label>
-                     <select 
-                        required 
-                        disabled={isSaving}
-                        value={formData.status}
-                        onChange={e => setFormData({...formData, status: e.target.value as any})}
-                        className="w-full bg-gray-50 dark:bg-gray-800 rounded-full py-3 px-4 outline-none border-transparent focus:border-treservi-accent border disabled:opacity-50"
-                     >
-                        <option value="active">Active</option>
-                        <option value="suspended">Suspended</option>
-                        <option value="cancelled">Cancelled</option>
-                     </select>
-                  </div>
-                )}
-                <button disabled={isSaving} type="submit" className="w-full bg-treservi-accent disabled:opacity-50 text-white py-3 rounded-full font-bold shadow-neon-glow hover:scale-105 transition-transform">
-                    {isSaving ? (editingId ? 'Updating...' : 'Creating...') : (editingId ? 'Update Tenant' : 'Create Tenant')}
-                </button>
-             </form>
+              )}
+              <button disabled={isSaving} type="submit" className="w-full bg-treservi-accent disabled:opacity-50 text-white py-3 rounded-full font-bold shadow-neon-glow hover:scale-105 transition-transform">
+                {isSaving ? (editingId ? 'Updating...' : 'Creating...') : (editingId ? 'Update Tenant' : 'Create Tenant')}
+              </button>
+            </form>
           </div>
         </div>
-       )}
+      )}
 
     </div>
   );

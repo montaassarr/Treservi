@@ -306,7 +306,7 @@ const AppRoutes: React.FC = () => {
             requireSuperAdmin={true}
             isSuperAdmin={isSuperAdmin}
           >
-            <SuperAdminDashboard />
+            <SuperAdminDashboard onLogout={handleLogout} />
           </ProtectedRoute>
         </SalonProvider>
       } />
