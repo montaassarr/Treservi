@@ -55,18 +55,18 @@ const AppRoutes: React.FC = () => {
         setStaffName(staffData.full_name);
         setSalonId(staffData.salon_id || '');
         setIsSuperAdmin(staffData.is_super_admin || false);
-        
+
         // Fetch the salon slug
         if (staffData.salon_id) {
           try {
             const { data: salonData } = await supabase
-                .from('salons')
-                .select('slug')
-                .eq('id', staffData.salon_id)
-                .single();
-            
+              .from('salons')
+              .select('slug')
+              .eq('id', staffData.salon_id)
+              .single();
+
             if (salonData?.slug) {
-                setUserSalonSlug(salonData.slug);
+              setUserSalonSlug(salonData.slug);
             }
           } catch (e) {
             console.error(e);
@@ -97,13 +97,13 @@ const AppRoutes: React.FC = () => {
     if (location.pathname === '/' || location.pathname.includes('/login') || location.pathname.startsWith('/admin')) {
       return; // Skip saving state for these paths
     }
-    
+
     const pathParts = location.pathname.split('/').filter(Boolean);
     // Expected format: /salonSlug/route
     if (pathParts.length >= 2) {
       const possibleSlug = pathParts[0];
       const route = '/' + pathParts.slice(1).join('/');
-      
+
       if (possibleSlug) {
         saveAppState(route, possibleSlug);
       }
@@ -119,55 +119,55 @@ const AppRoutes: React.FC = () => {
         if (mounted) setIsLoadingAuth(false);
         return;
       }
-      
+
       try {
         const { data: { session } } = await withTimeout(
           supabase.auth.getSession(),
           4000,
           { data: { session: null } } as any
         );
-        
+
         if (session?.user && mounted) {
-           console.log('[App] Session found:', session.user.id);
-           setUserEmail(session.user.email || '');
-           setUserId(session.user.id);
-           setIsAuthenticated(true);
-           // Fetch user data asynchronously without blocking
-            await withTimeout(fetchUserData(session.user.id, session.user.email || ''), 4000, undefined as any);
+          console.log('[App] Session found:', session.user.id);
+          setUserEmail(session.user.email || '');
+          setUserId(session.user.id);
+          setIsAuthenticated(true);
+          // Fetch user data asynchronously without blocking
+          await withTimeout(fetchUserData(session.user.id, session.user.email || ''), 4000, undefined as any);
         } else if (mounted) {
-           setIsAuthenticated(false);
+          setIsAuthenticated(false);
         }
       } catch (error) {
-         console.error('Auth check failed:', error);
-         if (mounted) setIsAuthenticated(false);
+        console.error('Auth check failed:', error);
+        if (mounted) setIsAuthenticated(false);
       } finally {
-         if (mounted) {
-            console.log('[App] initAuth finished, setting isLoadingAuth false');
-            setIsLoadingAuth(false);
-         }
+        if (mounted) {
+          console.log('[App] initAuth finished, setting isLoadingAuth false');
+          setIsLoadingAuth(false);
+        }
       }
     };
 
     // Start init
     initAuth();
 
-     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-       if (!mounted) return;
-       
-       if (session?.user) {
-          setIsAuthenticated(true);
-          setUserEmail(session.user.email || '');
-          setUserId(session.user.id);
-          // Don't set loading false immediately, wait for user data
-         await withTimeout(fetchUserData(session.user.id, session.user.email || ''), 4000, undefined as any);
-          setIsLoadingAuth(false);
-       } else {
-          setIsAuthenticated(false);
-          setIsLoadingAuth(false);
-          setUserEmail('');
-          setUserId('');
-          // Logic for redirecting logged out users is handled by ProtectedRoute
-       }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
+      if (session?.user) {
+        setIsAuthenticated(true);
+        setUserEmail(session.user.email || '');
+        setUserId(session.user.id);
+        // Don't set loading false immediately, wait for user data
+        await withTimeout(fetchUserData(session.user.id, session.user.email || ''), 4000, undefined as any);
+        setIsLoadingAuth(false);
+      } else {
+        setIsAuthenticated(false);
+        setIsLoadingAuth(false);
+        setUserEmail('');
+        setUserId('');
+        // Logic for redirecting logged out users is handled by ProtectedRoute
+      }
     });
 
     return () => {
@@ -199,7 +199,7 @@ const AppRoutes: React.FC = () => {
     if (supabase) {
       await supabase.auth.signOut();
     }
-    
+
     setIsAuthenticated(false);
     setUserEmail('');
     setUserId('');
@@ -208,13 +208,13 @@ const AppRoutes: React.FC = () => {
     setSalonId('');
     setUserSalonSlug('');
     setIsSuperAdmin(false);
-    
+
     if (wasSuperAdmin) {
-        navigate('/admin/login', { replace: true });
+      navigate('/admin/login', { replace: true });
     } else if (previousSlug) {
-        navigate(`/${previousSlug}/login`, { replace: true });
+      navigate(`/${previousSlug}/login`, { replace: true });
     } else {
-        navigate('/', { replace: true });
+      navigate('/', { replace: true });
     }
   }, [navigate, isSuperAdmin, userSalonSlug]);
 
@@ -223,11 +223,11 @@ const AppRoutes: React.FC = () => {
     const path = location.pathname;
     const params = new URLSearchParams(location.search);
     const isPWALaunch = params.get('source') === 'pwa' || window.matchMedia('(display-mode: standalone)').matches;
-    
+
     // Root path - check for salon param or restore previous state
     if (path === '/') {
       const deepLink = parseDeepLink(params);
-      
+
       // If salon param in URL (from QR code), save and redirect
       if (deepLink.salonSlug) {
         saveSalonPreference(deepLink.salonSlug);
@@ -236,7 +236,7 @@ const AppRoutes: React.FC = () => {
         navigate(`/${deepLink.salonSlug}${deepLink.route}`, { replace: true });
         return;
       }
-      
+
       // Try to restore previous app state (like Facebook does)
       // This works for PWA launched from home screen
       const savedState = restoreAppState();
@@ -245,33 +245,39 @@ const AppRoutes: React.FC = () => {
         navigate(`/${savedState.salonSlug}${savedState.route}`, { replace: true });
         return;
       }
-      
+
       // If user is authenticated and PWA, go to dashboard
       if (isPWALaunch && isAuthenticated && !isLoadingAuth && userSalonSlug) {
         navigate(`/${userSalonSlug}/dashboard`, { replace: true });
         return;
       }
-      
+
       // If user is authenticated, show dashboard
       if (isAuthenticated && !isLoadingAuth && userSalonSlug) {
         navigate(`/${userSalonSlug}/dashboard`, { replace: true });
         return;
       }
     }
-    
+
     // Authenticated users redirect
     if (isAuthenticated && !isLoadingAuth) {
       // If super admin and on generic pages or salon pages
-      if (isSuperAdmin && (path === '/' || path.endsWith('/login'))) {
-          navigate('/admin/dashboard', { replace: true });
-          return;
+      if (isSuperAdmin) {
+        // Force redirect to admin dashboard if on root, login, or any tenant dashboard
+        if (path === '/' || path.endsWith('/login') || path.includes('/dashboard')) {
+          // Only redirect if NOT already on the admin dashboard
+          if (path !== '/admin/dashboard') {
+            navigate('/admin/dashboard', { replace: true });
+            return;
+          }
+        }
       }
-      
+
       if (userSalonSlug && !isSuperAdmin) {
-         if (path === '/' || path.endsWith('/login')) {
-             navigate(`/${userSalonSlug}/dashboard`, { replace: true });
-             return;
-         }
+        if (path === '/' || path.endsWith('/login')) {
+          navigate(`/${userSalonSlug}/dashboard`, { replace: true });
+          return;
+        }
       }
     }
   }, [isAuthenticated, isLoadingAuth, userSalonSlug, isSuperAdmin, location.pathname, location.search, navigate]);
@@ -280,7 +286,7 @@ const AppRoutes: React.FC = () => {
     <Routes>
       {/* Landing Page */}
       <Route path="/" element={<LandingPage />} />
-      
+
       {/* Super Admin Routes */}
       <Route path="/admin/login" element={
         isAuthenticated && isSuperAdmin ? (
@@ -289,7 +295,7 @@ const AppRoutes: React.FC = () => {
           <AdminLoginPage onLogin={handleLogin} isLoadingAuth={isLoadingAuth} />
         )
       } />
-      
+
       <Route path="/admin/dashboard" element={
         <SalonProvider>
           <ProtectedRoute
@@ -326,12 +332,12 @@ const AppRoutes: React.FC = () => {
             requireAuth={true}
             isSuperAdmin={isSuperAdmin}
           >
-            <DashboardPage 
-              salonId={salonId} 
+            <DashboardPage
+              salonId={salonId}
               userId={userId}
               userRole={userRole}
               staffName={staffName}
-              onLogout={handleLogout} 
+              onLogout={handleLogout}
             />
           </ProtectedRoute>
         </SalonProvider>
