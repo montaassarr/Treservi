@@ -3,7 +3,7 @@
 export interface Barber {
   id: string;
   name: string;
-  avatarUrl: string;
+  firstName: string;
   rating: number;
   earnings: string;
 }
@@ -11,7 +11,7 @@ export interface Barber {
 export interface Appointment {
   id: string;
   customerName: string;
-  customerAvatar: string;
+  customerFirstName: string;
   service: string;
   time: string;
   status: 'Pending' | 'Confirmed' | 'Completed';
@@ -135,7 +135,7 @@ export interface BookingStaff {
   role: string;
   rating: number;
   price: number;
-  image: string;
+  firstName: string;
   bgColor: string;
   category: 'Barber' | 'Colorist' | 'Stylist';
 }

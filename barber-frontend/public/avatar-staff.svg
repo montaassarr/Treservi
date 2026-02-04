@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background -->
+  <rect width="200" height="200" fill="#3b82f6"/>
+  
+  <!-- Head -->
+  <circle cx="100" cy="70" r="35" fill="#ffc69b"/>
+  
+  <!-- Hair (short barber cut) -->
+  <path d="M 65 70 Q 65 40 100 40 Q 135 40 135 70" fill="#2d2d2d"/>
+  <rect x="65" y="55" width="70" height="20" fill="#2d2d2d"/>
+  
+  <!-- Eyes -->
+  <circle cx="88" cy="65" r="4" fill="#000"/>
+  <circle cx="112" cy="65" r="4" fill="#000"/>
+  
+  <!-- Smile -->
+  <path d="M 88 80 Q 100 87 112 80" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round"/>
+  
+  <!-- Neck -->
+  <rect x="90" y="100" width="20" height="15" fill="#ffc69b"/>
+  
+  <!-- Body (Barber uniform) -->
+  <rect x="60" y="115" width="80" height="70" fill="#2d5016" rx="5"/>
+  
+  <!-- Apron (barber cape) -->
+  <ellipse cx="100" cy="125" rx="50" ry="35" fill="#e74c3c" opacity="0.8"/>
+  
+  <!-- Arms -->
+  <rect x="30" y="120" width="30" height="15" fill="#ffc69b" rx="7"/>
+  <rect x="140" y="120" width="30" height="15" fill="#ffc69b" rx="7"/>
+  
+  <!-- Scissors badge -->
+  <text x="155" y="145" font-size="28" text-anchor="middle">✂</text>
+</svg>

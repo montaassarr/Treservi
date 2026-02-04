@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X, Calendar, Clock } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
-import { getStaffAvatar } from '../utils/avatarGenerator';
+
 
 interface Appointment {
   id: string;
@@ -168,12 +168,10 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
                     </p>
                   </div>
 
-                  {/* Staff Avatar */}
-                  <img
-                    src={apt.staff?.avatar_url || getStaffAvatar(apt.staff?.full_name || 'Staff')}
-                    alt=""
-                    className="w-9 h-9 rounded-full object-cover"
-                  />
+                  {/* Staff First Name */}
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {apt.staff?.full_name?.split(' ')[0] || 'Staff'}
+                  </span>
 
                   {/* Amount */}
                   {apt.amount && (

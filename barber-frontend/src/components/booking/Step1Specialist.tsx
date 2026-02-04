@@ -66,11 +66,9 @@ export const Step1Specialist: React.FC<Props> = ({ onSelect, staffList, t, selec
             >
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <img 
-                    src={staff.image} 
-                    alt={staff.name} 
-                    className="w-16 h-16 rounded-2xl object-cover shadow-sm"
-                  />
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-sm">
+                    <span className="text-2xl font-bold text-white">{staff.firstName}</span>
+                  </div>
                   {/* Rating removed as per request */}
                 </div>
                 <div>

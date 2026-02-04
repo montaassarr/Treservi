@@ -18,7 +18,7 @@ import { formatPrice } from '../utils/format';
 import { DashboardSkeleton } from './SkeletonLoader';
 import { fetchServices } from '../services/serviceService';
 import { Service } from '../types';
-import { getStaffAvatar, getCustomerAvatar } from '../utils/avatarGenerator';
+
 
 // Default/placeholder data while loading
 const defaultChartData: ChartData[] = [
@@ -181,7 +181,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
         const rankedStaff = staffData.map((s: any) => ({
           id: s.id,
           name: s.full_name,
-          avatarUrl: s.avatar_url || getStaffAvatar(s.full_name),
+          firstName: s.full_name.split(' ')[0],
           rating: 0, // No rating data in appointments
           earnings: formatPrice(staffStats[s.id]?.revenue || 0),
           clientCount: staffStats[s.id]?.clients.size || 0
@@ -207,7 +207,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
         const transformedAppointments: Appointment[] = listData.map((apt: any) => ({
           id: apt.id,
           customerName: apt.customer_name,
-          customerAvatar: apt.customer_avatar || getCustomerAvatar(apt.customer_name),
+          customerFirstName: apt.customer_name.split(' ')[0],
           service: 'Service', // Join fetching usually better, keeping simple for now
           time: apt.appointment_time || '00:00',
           status: apt.status,
@@ -345,7 +345,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
       const newApt: Appointment = {
         id: Date.now().toString(),
         customerName: formData.customerName || 'New Client',
-        customerAvatar: `https://picsum.photos/id/${Math.floor(Math.random() * 500) + 10}/50/50`, // Random avatar
+        customerFirstName: mockData[i].customerName.split(' ')[0],
         service: formData.service || 'Classic Cut',
         time: formData.time || '09:00 AM',
         status: (formData.status as any) || 'Pending',
@@ -518,10 +518,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                   {appointments.map((apt) => (
                     <tr key={apt.id} className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <td className="py-4 pl-4 first:rounded-l-2xl last:rounded-r-2xl">
-                        <div className="flex items-center gap-3">
-                          <img src={apt.customerAvatar} className="w-10 h-10 rounded-full object-cover" alt={apt.customerName} />
-                          <span className="font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">{apt.customerName}</span>
-                        </div>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">{apt.customerFirstName}</span>
                       </td>
                       <td className="py-4 text-gray-500 whitespace-nowrap">{apt.service}</td>
                       <td className="py-4 text-gray-500 whitespace-nowrap">{apt.time}</td>
@@ -577,8 +574,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                           <span className="text-sm font-bold text-gray-900 dark:text-white">{apt.time}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <img src={apt.customerAvatar} className="w-6 h-6 rounded-full object-cover" alt={apt.customerName} />
-                          <span className="font-semibold text-gray-900 dark:text-white text-sm">{apt.customerName}</span>
+                          <span className="font-semibold text-gray-900 dark:text-white text-sm">{apt.customerFirstName}</span>
                         </div>
                       </div>
                       <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap
@@ -644,9 +640,8 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                   topBarbers.slice(0, 3).map(barber => (
                     <div key={barber.id} className="flex items-center justify-between p-2 sm:p-3 bg-white/10 rounded-xl border border-white/5 hover:bg-white/15 transition-colors">
                       <div className="flex items-center gap-2 sm:gap-3">
-                        <img src={barber.avatarUrl} alt={barber.name} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-white/20" />
                         <div>
-                          <p className="text-xs sm:text-sm font-bold">{barber.name}</p>
+                          <p className="text-xs sm:text-sm font-bold">{barber.firstName}</p>
                           <div className="text-[10px] sm:text-xs font-medium text-gray-400">
                             {(barber as any).clientCount} Clients
                           </div>

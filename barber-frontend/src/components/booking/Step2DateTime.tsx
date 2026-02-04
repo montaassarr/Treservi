@@ -118,7 +118,9 @@ export const Step2DateTime: React.FC<Props> = ({ staff, selectedDate, selectedTi
         animate={{ opacity: 1, y: 0 }}
         className={`${staff.bgColor} p-4 rounded-3xl flex items-center gap-4 bg-opacity-50`}
       >
-        <img src={staff.image} alt={staff.name} className="w-12 h-12 rounded-xl object-cover" />
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+          <span className="text-lg font-bold text-white">{staff.firstName}</span>
+        </div>
         <div>
           <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{t.specialist}</p>
           <h3 className="font-bold text-gray-900">{staff.name}</h3>

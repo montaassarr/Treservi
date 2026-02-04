@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background -->
+  <rect width="200" height="200" fill="#10b981"/>
+  
+  <!-- Head -->
+  <circle cx="100" cy="70" r="35" fill="#ffc69b"/>
+  
+  <!-- Hair -->
+  <path d="M 65 70 Q 65 35 100 35 Q 135 35 135 70" fill="#3d3d3d"/>
+  
+  <!-- Eyes -->
+  <circle cx="90" cy="65" r="4" fill="#000"/>
+  <circle cx="110" cy="65" r="4" fill="#000"/>
+  
+  <!-- Smile -->
+  <path d="M 90 80 Q 100 87 110 80" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round"/>
+  
+  <!-- Neck -->
+  <rect x="90" y="100" width="20" height="15" fill="#ffc69b"/>
+  
+  <!-- Body (Business attire) -->
+  <rect x="60" y="115" width="80" height="60" fill="#1a1a1a" rx="5"/>
+  
+  <!-- Shirt -->
+  <rect x="70" y="120" width="60" height="30" fill="#ffffff"/>
+  
+  <!-- Tie -->
+  <polygon points="100,120 95,135 100,150 105,135" fill="#c41e3a"/>
+  
+  <!-- Arms -->
+  <rect x="30" y="120" width="30" height="15" fill="#ffc69b" rx="7"/>
+  <rect x="140" y="120" width="30" height="15" fill="#ffc69b" rx="7"/>
+  
+  <!-- Crown/Badge indicator -->
+  <circle cx="140" cy="45" r="12" fill="#ffd700"/>
+  <text x="140" y="52" font-size="20" font-weight="bold" text-anchor="middle" fill="#333">★</text>
+</svg>

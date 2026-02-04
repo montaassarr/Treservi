@@ -1,50 +1,36 @@
 /**
- * Generate 3D human emoji-style avatar URLs using DiceBear API
- * Uses the "adventurer" or "personas" style for 3D human-like avatars
+ * Simple static avatar icons for different user roles
+ * Uses clean SVG icons instead of generated avatars
  */
-
-// Different 3D avatar styles available
-type AvatarStyle = 'adventurer' | 'avataaars' | 'big-smile' | 'personas' | 'lorelei';
 
 /**
- * Generates a 3D human emoji-style avatar URL
- * @param name - The name to seed the avatar generation
- * @param style - The avatar style to use (default: 'adventurer')
- * @returns URL string for the generated avatar
+ * Gets avatar for staff members
+ * @param name - Staff member name (not used, just for compatibility)
+ * @returns URL for staff avatar icon
  */
-export const generate3DAvatar = (name: string, style: AvatarStyle = 'adventurer'): string => {
-  const seed = encodeURIComponent(name.trim() || 'default');
-  return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+export const getStaffAvatar = (name?: string): string => {
+  return '/avatar-staff.svg';
 };
 
 /**
- * Generates a fun 3D emoji avatar with consistent style
- * @param name - The name to seed the avatar
- * @returns URL for 3D human emoji avatar
+ * Gets avatar for customers
+ * @param name - Customer name (not used, just for compatibility)
+ * @returns URL for customer avatar icon
  */
-export const getStaffAvatar = (name: string): string => {
-  return generate3DAvatar(name, 'adventurer');
+export const getCustomerAvatar = (name?: string): string => {
+  return '/avatar-client.svg';
 };
 
 /**
- * Generates avatar for customers
- * @param name - Customer name
- * @returns URL for customer avatar
+ * Gets avatar for salon owner
+ * @param name - Owner name (not used, just for compatibility)
+ * @returns URL for owner avatar icon
  */
-export const getCustomerAvatar = (name: string): string => {
-  return generate3DAvatar(name, 'big-smile');
+export const getOwnerAvatar = (name?: string): string => {
+  return '/avatar-owner.svg';
 };
 
 /**
- * Generates avatar for salon owner
- * @param name - Owner name
- * @returns URL for owner avatar
+ * Fallback avatar URL if needed
  */
-export const getOwnerAvatar = (name: string): string => {
-  return generate3DAvatar(name, 'personas');
-};
-
-/**
- * Fallback avatar URL if name is empty
- */
-export const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/adventurer/svg?seed=default&backgroundColor=b6e3f4';
+export const DEFAULT_AVATAR = '/avatar-client.svg';

@@ -25,7 +25,7 @@ import {
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../services/supabaseClient';
 import { Appointment, AppointmentData, Service, CreateAppointmentInput } from '../types';
-import { getCustomerAvatar } from '../utils/avatarGenerator';
+
 import DailyScheduleView from './DailyScheduleView';
 import {
   fetchTodayAppointments,
@@ -144,7 +144,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
       const mapped = (upcomingRes.data || []).map((apt: any) => ({
         id: apt.id,
         customerName: apt.customer_name,
-        customerAvatar: apt.customer_avatar || getCustomerAvatar(apt.customer_name),
+        customerFirstName: apt.customer_name.split(' ')[0],
         service: apt.service?.name || 'Unknown Service',
         time: apt.appointment_time?.slice(0, 5) || '00:00',
         status: apt.status,
@@ -463,10 +463,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
               {appointments.map((apt) => (
                 <tr key={apt.id} className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                   <td className="py-4 pl-4 first:rounded-l-2xl last:rounded-r-2xl">
-                    <div className="flex items-center gap-3">
-                      <img src={apt.customerAvatar} className="w-10 h-10 rounded-full object-cover" alt={apt.customerName} />
-                      <span className="font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">{apt.customerName}</span>
-                    </div>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">{apt.customerFirstName}</span>
                   </td>
                   <td className="py-4 text-gray-500 whitespace-nowrap">{apt.service}</td>
                   <td className="py-4 text-gray-500 whitespace-nowrap">{apt.time}</td>

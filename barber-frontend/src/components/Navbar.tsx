@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Globe, LogOut, Home, Calendar, Users, Settings, Briefcase, User, Info, CreditCard } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { Language } from '../types';
-import { getOwnerAvatar, getStaffAvatar } from '../utils/avatarGenerator';
+
 import NotificationToggle from './NotificationToggle';
 
 interface NavbarProps {
@@ -115,19 +115,15 @@ const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-2 md:gap-4">
             <NotificationToggle userId={userId} salonId={salonId} />
             
-            {/* Profile Avatar / Toggle Menu */}
+            {/* Profile Name / Toggle Menu */}
             <div className="relative" ref={profileRef}>
                <button 
                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                 className="relative focus:outline-none"
+                 className="relative focus:outline-none px-3 py-2 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 border-2 border-white dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow"
                >
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-blue-100 to-purple-100">
-                      <img 
-                          src={userRole === 'owner' ? getOwnerAvatar(userName) : getStaffAvatar(userName)} 
-                          alt="Profile" 
-                          className="w-full h-full object-cover"
-                      />
-                  </div>
+                  <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                    {userName.split(' ')[0]}
+                  </span>
                </button>
 
                {/* Mobile Profile Dropdown Menu */}
@@ -136,9 +132,6 @@ const Navbar: React.FC<NavbarProps> = ({
                        
                        <div className="p-6 pb-2 border-b border-gray-100 dark:border-gray-700/50">
                           <div className="flex items-center gap-4 mb-4">
-                               <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-treservi-accent padding-1 bg-gradient-to-br from-blue-100 to-purple-100">
-                                  <img src={userRole === 'owner' ? getOwnerAvatar(userName) : getStaffAvatar(userName)} alt="Profile" className="w-full h-full object-cover" />
-                               </div>
                                <div>
                                    <h3 className="font-bold text-lg dark:text-white">{userName}</h3>
                                    <p className="text-sm text-gray-500 capitalize">{userRole === 'super_admin' ? 'Super Admin' : userRole}</p>

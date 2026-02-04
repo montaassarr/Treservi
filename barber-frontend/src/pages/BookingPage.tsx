@@ -14,7 +14,7 @@ import { fetchStaff } from '../services/staffService';
 import { fetchServices } from '../services/serviceService';
 import { createAppointment, checkDuplicateBooking, checkSlotAvailability, checkSpamBookings } from '../services/appointmentService';
 import { useNavigate } from 'react-router-dom';
-import { getStaffAvatar } from '../utils/avatarGenerator';
+
 import { isValidTunisianPhone } from '../utils/validationUtils';
 
 // Translations taken from hamdi-salon
@@ -193,7 +193,7 @@ export default function BookingPage() {
             role: s.specialty || 'Stylist',
             rating: 0,
             price: 0,
-            image: s.avatar_url || getStaffAvatar(s.full_name),
+            firstName: s.full_name.split(' ')[0],
             bgColor: 'bg-gray-50', 
             category: (s.specialty === 'Barber' || s.specialty === 'Colorist') ? s.specialty : 'Stylist'
           }));
