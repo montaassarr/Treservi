@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+let hasServiceWorkerListeners = false;
 
 export const usePushNotifications = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -52,14 +53,31 @@ export const usePushNotifications = () => {
       let registration = await navigator.serviceWorker.getRegistration();
       
       if (!registration) {
-        // Register service worker
         registration = await navigator.serviceWorker.register('/service-worker.js', {
           scope: '/'
         });
         console.log('Service Worker registered:', registration);
       }
 
-      // Wait for service worker to be ready
+      if (!hasServiceWorkerListeners) {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
+        hasServiceWorkerListeners = true;
+      }
+
+      registration.addEventListener('updatefound', () => {
+        const installingWorker = registration?.installing;
+        if (!installingWorker) return;
+
+        installingWorker.addEventListener('statechange', () => {
+          if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            installingWorker.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+
+      await registration.update();
       await navigator.serviceWorker.ready;
       return registration;
     } catch (error) {

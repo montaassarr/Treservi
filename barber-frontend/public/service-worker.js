@@ -1,7 +1,7 @@
 // Service Worker for Treservi PWA
 // Handles offline caching, badge updates, and push notifications
 
-const CACHE_NAME = 'treservi-v1';
+const CACHE_NAME = 'treservi-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -62,20 +62,20 @@ self.addEventListener('fetch', (event) => {
   ) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        return fetch(event.request).then((response) => {
-          // Don't cache bad responses
-          if (!response || response.status !== 200 || response.type !== 'basic') {
+        const fetchPromise = fetch(event.request)
+          .then((response) => {
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
             return response;
-          }
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-          return response;
-        });
+          })
+          .catch(() => cachedResponse);
+
+        return cachedResponse || fetchPromise;
       })
     );
     return;
@@ -172,10 +172,14 @@ self.addEventListener('notificationclick', (event) => {
 
 // Badge API support - update badge count
 self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+
   if (event.data && event.data.type === 'UPDATE_BADGE') {
     const count = event.data.count || 0;
 
-    // Set badge using Badge API
     if (self.navigator && self.navigator.setAppBadge) {
       if (count > 0) {
         self.navigator.setAppBadge(count);
