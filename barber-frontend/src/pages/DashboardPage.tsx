@@ -468,7 +468,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           {activeTab === 'appointments' && userRole === 'owner' && <Appointments salonId={salonId} />}
           {activeTab === 'services' && userRole === 'owner' && <Services salonId={salonId} />}
           {activeTab === 'staff' && userRole === 'owner' && <Staff salonId={salonId} />}
-          {activeTab === 'settings' && userRole === 'owner' && <Settings salonId={salonId} />}
+          {activeTab === 'settings' && userRole === 'owner' && <Settings salonId={salonId} userId={userId} />}
         </div>
       </div>
 
