@@ -121,17 +121,31 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
 
     const checkStatus = async () => {
       try {
+        const currentPlatform = detectPlatform();
+        console.log('[useNotifications] 📱 Platform detected:', {
+          isIOS: currentPlatform.isIOS,
+          iosVersion: currentPlatform.iosVersion,
+          isPWA: currentPlatform.isPWA,
+          isAndroid: currentPlatform.isAndroid,
+          isDesktop: currentPlatform.isDesktop,
+          browserName: currentPlatform.browserName,
+          supportsWebPush: currentPlatform.supportsWebPush,
+          supportsNotifications: currentPlatform.supportsNotifications
+        });
+        
         const currentStatus = await getSubscriptionStatus();
+        console.log('[useNotifications] 🔔 Current status:', currentStatus);
+        
         if (mountedRef.current) {
           setStatus(currentStatus);
+          setPlatform(currentPlatform);
         }
       } catch (err) {
-        console.error('[useNotifications] Status check failed:', err);
+        console.error('[useNotifications] ❌ Status check failed:', err);
       }
     };
 
     checkStatus();
-    setPlatform(detectPlatform());
 
     return () => {
       mountedRef.current = false;
@@ -144,6 +158,7 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
 
   useEffect(() => {
     if (!enableRealtime || !userId || !salonId) {
+      console.log('[useNotifications] ⏸️ Realtime disabled or missing userId/salonId:', { enableRealtime, userId, salonId });
       return;
     }
 
@@ -156,6 +171,7 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
 
         // Create user-specific notification channel
         const channelName = `notifications:${userId}`;
+        console.log('[useNotifications] 🔌 Setting up realtime channel:', channelName);
         
         realtimeChannelRef.current = supabase
           .channel(channelName, {
@@ -164,7 +180,7 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
             }
           })
           .on('broadcast', { event: 'appointment_notification' }, (payload) => {
-            console.log('[useNotifications] Realtime notification received:', payload);
+            console.log('[useNotifications] 📬 Realtime notification received:', payload);
 
             const notification: NotificationData = {
               id: payload.payload.appointmentId || `notif-${Date.now()}`,
@@ -200,16 +216,17 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
             }
           })
           .subscribe((subscribeStatus) => {
+            console.log('[useNotifications] 📡 Channel subscription status:', subscribeStatus);
             if (subscribeStatus === 'SUBSCRIBED') {
-              console.log('[useNotifications] Realtime channel subscribed:', channelName);
+              console.log('[useNotifications] ✅ Realtime channel subscribed:', channelName);
             } else if (subscribeStatus === 'CHANNEL_ERROR') {
-              console.error('[useNotifications] Realtime channel error');
+              console.error('[useNotifications] ❌ Realtime channel error');
               onError?.(new Error('Failed to connect to notification channel'));
             }
           });
 
       } catch (err) {
-        console.error('[useNotifications] Realtime setup failed:', err);
+        console.error('[useNotifications] ❌ Realtime setup failed:', err);
         onError?.(err instanceof Error ? err : new Error(String(err)));
       }
     };
@@ -218,6 +235,7 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
 
     return () => {
       if (realtimeChannelRef.current) {
+        console.log('[useNotifications] 🧹 Cleaning up realtime channel');
         supabase.removeChannel(realtimeChannelRef.current);
         realtimeChannelRef.current = null;
       }
@@ -235,6 +253,7 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
       return false;
     }
 
+    console.log('[useNotifications] 🔔 Starting push subscription...');
     setIsLoading(true);
     setError(null);
 
@@ -243,19 +262,24 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
       initAudioContext();
 
       const result = await setupPushNotifications(userId, salonId);
+      console.log('[useNotifications] 🔔 Push subscription result:', result);
 
       if (mountedRef.current) {
         setStatus(result.status);
         
         if (!result.success) {
+          console.log('[useNotifications] ❌ Push subscription failed:', result.error);
           setError(result.error || 'Failed to subscribe');
           onError?.(new Error(result.error || 'Failed to subscribe'));
+        } else {
+          console.log('[useNotifications] ✅ Push subscription successful!');
         }
       }
 
       return result.success;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('[useNotifications] ❌ Push subscription error:', errorMessage);
       
       if (mountedRef.current) {
         setError(errorMessage);

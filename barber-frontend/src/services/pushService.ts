@@ -30,6 +30,13 @@ export interface PushSubscriptionData {
   };
 }
 
+// NotificationAction interface (not in standard TS lib but supported by browsers)
+export interface NotificationActionType {
+  action: string;
+  title: string;
+  icon?: string;
+}
+
 export interface NotificationPayload {
   title: string;
   body: string;
@@ -39,7 +46,7 @@ export interface NotificationPayload {
   data?: Record<string, unknown>;
   requireInteraction?: boolean;
   silent?: boolean;
-  actions?: NotificationAction[];
+  actions?: NotificationActionType[];
 }
 
 export interface PlatformInfo {
@@ -256,9 +263,10 @@ export async function subscribeToPush(): Promise<PushSubscriptionData | null> {
     
     if (!subscription) {
       console.log('[PushService] Creating new push subscription...');
+      const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true, // Required - ensures notifications are visible to user
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        applicationServerKey: applicationServerKey.buffer as ArrayBuffer
       });
     }
 
@@ -395,17 +403,30 @@ export async function setupPushNotifications(
 ): Promise<{ success: boolean; status: SubscriptionStatus; error?: string }> {
   const platform = detectPlatform();
   
+  console.log('[PushService] 🚀 Starting push notification setup:', {
+    userId,
+    salonId,
+    platform: {
+      isIOS: platform.isIOS,
+      iosVersion: platform.iosVersion,
+      isPWA: platform.isPWA,
+      supportsWebPush: platform.supportsWebPush
+    }
+  });
+  
   // Check support
   if (!platform.supportsWebPush) {
     const reason = platform.isIOS && platform.iosVersion && platform.iosVersion < 16
       ? 'iOS 16.4+ required for push notifications'
       : 'Push notifications not supported on this device';
     
+    console.log('[PushService] ❌ Platform not supported:', reason);
     return { success: false, status: 'unsupported', error: reason };
   }
 
   // Check if PWA on iOS
   if (platform.isIOS && !platform.isPWA) {
+    console.log('[PushService] ⚠️ iOS but not PWA - user needs to add to home screen');
     return {
       success: false,
       status: 'unsupported',
@@ -414,13 +435,19 @@ export async function setupPushNotifications(
   }
 
   // Register service worker
+  console.log('[PushService] 📝 Registering service worker...');
   const registration = await registerServiceWorker();
   if (!registration) {
+    console.log('[PushService] ❌ Service worker registration failed');
     return { success: false, status: 'error', error: 'Service worker registration failed' };
   }
+  console.log('[PushService] ✅ Service worker registered');
 
   // Request permission
+  console.log('[PushService] 🔔 Requesting notification permission...');
   const permission = await requestPermission();
+  console.log('[PushService] 🔔 Permission result:', permission);
+  
   if (permission === 'denied') {
     return { success: false, status: 'permission-denied', error: 'Notification permission denied' };
   }
@@ -429,16 +456,22 @@ export async function setupPushNotifications(
   }
 
   // Subscribe to push
+  console.log('[PushService] 📬 Creating push subscription...');
   const subscription = await subscribeToPush();
   if (!subscription) {
+    console.log('[PushService] ❌ Failed to create push subscription');
     return { success: false, status: 'error', error: 'Failed to create push subscription' };
   }
+  console.log('[PushService] ✅ Push subscription created:', subscription.endpoint);
 
   // Save to backend
+  console.log('[PushService] 💾 Saving subscription to backend...');
   const saved = await saveSubscriptionToBackend(userId, subscription, salonId);
   if (!saved) {
+    console.log('[PushService] ❌ Failed to save subscription to server');
     return { success: false, status: 'error', error: 'Failed to save subscription to server' };
   }
+  console.log('[PushService] ✅ Subscription saved to backend');
 
   return { success: true, status: 'subscribed' };
 }
@@ -503,16 +536,23 @@ export async function showLocalNotification(payload: NotificationPayload): Promi
   try {
     const registration = await navigator.serviceWorker.ready;
     
-    await registration.showNotification(payload.title, {
+    // Use extended options with type assertion for browser-specific features
+    const options: NotificationOptions & { actions?: NotificationActionType[] } = {
       body: payload.body,
       icon: payload.icon || '/icon-192.png',
       badge: payload.badge || '/icon-72.png',
       tag: payload.tag,
       data: payload.data,
       requireInteraction: payload.requireInteraction ?? false,
-      silent: payload.silent ?? false,
-      actions: payload.actions
-    });
+      silent: payload.silent ?? false
+    };
+    
+    // Actions are supported by service worker notifications but not standard Notification
+    if (payload.actions && payload.actions.length > 0) {
+      (options as any).actions = payload.actions;
+    }
+    
+    await registration.showNotification(payload.title, options);
   } catch (error) {
     console.error('[PushService] Failed to show notification:', error);
     

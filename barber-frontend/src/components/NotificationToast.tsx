@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, X, CheckCircle } from 'lucide-react';
-import { RealtimeNotification } from '../hooks/useRealtimeNotifications';
+import { NotificationData } from '../hooks/useNotifications';
 
 interface NotificationToastProps {
-  notification: RealtimeNotification | null;
+  notification: NotificationData | null;
   onDismiss?: () => void;
   duration?: number;
 }

@@ -12,10 +12,10 @@ import NotificationToast from '../components/NotificationToast';
 import { useSalon } from '../context/SalonContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAppBadge } from '../hooks/useAppBadge';
-import { usePushNotifications } from '../hooks/usePushNotifications';
-import { useRealtimeNotifications, RealtimeNotification } from '../hooks/useRealtimeNotifications';
+import { useNotifications, NotificationData } from '../hooks/useNotifications';
 import { supabase } from '../services/supabaseClient';
 import { QRCodeCanvas } from 'qrcode.react';
+import { detectPlatform } from '../services/pushService';
 
 interface DashboardPageProps {
   salonId: string;
@@ -40,11 +40,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; subtitle: string; timestamp: string }>>([]);
   const [notificationCount, setNotificationCount] = useState(0);
-  const [currentToastNotification, setCurrentToastNotification] = useState<RealtimeNotification | null>(null);
+  const [currentToastNotification, setCurrentToastNotification] = useState<NotificationData | null>(null);
   const seenAppointmentsRef = useRef<Set<string>>(new Set());
   const [hasBootstrappedNotifications, setHasBootstrappedNotifications] = useState(false);
   const [hasReadNotifications, setHasReadNotifications] = useState(false);
   const isLiveRef = useRef(false); // Track if we're receiving live updates (not bootstrap)
+  const [showNotificationBanner, setShowNotificationBanner] = useState(false);
 
   // Initialize app badge hook with Supabase sync
   const {
@@ -61,15 +62,27 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     userRole: userRole
   });
 
-  const { subscribeToPush } = usePushNotifications();
+  // Get platform info for iOS-specific handling
+  const platformInfo = useMemo(() => detectPlatform(), []);
 
-  // Setup Real-time Notifications (Works for all platforms as fallback)
-  const { isSubscribed: isRealtimeSubscribed } = useRealtimeNotifications({
+  // Unified Notification Hook (push + realtime)
+  const {
+    status: notificationStatus,
+    platform,
+    isLoading: notificationLoading,
+    error: notificationError,
+    subscribe: subscribeToNotifications,
+    showNotification: showLocalNotification,
+    playSound,
+    vibrate: vibrateDevice
+  } = useNotifications({
     userId,
     salonId,
     userRole,
-    enabled: true,
-    onNotification: (notification) => {
+    enableRealtime: true,
+    onNotification: (notification: NotificationData) => {
+      console.log('[DashboardPage] 📬 Notification received:', notification);
+      
       // Show toast notification (works on all platforms)
       setCurrentToastNotification(notification);
       
@@ -89,33 +102,56 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
       // Update app badge
       updateBadge(notificationCount + 1);
+      
+      // Play sound and vibrate
+      playSound();
+      vibrateDevice([200, 100, 200]);
     },
     onError: (error) => {
-      console.error('Realtime notification error:', error);
+      console.error('[DashboardPage] ❌ Notification error:', error);
     }
   });
 
-  // Subscribe to Push Notifications (iOS 16.4+ and all browsers)
+  // Show notification setup banner on iOS if not subscribed
   useEffect(() => {
-    if (!userId) return;
+    if (platformInfo.isIOS && platformInfo.isPWA && notificationStatus !== 'subscribed') {
+      // Show banner after 3 seconds if on iOS PWA and not yet subscribed
+      const timer = setTimeout(() => {
+        setShowNotificationBanner(true);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [platformInfo.isIOS, platformInfo.isPWA, notificationStatus]);
 
-    // Attempt push notification subscription after 2 seconds
-    const timer = setTimeout(() => {
-      subscribeToPush(userId)
-        .then((success) => {
-          if (success) {
-            console.log('✅ Push notifications enabled');
-          } else {
-            console.log('⚠️ Push notifications not available, using real-time fallback');
-          }
-        })
-        .catch((error) => {
-          console.log('Push subscription failed, using real-time fallback:', error);
-        });
+  // Auto-subscribe on non-iOS platforms (desktop/Android)
+  useEffect(() => {
+    if (!userId || !salonId) return;
+    if (platformInfo.isIOS) return; // iOS requires user gesture, don't auto-subscribe
+
+    // For desktop/Android, attempt subscription after 2 seconds
+    const timer = setTimeout(async () => {
+      if (notificationStatus === 'unsubscribed' || notificationStatus === 'permission-default') {
+        const success = await subscribeToNotifications();
+        if (success) {
+          console.log('✅ Push notifications enabled (auto)');
+        } else {
+          console.log('⚠️ Push notifications not available, using real-time fallback');
+        }
+      }
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [userId, subscribeToPush]);
+  }, [userId, salonId, platformInfo.isIOS, notificationStatus, subscribeToNotifications]);
+
+  // Handler for iOS notification enable button (requires user gesture)
+  const handleEnableNotifications = async () => {
+    console.log('[DashboardPage] 🔔 User tapped enable notifications button');
+    const success = await subscribeToNotifications();
+    if (success) {
+      setShowNotificationBanner(false);
+      console.log('✅ iOS Push notifications enabled via user gesture');
+    }
+  };
 
   // Update page title with salon name
   useEffect(() => {
@@ -346,7 +382,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
     bootstrapNotifications();
 
-    // Realtime subscription is sufficient, removing duplicate polling
+    // Realtime subscription for appointments - this is the primary notification mechanism
+    console.log('[DashboardPage] 🔌 Setting up postgres_changes subscription for appointments');
     const channel = supabase
       .channel('notifications-appointments')
       .on('postgres_changes', {
@@ -357,13 +394,17 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           ? `salon_id=eq.${salonId}`
           : `staff_id=eq.${userId}`,
       }, (payload) => {
+        console.log('[DashboardPage] 📬 postgres_changes notification received:', payload);
         // Mark as live mode - this is a real-time update
         isLiveRef.current = true;
         addNotification(payload.new as any);
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[DashboardPage] 📡 postgres_changes subscription status:', status);
+      });
 
     return () => {
+      console.log('[DashboardPage] 🧹 Cleaning up postgres_changes subscription');
       supabase.removeChannel(channel);
     };
   }, [salonId, userId, userRole, hasBootstrappedNotifications]);
@@ -398,6 +439,36 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         onDismiss={() => setCurrentToastNotification(null)}
         duration={5000}
       />
+
+      {/* iOS Notification Enable Banner - Requires user gesture */}
+      {showNotificationBanner && platformInfo.isIOS && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🔔</span>
+              <div>
+                <p className="font-semibold">Enable Notifications</p>
+                <p className="text-sm opacity-90">Stay updated with new appointments</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleEnableNotifications}
+                disabled={notificationLoading}
+                className="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors disabled:opacity-50"
+              >
+                {notificationLoading ? 'Enabling...' : 'Enable'}
+              </button>
+              <button
+                onClick={() => setShowNotificationBanner(false)}
+                className="text-white/80 hover:text-white px-2"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sidebar - Desktop Only */}
       <div className="hidden lg:block h-screen sticky top-0 z-40 bg-white dark:bg-black/20 backdrop-blur-md">
