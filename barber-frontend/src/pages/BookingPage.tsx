@@ -275,13 +275,22 @@ export default function BookingPage() {
 
     if (!supabase || !salon?.id || !booking.selectedStaff) return;
     const channel = supabase
-      .channel('booking-slots')
+      .channel(`booking-slots-${booking.selectedStaff.id}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'appointments',
-        filter: `staff_id=eq.${booking.selectedStaff.id}`,
-      }, () => {
+      }, (payload) => {
+        const record: any = payload.eventType === 'DELETE' ? payload.old : payload.new;
+        if (!record) return;
+        if (record.salon_id !== salon.id) return;
+        if (record.staff_id !== booking.selectedStaff.id) return;
+
+        if (booking.selectedDate) {
+          const dateKey = booking.selectedDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' });
+          if (record.appointment_date !== dateKey) return;
+        }
+
         loadBookedTimes();
       })
       .subscribe();
