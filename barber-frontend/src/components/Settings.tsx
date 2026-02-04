@@ -1,192 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-**Tested On:** iPhone 12, iPad Air (iOS 15+)**Status:** ✅ iOS notifications working via real-time WebSocket**Last Updated:** 2026-02-04---4. **Request Notification Setting**: Add iOS setting in app for notification preferences3. **SMS Notifications**: Send SMS for critical notifications2. **Email Notifications**: Send email notifications as fallback for iOS users1. **Native iOS App**: Build native iOS app for true background push notifications## Next Steps (Optional Improvements)A: The badge updates in real-time via the realtime subscription. No manual refresh needed.**Q: How often should I refresh the notification badge?**A: Not for push notifications. The WebSocket connection is required for real-time updates.**Q: Can I make it work offline on iOS?**A: No, they'll see a "Allow Notifications?" popup once. That's it.**Q: Do Android users need to do anything special?**A: No, real-time WebSocket notifications require an active connection. To get background notifications on iOS, you would need to build a native app.**Q: Will notifications work if I close the app on iOS?**A: Apple restricts this for PWAs. Only native iOS apps can receive background push notifications. This is by design.**Q: Why can't iOS get push notifications?**## FAQ- Shows notification capability and setup instructions📁 `/barber-frontend/src/components/NotificationInfo.tsx`### Status Display- Line ~85: Shows real-time notifications for all platforms- Line ~70: Skips Web Push for iOS📁 `/barber-frontend/src/pages/DashboardPage.tsx`### Dashboard Integration- `isIOSPWA()` - Checks if iOS PWA- `showNativeNotification()` - Platform-appropriate notifications- `getNotificationCapability()` - Detects device type📁 `/barber-frontend/src/utils/iosNotifications.ts`### Notification Capability Detection## Code References```Show notification to user   ↓Service Worker handles push event   ↓Browser receives push (even if app closed)   ↓Backend sends to Push Service (FCM/APNs)   ↓User A creates appointment```### Web Push Notification Flow (Android/Desktop only)```Toast notification + Vibration + Sound   ↓useRealtimeNotifications hook triggers   ↓App receives event in real-time channel   ↓Supabase broadcasts event via WebSocket   ↓Database updates in Supabase   ↓User A creates appointment```### Real-time Notification Flow## Technical Details3. **Browser permissions**: Ensure microphone/speaker permissions granted2. **iOS silently blocks audio**: May need to enable sound in app settings1. **Check device settings**: Volume on, vibration enabled### Notification toast shows but no sound/vibration3. **Service Worker must be registered**: Check DevTools → Application → Service Workers2. **Check notification permissions**: Browser settings or OS settings1. **Did you click "Allow"?** First time shows a popup### Android/Desktop: No push notification3. **Check browser notifications**: Settings → Safari → Notifications → Enable for your domain2. **Verify WebSocket connection**: Open DevTools → Network → look for WebSocket1. **Check if app is open**: Real-time notifications only work when app is active### iOS: No notification toast appears## Troubleshooting```  }'    "appointment_time": "14:00:00"    "appointment_date": "2026-02-15",    "customer_email": "test@example.com",    "customer_name": "Test",    "service_id": "ed480ad7-3038-459b-b661-c4d76d3e66ec",    "salon_id": "e07d2b13-6d04-45d8-809d-2b689fae2b76",  -d '{  -H "Content-Type: application/json" \  -H "apikey: REDACTED_JWT" \curl -X POST "https://czvsgtvienmchudyzqpk.supabase.co/rest/v1/appointments" \# From barber-backend folder```bashCreate a test appointment via:### Step 4: Test Data- 📱 The **badge count** should update on app icon- 📱 You should hear a **notification sound**- 📱 The app should **vibrate**- 📱 You should see an **in-app toast notification** on iPhoneWhen an appointment is made (on laptop/web):### Step 3: Verify Notifications Work   - Settings → Safari → Notifications → Your Domain4. If it says notifications aren't ready, check browser settings:3. You should see: **"iOS notifications are ready! You'll receive live appointment updates."**2. Go to **Settings**1. Open the appInstead:**Do NOT expect an "Allow Notifications" popup on iOS**### Step 2: Grant Notification Access (Settings Only)4. The app is now a PWA3. Tap **Share** → **Add to Home Screen**2. Go to your Reservi domain1. Open Safari on iPhone### Step 1: Install the App## How to Test on iPhone- Clear instructions for each platform- 🔴 **Denied** if user blocked notifications- 🟢 **Granted** for Android/Desktop users with permission- 🟢 **Ready** for iOS usersSettings page now shows:### 3. **User-Friendly Status** (New 🆕)- ✅ No confusing permission popups- ✅ Badge count on app icon- ✅ Sound alert (Web Audio API)- ✅ Vibration feedback- ✅ In-app toast notificationsReal-time notifications now include:### 2. **iOS-Friendly Notifications** (New 🆕)```}  console.log('iOS detected: Skipping Web Push subscription');  // iOS: Skip Web Push, use realtime notificationsif (capability.type === 'realtime') {const capability = getNotificationCapability();// In DashboardPage.tsx```typescriptThe app now detects the device automatically:### 1. **Automatic Detection** (New 🆕)## What Changed- Shows in-app toast notifications + vibration + sound- Works when the app is open- No permission popup needed- Now uses **Real-time WebSocket notifications** instead- **Can't use Web Push** (Apple limitation)### iOS Users (iPad/iPhone)- Works even when the app is closed- Requires one-time "Allow" permission- Shows browser push notifications- Uses **Web Push API** (industry standard)### Desktop/Android Users## How Notifications Work Now (Fixed ✅)**iOS Safari (and iOS PWAs) do not support the Web Push Notification API** that Android and desktop browsers use. This is an Apple limitation, not a bug in the app.## Root CauseiOS PWA users are not receiving push notifications when they click "Allow".## Problem  Save, 
+  Save, 
   MapPin, 
   Clock, 
   Calendar, 
@@ -197,12 +11,10 @@ import {
   Mail,
   Globe,
   CheckCircle,
-  X,
-  Bell
+  X
 } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { useLanguage } from '../context/LanguageContext';
-import NotificationInfo from './NotificationInfo';
 
 interface SettingsProps {
   salonId: string;
@@ -423,14 +235,6 @@ const Settings: React.FC<SettingsProps> = ({ salonId }) => {
           <span className="font-medium">{error}</span>
         </div>
       )}
-
-      {/* Notification Status */}
-      <div className="flex items-start gap-3">
-        <Bell className="w-5 h-5 text-blue-500 mt-1 flex-shrink-0" />
-        <div className="flex-1">
-          <NotificationInfo />
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Salon Information */}

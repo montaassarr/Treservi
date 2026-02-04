@@ -10,7 +10,7 @@ export const isIOSPWA = (): boolean => {
   const userAgent = navigator.userAgent.toLowerCase();
   const isIOS = /iphone|ipad|ipod/.test(userAgent);
   const isStandalone = (navigator as any).standalone === true;
-  const isInWebClip = window.navigator.standalone === true;
+  const isInWebClip = (window.navigator as any).standalone === true;
   return isIOS && (isStandalone || isInWebClip || isWebApp());
 };
 
