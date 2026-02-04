@@ -226,16 +226,41 @@ async function encryptPayload(
 }
 
 /**
+ * Build VAPID JWK from raw public/private keys
+ */
+function buildVapidJwk(): JsonWebKey {
+  const publicKeyBytes = base64urlDecode(VAPID_PUBLIC_KEY)
+  if (publicKeyBytes.length !== 65 || publicKeyBytes[0] !== 0x04) {
+    throw new Error('Invalid VAPID public key format')
+  }
+
+  const x = publicKeyBytes.slice(1, 33)
+  const y = publicKeyBytes.slice(33, 65)
+  const d = base64urlDecode(VAPID_PRIVATE_KEY)
+
+  if (d.length !== 32) {
+    throw new Error('Invalid VAPID private key length')
+  }
+
+  return {
+    kty: 'EC',
+    crv: 'P-256',
+    x: base64urlEncode(x),
+    y: base64urlEncode(y),
+    d: base64urlEncode(d),
+    ext: true
+  }
+}
+
+/**
  * Generate VAPID JWT for authorization
  */
 async function generateVapidJwt(audience: string): Promise<string> {
-  // Decode private key
-  const privateKeyData = base64urlDecode(VAPID_PRIVATE_KEY)
-  
-  // Import private key for signing
+  const jwk = buildVapidJwk()
+
   const privateKey = await crypto.subtle.importKey(
-    'pkcs8',
-    await formatPrivateKey(privateKeyData),
+    'jwk',
+    jwk,
     { name: 'ECDSA', namedCurve: 'P-256' },
     false,
     ['sign']
@@ -254,7 +279,7 @@ async function generateVapidJwt(audience: string): Promise<string> {
   const payloadEncoded = base64urlEncode(new TextEncoder().encode(JSON.stringify(payload)))
   const message = `${headerEncoded}.${payloadEncoded}`
   
-  // Sign the message
+  // Sign the message (WebCrypto returns DER-encoded signature)
   const signature = await crypto.subtle.sign(
     { name: 'ECDSA', hash: 'SHA-256' },
     privateKey,
@@ -266,27 +291,6 @@ async function generateVapidJwt(audience: string): Promise<string> {
   const signatureEncoded = base64urlEncode(derToRaw(signatureArray))
   
   return `${message}.${signatureEncoded}`
-}
-
-/**
- * Format raw private key to PKCS8 format
- */
-async function formatPrivateKey(raw: Uint8Array): Promise<ArrayBuffer> {
-  // This is a simplified approach - for production, use proper PKCS8 formatting
-  // The raw private key is 32 bytes for P-256
-  
-  // PKCS8 header for P-256 ECDSA
-  const pkcs8Header = new Uint8Array([
-    0x30, 0x41, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48,
-    0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03,
-    0x01, 0x07, 0x04, 0x27, 0x30, 0x25, 0x02, 0x01, 0x01, 0x04, 0x20
-  ])
-  
-  const result = new Uint8Array(pkcs8Header.length + raw.length)
-  result.set(pkcs8Header, 0)
-  result.set(raw, pkcs8Header.length)
-  
-  return result.buffer
 }
 
 /**
