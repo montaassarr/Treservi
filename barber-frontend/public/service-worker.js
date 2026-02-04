@@ -131,10 +131,11 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data ? JSON.parse(event.data.text()) : {};
   } catch (error) {
+    console.error('[ServiceWorker] Failed to parse push payload:', error);
     payload = {};
   }
 
-  console.log('[ServiceWorker] Push received:', payload);
+  console.log('[ServiceWorker] 🔔 Push received:', payload);
 
   const title = payload.title || payload.message || '📞 New Appointment';
   const body = payload.body || 'You have a new appointment';
@@ -143,14 +144,13 @@ self.addEventListener('push', (event) => {
   const url = payload?.data?.url || payload?.url || '/dashboard';
   const appointmentId = payload?.data?.appointmentId || null;
   const tag = payload.tag || 'appointment-notification';
-  const sound = payload.sound || 'notification.mp3';
   
   const actions = payload.actions || [
     { action: 'open', title: 'Open' },
     { action: 'dismiss', title: 'Dismiss' }
   ];
 
-  // Rich notification with sound, vibration, and visual effects
+  // Rich notification with vibration and visual effects
   const options = {
     body,
     icon,
@@ -158,24 +158,30 @@ self.addEventListener('push', (event) => {
     tag,
     requireInteraction: true,
     actions,
-    data: { url, appointmentId },
-    // Sound - works on mobile devices
-    sound,
+    data: { url, appointmentId, playSound: true },
     // Vibration pattern (mobile only) - vibrate for 200ms, pause 100ms, vibrate 200ms
     vibrate: [200, 100, 200],
     // Notification priority and behavior
-    silent: false,
-    // Show on lock screen (Android)
-    showTrigger: true
+    silent: false
   };
 
   event.waitUntil(
     self.registration.showNotification(title, options)
       .then(() => {
-        console.log('[ServiceWorker] Notification shown:', title);
+        console.log('[ServiceWorker] ✅ Notification shown:', title);
+        
+        // Play notification sound by opening all clients and requesting them to play sound
+        return self.clients.matchAll().then((clients) => {
+          clients.forEach((client) => {
+            client.postMessage({
+              type: 'PLAY_NOTIFICATION_SOUND',
+              sound: '/notification.mp3'
+            });
+          });
+        });
       })
       .catch((error) => {
-        console.error('[ServiceWorker] Failed to show notification:', error);
+        console.error('[ServiceWorker] ❌ Failed to show notification:', error);
       })
   );
 });
