@@ -15,11 +15,9 @@ import {
 } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { useLanguage } from '../context/LanguageContext';
-import NotificationDiagnostic from './NotificationDiagnostic';
 
 interface SettingsProps {
   salonId: string;
-  userId?: string;
 }
 
 interface SalonSettings {
@@ -47,7 +45,7 @@ const DAYS_OF_WEEK = [
   'Sunday'
 ];
 
-const Settings: React.FC<SettingsProps> = ({ salonId, userId }) => {
+const Settings: React.FC<SettingsProps> = ({ salonId }) => {
   const { t, language } = useLanguage();
   const isRTL = language === 'ar' || language === 'tn';
 
@@ -442,9 +440,6 @@ const Settings: React.FC<SettingsProps> = ({ salonId, userId }) => {
           </div>
         </div>
       </div>
-
-      {/* Notification Diagnostics */}
-      <NotificationDiagnostic userId={userId} />
     </div>
   );
 };

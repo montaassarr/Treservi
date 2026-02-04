@@ -40,20 +40,24 @@ export const getNotificationCapability = (): NotificationCapability => {
   const isInstalledPWA = isIOSPWA();
 
   if (isIOS) {
-    // iOS Web Push works only for installed PWAs (iOS 16.4+)
-    if (hasWebPush && isInstalledPWA && hasNotificationAPI) {
+    // iOS 16.4+ supports Web Push (both Safari and PWA)
+    // Always try Web Push if APIs are available
+    if (hasWebPush && hasNotificationAPI) {
       return {
         supported: true,
         type: 'webpush',
-        description: 'iOS PWA detected: Web Push notifications supported',
+        description: isInstalledPWA 
+          ? 'iOS PWA: Web Push notifications supported' 
+          : 'iOS Safari: Web Push supported (iOS 16.4+)',
         requiresPermission: true
       };
     }
 
+    // Fallback to realtime only if Web Push APIs not available
     return {
       supported: true,
       type: 'realtime',
-      description: 'iOS detected: Using real-time WebSocket notifications',
+      description: 'iOS detected: Using real-time WebSocket notifications (older iOS)',
       requiresPermission: false
     };
   }
@@ -90,13 +94,7 @@ export const getNotificationCapability = (): NotificationCapability => {
 export const requestAppropriateNotificationPermission = async (): Promise<boolean> => {
   const capability = getNotificationCapability();
 
-  // iOS realtime doesn't need permission
-  if (capability.type === 'realtime' && /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase())) {
-    console.log('iOS detected: Real-time notifications ready (no permission needed)');
-    return true;
-  }
-
-  // Web push requires permission on all platforms (including iOS PWA)
+  // Web push requires permission on all platforms (iOS 16.4+, Android, Desktop)
   if (capability.type === 'webpush' && 'Notification' in window) {
     try {
       const permission = await Notification.requestPermission();
@@ -105,6 +103,12 @@ export const requestAppropriateNotificationPermission = async (): Promise<boolea
       console.error('Failed to request notification permission:', error);
       return false;
     }
+  }
+
+  // Realtime notifications don't require browser permission
+  if (capability.type === 'realtime') {
+    console.log('Using real-time notifications (no browser permission needed)');
+    return true;
   }
 
   return false;
