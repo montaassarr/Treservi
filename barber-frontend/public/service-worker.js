@@ -1,31 +1,56 @@
-// Service Worker for Treservi PWA
-// Handles offline caching, badge updates, and push notifications
+/**
+ * Service Worker for Treservi PWA
+ * 
+ * Handles:
+ * - Push notification reception and display
+ * - Notification click handling
+ * - Offline caching (network-first strategy for HTML, cache-first for assets)
+ * - App badge updates
+ * - Background sync
+ * 
+ * Compatible with iOS 16.4+, Android, and Desktop browsers
+ */
 
-const CACHE_NAME = 'treservi-v2';
-const urlsToCache = [
+const CACHE_NAME = 'treservi-v3';
+const OFFLINE_URL = '/offline.html';
+
+// Resources to cache on install
+const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/offline.html', // Create a simple offline fallback page
+  '/offline.html'
 ];
 
-// Install event - cache essential resources
+// ============================================================================
+// INSTALL EVENT
+// ============================================================================
+
 self.addEventListener('install', (event) => {
+  console.log('[ServiceWorker] Installing...');
+  
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('[ServiceWorker] Caching app shell');
-        return cache.addAll(urlsToCache);
+        return cache.addAll(PRECACHE_URLS);
       })
       .catch((error) => {
         console.error('[ServiceWorker] Cache failed:', error);
       })
   );
+  
+  // Activate immediately
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// ============================================================================
+// ACTIVATE EVENT
+// ============================================================================
+
 self.addEventListener('activate', (event) => {
+  console.log('[ServiceWorker] Activating...');
+  
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -38,39 +63,46 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+  
+  // Take control of all clients immediately
   return self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
-// Fetch event - Efficient caching strategy
+// ============================================================================
+// FETCH EVENT - Caching Strategy
+// ============================================================================
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 1. IGNORE: Non-GET, API calls, Chrome Extensions, Supabase
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Skip chrome-extension, Supabase API, and other API calls
   if (
-    event.request.method !== 'GET' ||
     url.protocol.startsWith('chrome-extension') ||
     url.hostname.includes('supabase.co') ||
-    url.pathname.startsWith('/api/')
+    url.pathname.startsWith('/api/') ||
+    url.pathname.includes('/functions/')
   ) {
     return;
   }
 
-  // 2. CACHE-FIRST for Static Assets (Images, Fonts, Scripts)
-  if (
-    url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|woff|woff2)$/)
-  ) {
+  // Static assets: Cache-first with background update
+  if (url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|woff|woff2|webp)$/)) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
+        // Update cache in background
         const fetchPromise = fetch(event.request)
           .then((response) => {
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
+            if (response && response.status === 200 && response.type === 'basic') {
+              const responseToCache = response.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
             }
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
             return response;
           })
           .catch(() => cachedResponse);
@@ -81,36 +113,74 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. NETWORK-FIRST for HTML/Navigation (ensures fresh content)
+  // Navigation requests: Network-first with offline fallback
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .catch(() => {
-          return caches.match('/offline.html');
+          return caches.match(OFFLINE_URL);
         })
     );
     return;
   }
 });
 
-// Handle push notifications
+// ============================================================================
+// PUSH EVENT - Handle incoming push notifications
+// ============================================================================
+
 self.addEventListener('push', (event) => {
-  let data = {};
+  console.log('[ServiceWorker] Push received');
+  
+  // Default notification data
+  let data = {
+    title: 'New Notification',
+    body: 'You have a new notification',
+    icon: '/icon-192.png',
+    badge: '/icon-72.png',
+    tag: 'default',
+    data: { url: '/' }
+  };
 
   try {
-    data = event.data ? event.data.json() : {};
+    if (event.data) {
+      const payload = event.data.json();
+      data = {
+        title: payload.title || data.title,
+        body: payload.body || data.body,
+        icon: payload.icon || data.icon,
+        badge: payload.badge || data.badge,
+        tag: payload.tag || data.tag,
+        data: payload.data || data.data
+      };
+      
+      // Handle badge count if provided
+      if (payload.badgeCount !== undefined && 'setAppBadge' in navigator) {
+        const count = parseInt(payload.badgeCount, 10);
+        if (!isNaN(count) && count > 0) {
+          navigator.setAppBadge(count).catch((err) => {
+            console.warn('[ServiceWorker] Failed to set badge:', err);
+          });
+        }
+      }
+    }
   } catch (e) {
-    // Fallback for text-only payloads
-    data = { body: event.data ? event.data.text() : 'You have a new appointment!' };
+    // If JSON parsing fails, try text
+    if (event.data) {
+      data.body = event.data.text();
+    }
+    console.warn('[ServiceWorker] Push data parse error, using text fallback');
   }
 
-  const title = data.title || 'New Appointment';
   const options = {
     body: data.body,
-    icon: data.icon || '/icon-192.png',
-    badge: '/icon-72.png',
+    icon: data.icon,
+    badge: data.badge,
+    tag: data.tag,
+    data: data.data,
     vibrate: [200, 100, 200],
-    data: data.data || { url: '/' },
+    requireInteraction: true, // Keep notification visible until user interacts (Android)
+    silent: false,
     actions: [
       {
         action: 'view',
@@ -118,80 +188,134 @@ self.addEventListener('push', (event) => {
         icon: '/icon-192.png'
       },
       {
-        action: 'close',
-        title: 'Close',
+        action: 'dismiss',
+        title: 'Dismiss',
         icon: '/icon-192.png'
       }
     ]
   };
 
-  // Update App Badge count from payload if present
-  if (data.badge && 'setAppBadge' in navigator) {
-    const badgeCount = parseInt(data.badge);
-    if (!isNaN(badgeCount)) {
-      navigator.setAppBadge(badgeCount).catch(err => console.error('Failed to set badge', err));
-    }
-  }
-
   event.waitUntil(
-    self.registration.showNotification(title, options)
+    self.registration.showNotification(data.title, options)
   );
 });
 
-// Handle notification click
+// ============================================================================
+// NOTIFICATION CLICK - Handle user clicking on notification
+// ============================================================================
+
 self.addEventListener('notificationclick', (event) => {
+  console.log('[ServiceWorker] Notification clicked:', event.action);
+  
+  // Close the notification
   event.notification.close();
 
-  if (event.action === 'close') return;
-
-  const urlToOpen = event.notification.data.url || '/';
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Check if there is already a window for this app open
-      for (let i = 0; i < windowClients.length; i++) {
-        const client = windowClients[i];
-        // If url matches or just bringing app to foreground
-        if ('focus' in client) {
-          if (client.url.includes(urlToOpen)) {
-            return client.focus();
-          }
-          // Optional: navigate client to url if different?
-          // For now, just focusing is good, but if we want to navigate:
-          // client.navigate(urlToOpen);
-        }
-      }
-
-      // If no window is open, open a new one
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
-    })
-  );
-});
-
-// Badge API support - update badge count
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+  // Handle dismiss action
+  if (event.action === 'dismiss') {
     return;
   }
 
-  if (event.data && event.data.type === 'UPDATE_BADGE') {
-    const count = event.data.count || 0;
+  // Get the URL to open
+  const urlToOpen = event.notification.data?.url || '/';
 
-    if (self.navigator && self.navigator.setAppBadge) {
-      if (count > 0) {
-        self.navigator.setAppBadge(count);
-      } else {
-        self.navigator.clearAppBadge();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((windowClients) => {
+        // Check if there's already a window open
+        for (const client of windowClients) {
+          // If we find an existing window, focus it and navigate
+          if (client.url.includes(self.registration.scope) && 'focus' in client) {
+            // Navigate to the specific URL if different
+            if (urlToOpen !== '/' && !client.url.endsWith(urlToOpen)) {
+              client.navigate(urlToOpen);
+            }
+            return client.focus();
+          }
+        }
+        
+        // If no window is open, open a new one
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+  );
+});
+
+// ============================================================================
+// NOTIFICATION CLOSE - Handle notification being dismissed
+// ============================================================================
+
+self.addEventListener('notificationclose', (event) => {
+  console.log('[ServiceWorker] Notification closed');
+});
+
+// ============================================================================
+// MESSAGE EVENT - Handle messages from main thread
+// ============================================================================
+
+self.addEventListener('message', (event) => {
+  const { type, data } = event.data || {};
+
+  switch (type) {
+    case 'SKIP_WAITING':
+      self.skipWaiting();
+      break;
+      
+    case 'UPDATE_BADGE':
+      if ('setAppBadge' in navigator) {
+        const count = data?.count || 0;
+        if (count > 0) {
+          navigator.setAppBadge(count);
+        } else {
+          navigator.clearAppBadge();
+        }
       }
-    }
+      break;
+      
+    case 'CLEAR_BADGE':
+      if ('clearAppBadge' in navigator) {
+        navigator.clearAppBadge();
+      }
+      break;
+      
+    case 'GET_SUBSCRIPTION':
+      // Return current subscription status
+      self.registration.pushManager.getSubscription()
+        .then((subscription) => {
+          if (event.ports && event.ports[0]) {
+            event.ports[0].postMessage({
+              subscribed: !!subscription,
+              endpoint: subscription?.endpoint
+            });
+          }
+        });
+      break;
+      
+    default:
+      // Legacy support for old message format
+      if (event.data?.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+      }
+      if (event.data?.type === 'UPDATE_BADGE') {
+        const count = event.data.count || 0;
+        if ('setAppBadge' in navigator) {
+          if (count > 0) {
+            navigator.setAppBadge(count);
+          } else {
+            navigator.clearAppBadge();
+          }
+        }
+      }
   }
 });
 
-// Background sync for appointment updates
+// ============================================================================
+// BACKGROUND SYNC - Handle offline actions
+// ============================================================================
+
 self.addEventListener('sync', (event) => {
+  console.log('[ServiceWorker] Background sync:', event.tag);
+  
   if (event.tag === 'sync-appointments') {
     event.waitUntil(syncAppointments());
   }
@@ -199,7 +323,9 @@ self.addEventListener('sync', (event) => {
 
 async function syncAppointments() {
   try {
-    // Fetch pending appointment updates
+    console.log('[ServiceWorker] Syncing appointments...');
+    
+    // Fetch pending appointment updates from cache
     const cache = await caches.open(CACHE_NAME);
     const pendingUpdates = await cache.match('/api/pending-updates');
 
@@ -217,10 +343,40 @@ async function syncAppointments() {
 
       // Clear pending updates
       await cache.delete('/api/pending-updates');
+      console.log('[ServiceWorker] Appointments synced successfully');
     }
   } catch (error) {
     console.error('[ServiceWorker] Sync failed:', error);
   }
 }
 
-console.log('[ServiceWorker] Loaded');
+// ============================================================================
+// PUSH SUBSCRIPTION CHANGE - Handle subscription expiry/changes
+// ============================================================================
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  console.log('[ServiceWorker] Push subscription changed');
+  
+  event.waitUntil(
+    self.registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: event.oldSubscription?.options?.applicationServerKey
+    })
+    .then((newSubscription) => {
+      // Notify the main app about the new subscription
+      return self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'SUBSCRIPTION_CHANGED',
+            subscription: newSubscription.toJSON()
+          });
+        });
+      });
+    })
+    .catch((error) => {
+      console.error('[ServiceWorker] Re-subscription failed:', error);
+    })
+  );
+});
+
+console.log('[ServiceWorker] Script loaded - v3');
