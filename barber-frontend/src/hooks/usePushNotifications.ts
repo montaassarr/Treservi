@@ -169,10 +169,23 @@ export const usePushNotifications = () => {
       }
 
       console.log('Saving subscription to database...');
+      
+      // Verify user is authenticated before saving
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('User not authenticated, cannot save subscription:', authError);
+        return false;
+      }
+
+      // Ensure userId matches the authenticated user
+      if (user.id !== userId) {
+        console.warn('User ID mismatch:', { sessionUserId: user.id, providedUserId: userId });
+      }
+
       const { error } = await supabase
         .from('push_subscriptions')
         .upsert({
-          user_id: userId,
+          user_id: user.id, // Use authenticated user ID instead of passed userId
           endpoint,
           p256dh: keys.p256dh,
           auth: keys.auth,
