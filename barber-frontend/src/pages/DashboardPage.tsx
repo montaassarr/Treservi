@@ -10,7 +10,6 @@ import Settings from '../components/Settings';
 import BottomNavigation from '../components/BottomNavigation';
 import { useSalon } from '../context/SalonContext';
 import { useLanguage } from '../context/LanguageContext';
-import { useNotificationManager } from '../hooks/useNotificationManager';
 import { QRCodeCanvas } from 'qrcode.react';
 
 interface DashboardPageProps {
@@ -33,18 +32,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  // iOS-Safe notification management (extracted to custom hook)
-  const {
-    notifications,
-    notificationCount,
-    markAsRead,
-  } = useNotificationManager({
-    salonId,
-    userId,
-    userRole,
-    enabled: true,
-  });
 
   // Update page title with salon name
   useEffect(() => {
@@ -124,9 +111,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             setActiveTab={setActiveTab}
             salonName={salon?.name || 'Salon'}
             userName={staffName || 'User'}
-            notificationCount={notificationCount}
-            notifications={notifications}
-            onNotificationsOpen={markAsRead}
             currentLanguage={language}
             onLanguageToggle={toggleLanguage}
           />

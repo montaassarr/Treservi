@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Search, Globe, LogOut, Home, Calendar, Users, Settings, Briefcase, User, Info, CreditCard } from 'lucide-react';
+import { Search, Globe, LogOut, Home, Calendar, Users, Settings, Briefcase, User, Info, CreditCard } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { Language } from '../types';
 import { getOwnerAvatar, getStaffAvatar } from '../utils/avatarGenerator';
@@ -16,22 +16,6 @@ interface NavbarProps {
   userName?: string;
   userRole?: 'owner' | 'staff' | 'super_admin';
   salonName?: string;
-  notificationCount?: number;
-  notifications?: Array<{
-    id: string;
-    title: string;
-    subtitle: string;
-    timestamp: string;
-    staffName?: string;
-    serviceName?: string;
-    amount?: string;
-    date?: string;
-    time?: string;
-    customerName?: string;
-    customerPhone?: string;
-    customerEmail?: string;
-  }>;
-  onNotificationsOpen?: () => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
   isMobileMenuOpen: boolean;
@@ -49,9 +33,6 @@ const Navbar: React.FC<NavbarProps> = ({
   userName = 'User', 
   userRole = 'owner', 
   salonName = 'Salon',
-  notificationCount = 0,
-  notifications = [],
-  onNotificationsOpen,
   isDarkMode, 
   toggleTheme,
   onLogout,
@@ -60,9 +41,7 @@ const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [showLanguage, setShowLanguage] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
-  const notificationRef = useRef<HTMLDivElement>(null);
   const langRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -77,9 +56,6 @@ const Navbar: React.FC<NavbarProps> = ({
   const handleClickOutside = useCallback((event: MouseEvent) => {
     if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
       setShowProfileMenu(false);
-    }
-    if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
-      setShowNotifications(false);
     }
     if (langRef.current && !langRef.current.contains(event.target as Node)) {
       setShowLanguage(false);
@@ -133,46 +109,6 @@ const Navbar: React.FC<NavbarProps> = ({
           {/* Actions Container */}
           <div className="flex items-center gap-2 md:gap-4">
             
-            {/* Notification Bell */}
-            <div className="relative" ref={notificationRef}>
-              <button 
-                onClick={() => {
-                  const next = !showNotifications;
-                  setShowNotifications(next);
-                  if (next) onNotificationsOpen?.();
-                }}
-                className="p-2.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors relative"
-              >
-                <Bell size={24} />
-                {notificationCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] leading-[18px] rounded-full text-center ring-2 ring-white dark:ring-[#121212]">
-                    {notificationCount}
-                  </span>
-                )}
-              </button>
-
-              {showNotifications && (
-                <div className="absolute right-0 mt-4 w-80 bg-white/95 dark:bg-treservi-card-dark/95 backdrop-blur-xl rounded-[24px] shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-200 ring-1 ring-black/5 z-50">
-                  <div className="p-4 border-b border-gray-100 dark:border-gray-700/50">
-                    <h3 className="font-bold text-sm">Notifications</h3>
-                  </div>
-                  <div className="max-h-96 overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <div className="p-4 text-sm text-gray-500">No new appointments.</div>
-                    ) : (
-                      notifications.slice(0, 3).map((item) => (
-                        <div key={item.id} className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">{item.title}</p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">{item.subtitle}</p>
-                          <p className="text-[11px] text-gray-400 mt-1">{item.timestamp}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Profile Avatar / Toggle Menu */}
             <div className="relative" ref={profileRef}>
                <button 

@@ -2,10 +2,7 @@
  * Service Worker for Treservi PWA
  * 
  * Handles:
- * - Push notification reception and display
- * - Notification click handling
  * - Offline caching (network-first strategy for HTML, cache-first for assets)
- * - App badge updates
  * - Background sync
  * 
  * Compatible with iOS 16.4+, Android, and Desktop browsers
@@ -126,101 +123,6 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ============================================================================
-// PUSH EVENT - Handle incoming push notifications
-// ============================================================================
-
-self.addEventListener('push', (event) => {
-  try {
-    const payload = event.data ? JSON.parse(event.data.text()) : {};
-    const title = payload.title || payload.message || 'New Appointment';
-    const body = payload.body || 'You have a new appointment';
-    const icon = payload.icon || '/icon-192.png';
-    const badge = payload.badge || '/badge-72.png';
-    const appointmentId = payload?.data?.appointmentId || null;
-
-    console.log('[ServiceWorker] Push notification received:', { title, body });
-
-    event.waitUntil(
-      self.registration.showNotification(title, {
-        body,
-        icon,
-        badge,
-        tag: 'appointment-notification',
-        requireInteraction: true,
-        actions: [
-          { action: 'open', title: 'Open' },
-          { action: 'dismiss', title: 'Dismiss' }
-        ],
-        data: { appointmentId }
-      })
-        .then(() => {
-          console.log('[ServiceWorker] Notification displayed successfully');
-        })
-        .catch((err) => {
-          console.error('[ServiceWorker] Failed to show notification:', err);
-        })
-    );
-  } catch (error) {
-    event.waitUntil(
-      self.registration.showNotification('New Notification', {
-        body: 'You have a new notification',
-        icon: '/icon-192.png',
-        data: { url: '/' }
-      })
-    );
-  }
-});
-
-// ============================================================================
-// NOTIFICATION CLICK - Handle user clicking on notification
-// ============================================================================
-
-self.addEventListener('notificationclick', (event) => {
-  console.log('[ServiceWorker] Notification clicked:', event.action);
-  
-  // Close the notification
-  event.notification.close();
-
-  // Handle dismiss action
-  if (event.action === 'dismiss') {
-    return;
-  }
-
-  // Get the URL to open
-  const urlToOpen = event.notification.data?.url || '/';
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((windowClients) => {
-        // Check if there's already a window open
-        for (const client of windowClients) {
-          // If we find an existing window, focus it and navigate
-          if (client.url.includes(self.registration.scope) && 'focus' in client) {
-            // Navigate to the specific URL if different
-            if (urlToOpen !== '/' && !client.url.endsWith(urlToOpen)) {
-              client.navigate(urlToOpen);
-            }
-            return client.focus();
-          }
-        }
-        
-        // If no window is open, open a new one
-        if (clients.openWindow) {
-          return clients.openWindow(urlToOpen);
-        }
-      })
-  );
-});
-
-// ============================================================================
-// NOTIFICATION CLOSE - Handle notification being dismissed
-// ============================================================================
-
-self.addEventListener('notificationclose', (event) => {
-  console.log('[ServiceWorker] Notification closed');
-});
-
-// ============================================================================
 // MESSAGE EVENT - Handle messages from main thread
 // ============================================================================
 
@@ -263,20 +165,6 @@ self.addEventListener('message', (event) => {
       break;
       
     default:
-      // Legacy support for old message format
-      if (event.data?.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-      }
-      if (event.data?.type === 'UPDATE_BADGE') {
-        const count = event.data.count || 0;
-        if ('setAppBadge' in navigator) {
-          if (count > 0) {
-            navigator.setAppBadge(count);
-          } else {
-            navigator.clearAppBadge();
-          }
-        }
-      }
   }
 });
 
@@ -320,34 +208,5 @@ async function syncAppointments() {
     console.error('[ServiceWorker] Sync failed:', error);
   }
 }
-
-// ============================================================================
-// PUSH SUBSCRIPTION CHANGE - Handle subscription expiry/changes
-// ============================================================================
-
-self.addEventListener('pushsubscriptionchange', (event) => {
-  console.log('[ServiceWorker] Push subscription changed');
-  
-  event.waitUntil(
-    self.registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: event.oldSubscription?.options?.applicationServerKey
-    })
-    .then((newSubscription) => {
-      // Notify the main app about the new subscription
-      return self.clients.matchAll().then((clients) => {
-        clients.forEach((client) => {
-          client.postMessage({
-            type: 'SUBSCRIPTION_CHANGED',
-            subscription: newSubscription.toJSON()
-          });
-        });
-      });
-    })
-    .catch((error) => {
-      console.error('[ServiceWorker] Re-subscription failed:', error);
-    })
-  );
-});
 
 console.log('[ServiceWorker] Script loaded - v3');
