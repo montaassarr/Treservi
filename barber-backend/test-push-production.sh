@@ -26,11 +26,13 @@ request_json() {
   if [ -z "$body" ]; then
     curl -s -X "$method" "$url" \
       -H "Authorization: Bearer $key" \
+      -H "apikey: $key" \
       -H "Content-Type: application/json" \
       -H "Prefer: return=representation"
   else
     curl -s -X "$method" "$url" \
       -H "Authorization: Bearer $key" \
+      -H "apikey: $key" \
       -H "Content-Type: application/json" \
       -H "Prefer: return=representation" \
       -d "$body"
@@ -44,7 +46,7 @@ SALON_PAYLOAD='{
 }'
 
 SALON_RESP=$(request_json POST "/salons" "$PROD_KEY" "$SALON_PAYLOAD")
-SALON_ID=$(echo "$SALON_RESP" | jq -r '.id // .[0].id // empty')
+SALON_ID=$(echo "$SALON_RESP" | jq -r 'if type=="array" then .[0].id else .id end // empty')
 
 if [ -z "$SALON_ID" ]; then
   say "ERROR: Failed to create salon"
@@ -64,7 +66,7 @@ STAFF_PAYLOAD="{
 }"
 
 STAFF_RESP=$(request_json POST "/staff" "$PROD_KEY" "$STAFF_PAYLOAD")
-STAFF_ID=$(echo "$STAFF_RESP" | jq -r '.id // .[0].id // empty')
+STAFF_ID=$(echo "$STAFF_RESP" | jq -r 'if type=="array" then .[0].id else .id end // empty')
 
 if [ -z "$STAFF_ID" ]; then
   say "ERROR: Failed to create staff"
@@ -83,7 +85,7 @@ SERVICE_PAYLOAD="{
 }"
 
 SERVICE_RESP=$(request_json POST "/services" "$PROD_KEY" "$SERVICE_PAYLOAD")
-SERVICE_ID=$(echo "$SERVICE_RESP" | jq -r '.id // .[0].id // empty')
+SERVICE_ID=$(echo "$SERVICE_RESP" | jq -r 'if type=="array" then .[0].id else .id end // empty')
 
 if [ -z "$SERVICE_ID" ]; then
   say "ERROR: Failed to create service"
@@ -112,7 +114,7 @@ APPT_PAYLOAD="{
 }"
 
 APPT_RESP=$(request_json POST "/appointments" "$PROD_KEY" "$APPT_PAYLOAD")
-APPT_ID=$(echo "$APPT_RESP" | jq -r '.id // .[0].id // empty')
+APPT_ID=$(echo "$APPT_RESP" | jq -r 'if type=="array" then .[0].id else .id end // empty')
 
 if [ -z "$APPT_ID" ]; then
   say "ERROR: Failed to create appointment"
@@ -126,6 +128,7 @@ say "   This should have triggered the push-notification edge function"
 say "STEP 5: Check push_subscriptions table"
 SUBS_RESP=$(curl -s -X GET "${PROD_URL}/rest/v1/push_subscriptions?select=id,user_id,endpoint" \
   -H "Authorization: Bearer $PROD_KEY" \
+  -H "apikey: $PROD_KEY" \
   -H "Content-Type: application/json")
 
 SUBS_COUNT=$(echo "$SUBS_RESP" | jq 'length')
