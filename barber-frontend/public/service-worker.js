@@ -123,6 +123,83 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ============================================================================
+// PUSH EVENT - Handle incoming push notifications
+// ============================================================================
+
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? JSON.parse(event.data.text()) : {};
+  } catch (error) {
+    payload = {};
+  }
+
+  const title = payload.title || payload.message || 'New Appointment';
+  const body = payload.body || 'You have a new appointment';
+  const icon = payload.icon || '/icon-192.png';
+  const badge = payload.badge || '/badge-72.png';
+  const url = payload?.data?.url || payload?.url || '/dashboard';
+  const appointmentId = payload?.data?.appointmentId || null;
+  const tag = payload.tag || 'appointment-notification';
+  const actions = payload.actions || [
+    { action: 'open', title: 'Open' },
+    { action: 'dismiss', title: 'Dismiss' }
+  ];
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon,
+      badge,
+      tag,
+      requireInteraction: true,
+      actions,
+      data: { url, appointmentId }
+    })
+  );
+});
+
+// ============================================================================
+// NOTIFICATION CLICK - Handle user clicking on notification
+// ============================================================================
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  if (event.action === 'dismiss') {
+    return;
+  }
+
+  const urlToOpen = event.notification.data?.url || '/dashboard';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((windowClients) => {
+        for (const client of windowClients) {
+          if (client.url.includes(self.registration.scope) && 'focus' in client) {
+            if (urlToOpen && !client.url.endsWith(urlToOpen)) {
+              client.navigate(urlToOpen);
+            }
+            return client.focus();
+          }
+        }
+
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+  );
+});
+
+// ============================================================================
+// NOTIFICATION CLOSE - Handle notification being dismissed
+// ============================================================================
+
+self.addEventListener('notificationclose', () => {
+  return;
+});
+
+// ============================================================================
 // MESSAGE EVENT - Handle messages from main thread
 // ============================================================================
 
@@ -208,5 +285,31 @@ async function syncAppointments() {
     console.error('[ServiceWorker] Sync failed:', error);
   }
 }
+
+// ============================================================================
+// PUSH SUBSCRIPTION CHANGE - Handle subscription expiry/changes
+// ============================================================================
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    self.registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: event.oldSubscription?.options?.applicationServerKey
+    })
+    .then((newSubscription) => {
+      return self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'SUBSCRIPTION_CHANGED',
+            subscription: newSubscription.toJSON()
+          });
+        });
+      });
+    })
+    .catch(() => {
+      return;
+    })
+  );
+});
 
 console.log('[ServiceWorker] Script loaded - v3');

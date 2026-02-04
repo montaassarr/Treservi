@@ -337,13 +337,7 @@ export async function saveSubscriptionToBackend(
     // Use authenticated user's ID
     const actualUserId = user.id;
 
-    // Keep only the latest subscription per user (all platforms)
     const platformInfo = detectPlatform();
-    await supabase
-      .from('push_subscriptions')
-      .delete()
-      .eq('user_id', actualUserId);
-    
     const { error } = await supabase
       .from('push_subscriptions')
       .upsert({

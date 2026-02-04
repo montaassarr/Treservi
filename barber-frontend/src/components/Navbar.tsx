@@ -4,6 +4,7 @@ import { Search, Globe, LogOut, Home, Calendar, Users, Settings, Briefcase, User
 import { useLanguage } from '../context/LanguageContext';
 import { Language } from '../types';
 import { getOwnerAvatar, getStaffAvatar } from '../utils/avatarGenerator';
+import NotificationToggle from './NotificationToggle';
 
 interface NavbarProps {
   // Mobile Header Props
@@ -16,6 +17,8 @@ interface NavbarProps {
   userName?: string;
   userRole?: 'owner' | 'staff' | 'super_admin';
   salonName?: string;
+  userId?: string;
+  salonId?: string;
   isDarkMode: boolean;
   toggleTheme: () => void;
   isMobileMenuOpen: boolean;
@@ -33,6 +36,8 @@ const Navbar: React.FC<NavbarProps> = ({
   userName = 'User', 
   userRole = 'owner', 
   salonName = 'Salon',
+  userId,
+  salonId,
   isDarkMode, 
   toggleTheme,
   onLogout,
@@ -108,6 +113,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
           {/* Actions Container */}
           <div className="flex items-center gap-2 md:gap-4">
+            <NotificationToggle userId={userId} salonId={salonId} />
             
             {/* Profile Avatar / Toggle Menu */}
             <div className="relative" ref={profileRef}>

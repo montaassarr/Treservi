@@ -468,36 +468,9 @@ serve(async (req) => {
       }
     })
 
-    // Keep only the latest subscription per user (all platforms)
-    const byUser = new Map<string, typeof subscriptions>()
-    for (const sub of subscriptions) {
-      const list = byUser.get(sub.user_id) || []
-      list.push(sub)
-      byUser.set(sub.user_id, list)
-    }
+    const selectedSubscriptions = subscriptions
 
-    const selectedSubscriptions: typeof subscriptions = []
-    const deleteIds: number[] = []
-
-    for (const subs of byUser.values()) {
-      subs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      const keep = subs[0]
-      selectedSubscriptions.push(keep)
-      for (const stale of subs.slice(1)) {
-        deleteIds.push(stale.id)
-      }
-    }
-
-    if (deleteIds.length > 0) {
-      await supabaseAdmin
-        .from('push_subscriptions')
-        .delete()
-        .in('id', deleteIds)
-
-      console.log(`[PushNotification] Cleaned ${deleteIds.length} stale subscriptions`)
-    }
-
-    // Send to selected subscriptions
+    // Send to all subscriptions
     const results = []
     
     for (const sub of selectedSubscriptions) {

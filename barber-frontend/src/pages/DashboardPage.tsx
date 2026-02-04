@@ -111,6 +111,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             setActiveTab={setActiveTab}
             salonName={salon?.name || 'Salon'}
             userName={staffName || 'User'}
+            userId={userId}
+            salonId={salonId}
             currentLanguage={language}
             onLanguageToggle={toggleLanguage}
           />
