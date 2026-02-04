@@ -6,9 +6,17 @@
 
 set -e
 
-# Production Supabase credentials (from .env or hardcode)
+# Production Supabase credentials (from env)
 PROD_URL="https://czvsgtvienmchudyzqpk.supabase.co"
-PROD_KEY="eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6dnNndHZpZW5tY2h1ZHl6cXBrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2OTgwNDk3NSwiZXhwIjoyMDg1MzgwOTc1fQ.8EwJfK5k8Z-KOt8pWEJr2d3rPf8WZPMQKlYX2j5T-qY"
+PROD_KEY="${SUPABASE_SERVICE_ROLE_KEY:-}"
+
+if [ -z "$PROD_KEY" ]; then
+  echo "ERROR: SUPABASE_SERVICE_ROLE_KEY is not set"
+  echo "Set it from Supabase Dashboard → Project Settings → API"
+  echo "Example:"
+  echo "  export SUPABASE_SERVICE_ROLE_KEY=YOUR_KEY"
+  exit 1
+fi
 
 say() {
   echo ""
