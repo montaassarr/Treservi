@@ -468,8 +468,7 @@ serve(async (req) => {
       }
     })
 
-    // Prefer latest iOS/Apple subscriptions and clean up old iOS duplicates
-    const isAppleEndpoint = (endpoint: string) => endpoint.includes('web.push.apple.com')
+    // Keep only the latest subscription per user (all platforms)
     const byUser = new Map<string, typeof subscriptions>()
     for (const sub of subscriptions) {
       const list = byUser.get(sub.user_id) || []
@@ -478,32 +477,24 @@ serve(async (req) => {
     }
 
     const selectedSubscriptions: typeof subscriptions = []
-    const iosDeleteIds: number[] = []
+    const deleteIds: number[] = []
 
-    for (const [userId, subs] of byUser.entries()) {
-      const appleSubs = subs.filter(s => s.platform === 'ios' || isAppleEndpoint(s.endpoint))
-      const otherSubs = subs.filter(s => !appleSubs.includes(s))
-
-      if (appleSubs.length > 0) {
-        appleSubs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        const keep = appleSubs[0]
-        selectedSubscriptions.push(keep)
-        for (const stale of appleSubs.slice(1)) {
-          iosDeleteIds.push(stale.id)
-        }
+    for (const subs of byUser.values()) {
+      subs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      const keep = subs[0]
+      selectedSubscriptions.push(keep)
+      for (const stale of subs.slice(1)) {
+        deleteIds.push(stale.id)
       }
-
-      // Keep non-iOS subscriptions as-is
-      selectedSubscriptions.push(...otherSubs)
     }
 
-    if (iosDeleteIds.length > 0) {
+    if (deleteIds.length > 0) {
       await supabaseAdmin
         .from('push_subscriptions')
         .delete()
-        .in('id', iosDeleteIds)
+        .in('id', deleteIds)
 
-      console.log(`[PushNotification] Cleaned ${iosDeleteIds.length} stale iOS subscriptions`)
+      console.log(`[PushNotification] Cleaned ${deleteIds.length} stale subscriptions`)
     }
 
     // Send to selected subscriptions
