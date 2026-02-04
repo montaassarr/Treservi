@@ -1,4 +1,5 @@
 {
+  "alias": ["resevini.vercel.app"],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
