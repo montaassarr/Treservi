@@ -413,7 +413,7 @@ serve(async (req) => {
       .from('staff')
       .select('id, role')
       .eq('salon_id', salon_id)
-    
+
     if (staffMembers) {
       for (const staff of staffMembers) {
         if (staff.role === 'owner') {
@@ -429,11 +429,11 @@ serve(async (req) => {
 
     console.log(`[PushNotification] Notifying users: ${Array.from(userIdsToNotify).join(', ')}`)
 
-    // Get push subscriptions for these users
+    // Get push subscriptions for this salon (covers owner even if not in staff)
     const { data: subscriptions, error: subError } = await supabaseAdmin
       .from('push_subscriptions')
       .select('id, user_id, endpoint, p256dh, auth, platform, created_at')
-      .in('user_id', Array.from(userIdsToNotify))
+      .eq('salon_id', salon_id)
 
     if (subError || !subscriptions) {
       console.error('[PushNotification] Error fetching subscriptions:', subError)
