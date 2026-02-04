@@ -126,8 +126,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         appointment_time: now.toTimeString().slice(0, 5)
       };
 
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+
       await supabase.functions.invoke('send-push-notification', {
-        body: payload
+        body: payload,
+        headers: accessToken
+          ? { Authorization: `Bearer ${accessToken}` }
+          : undefined
       });
     } catch (error) {
       console.error('Test push failed:', error);
