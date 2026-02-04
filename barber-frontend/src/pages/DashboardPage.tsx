@@ -14,6 +14,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAppBadge } from '../hooks/useAppBadge';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useRealtimeNotifications, RealtimeNotification } from '../hooks/useRealtimeNotifications';
+import { getNotificationCapability, showNativeNotification, getNotificationSetupMessage } from '../utils/iosNotifications';
 import { supabase } from '../services/supabaseClient';
 import { QRCodeCanvas } from 'qrcode.react';
 
@@ -62,6 +63,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   });
 
   const { subscribeToPush } = usePushNotifications();
+  const [notificationCapability, setNotificationCapability] = useState(getNotificationCapability());
 
   // Setup Real-time Notifications (iOS-compatible via WebSocket)
   const { isSubscribed: isRealtimeSubscribed } = useRealtimeNotifications({
@@ -89,20 +91,44 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
       // Update app badge
       updateBadge(notificationCount + 1);
+
+      // Show platform-appropriate notification feedback
+      showNativeNotification(notification.title, {
+        body: notification.body,
+        tag: notification.id,
+        icon: '/icon-192.png',
+        badge: '/icon-72.png'
+      }).catch(error => {
+        console.log('Native notification feedback unavailable:', error);
+      });
     },
     onError: (error) => {
       console.error('Realtime notification error:', error);
     }
   });
 
-  // Subscribe to Push Notifications (deferred to not block initial render)
+  // Subscribe to Push Notifications - only if not iOS
   useEffect(() => {
     if (!userId) return;
+
+    // Check notification capability on mount
+    const capability = getNotificationCapability();
+    setNotificationCapability(capability);
+
+    // iOS doesn't need Web Push subscription, it uses realtime
+    if (capability.type === 'realtime') {
+      console.log('iOS/Realtime-only device detected: Skipping Web Push subscription');
+      return;
+    }
+
     const timer = setTimeout(() => {
-      subscribeToPush(userId).catch(() => { });
+      subscribeToPush(userId).catch((error) => {
+        console.log('Push subscription skipped or failed:', error);
+      });
     }, 2000); // Delay 2 seconds after mount
+
     return () => clearTimeout(timer);
-  }, [userId, subscribeToPush, updateBadge, notificationCount]);
+  }, [userId, subscribeToPush]);
 
   // Update page title with salon name
   useEffect(() => {
