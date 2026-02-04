@@ -1,14 +1,36 @@
--- FINAL FIX: Link staff to salon
+-- ARCHITECTURE VERIFICATION
+-- Super Admin should NOT be linked to any salon
+-- Super Admin manages the entire platform and all salons
 
--- Step 1: Check the salon exists
-SELECT id, name, slug FROM public.salons WHERE slug = 'reservi-main';
-
--- Step 2: Link the staff member to the salon
-UPDATE public.staff 
-SET salon_id = (SELECT id FROM public.salons WHERE slug = 'reservi-main')
-WHERE email = 'admin@reservi.com';
-
--- Step 3: Verify the link
+-- Check Super Admin (should have salon_id = NULL)
 SELECT id, email, full_name, salon_id, role, is_super_admin 
 FROM public.staff 
 WHERE email = 'admin@reservi.com';
+-- Expected: salon_id = NULL, role = 'super_admin', is_super_admin = true
+
+-- Check Salon Owners (should have salon_id set)
+SELECT 
+    s.id, 
+    s.email, 
+    s.full_name, 
+    s.salon_id, 
+    s.role, 
+    s.is_super_admin,
+    sal.name as salon_name
+FROM public.staff s
+LEFT JOIN public.salons sal ON s.salon_id = sal.id
+WHERE s.role = 'owner';
+-- Expected: salon_id = their salon UUID, role = 'owner', is_super_admin = false
+
+-- Check all staff hierarchy
+SELECT 
+    s.email,
+    s.role,
+    s.is_super_admin,
+    CASE 
+        WHEN s.salon_id IS NULL THEN 'Platform Level (All Salons)'
+        ELSE sal.name
+    END as scope
+FROM public.staff s
+LEFT JOIN public.salons sal ON s.salon_id = sal.id
+ORDER BY s.is_super_admin DESC, s.role;
