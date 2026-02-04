@@ -130,74 +130,29 @@ self.addEventListener('fetch', (event) => {
 // ============================================================================
 
 self.addEventListener('push', (event) => {
-  console.log('[ServiceWorker] Push received');
-  
-  // Default notification data
-  let data = {
-    title: 'New Notification',
-    body: 'You have a new notification',
-    icon: '/icon-192.png',
-    badge: '/icon-72.png',
-    tag: 'default',
-    data: { url: '/' }
-  };
-
   try {
-    if (event.data) {
-      const payload = event.data.json();
-      data = {
-        title: payload.title || data.title,
-        body: payload.body || data.body,
-        icon: payload.icon || data.icon,
-        badge: payload.badge || data.badge,
-        tag: payload.tag || data.tag,
-        data: payload.data || data.data
-      };
-      
-      // Handle badge count if provided
-      if (payload.badgeCount !== undefined && 'setAppBadge' in navigator) {
-        const count = parseInt(payload.badgeCount, 10);
-        if (!isNaN(count) && count > 0) {
-          navigator.setAppBadge(count).catch((err) => {
-            console.warn('[ServiceWorker] Failed to set badge:', err);
-          });
-        }
-      }
-    }
-  } catch (e) {
-    // If JSON parsing fails, try text
-    if (event.data) {
-      data.body = event.data.text();
-    }
-    console.warn('[ServiceWorker] Push data parse error, using text fallback');
+    const payload = event.data ? JSON.parse(event.data.text()) : {};
+    const title = payload.title || payload.message || 'New Notification';
+    const body = payload.body || '';
+    const icon = payload.icon || '/icon-192.png';
+    const url = payload?.data?.url || '/';
+
+    event.waitUntil(
+      self.registration.showNotification(title, {
+        body,
+        icon,
+        data: { url }
+      })
+    );
+  } catch (error) {
+    event.waitUntil(
+      self.registration.showNotification('New Notification', {
+        body: 'You have a new notification',
+        icon: '/icon-192.png',
+        data: { url: '/' }
+      })
+    );
   }
-
-  const options = {
-    body: data.body,
-    icon: data.icon,
-    badge: data.badge,
-    tag: data.tag,
-    data: data.data,
-    vibrate: [200, 100, 200],
-    requireInteraction: true, // Keep notification visible until user interacts (Android)
-    silent: false,
-    actions: [
-      {
-        action: 'view',
-        title: 'View',
-        icon: '/icon-192.png'
-      },
-      {
-        action: 'dismiss',
-        title: 'Dismiss',
-        icon: '/icon-192.png'
-      }
-    ]
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(data.title, options)
-  );
 });
 
 // ============================================================================

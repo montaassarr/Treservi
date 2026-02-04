@@ -336,6 +336,16 @@ export async function saveSubscriptionToBackend(
 
     // Use authenticated user's ID
     const actualUserId = user.id;
+
+    // For iOS, keep only the latest subscription per user
+    const platformInfo = detectPlatform();
+    if (platformInfo.isIOS) {
+      await supabase
+        .from('push_subscriptions')
+        .delete()
+        .eq('user_id', actualUserId)
+        .eq('platform', 'ios');
+    }
     
     const { error } = await supabase
       .from('push_subscriptions')
@@ -346,7 +356,7 @@ export async function saveSubscriptionToBackend(
         auth: subscription.keys.auth,
         salon_id: salonId || null,
         user_agent: navigator.userAgent,
-        platform: detectPlatform().isIOS ? 'ios' : detectPlatform().isAndroid ? 'android' : 'desktop',
+        platform: platformInfo.isIOS ? 'ios' : platformInfo.isAndroid ? 'android' : 'desktop',
         last_used_at: new Date().toISOString()
       }, {
         onConflict: 'endpoint',
