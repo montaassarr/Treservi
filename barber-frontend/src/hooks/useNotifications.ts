@@ -156,18 +156,32 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
   // REALTIME NOTIFICATIONS (WebSocket fallback for background + iOS)
   // ============================================================================
 
+  // Store callbacks in refs to avoid re-running effect
+  const onNotificationRef = useRef(onNotification);
+  const onErrorRef = useRef(onError);
+  
+  useEffect(() => {
+    onNotificationRef.current = onNotification;
+    onErrorRef.current = onError;
+  }, [onNotification, onError]);
+
   useEffect(() => {
     if (!enableRealtime || !userId || !salonId) {
       console.log('[useNotifications] ⏸️ Realtime disabled or missing userId/salonId:', { enableRealtime, userId, salonId });
       return;
     }
 
+    let isActive = true;
+    
     const setupRealtime = async () => {
       try {
         // Clean up existing channel
         if (realtimeChannelRef.current) {
           await supabase.removeChannel(realtimeChannelRef.current);
+          realtimeChannelRef.current = null;
         }
+
+        if (!isActive) return;
 
         // Create user-specific notification channel
         const channelName = `notifications:${userId}`;
@@ -196,13 +210,14 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
             };
 
             // Trigger callback
-            onNotification?.(notification);
+            onNotificationRef.current?.(notification);
 
-            // Play feedback
+            // Play feedback - this works in iOS when app is in foreground
             playNotificationSound();
             vibrate([200, 100, 200]);
 
             // Show local notification if permission granted
+            // NOTE: On iOS, this only shows banner when app is in BACKGROUND
             if (Notification.permission === 'granted') {
               showLocalNotification({
                 title: notification.title,
@@ -221,26 +236,27 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
               console.log('[useNotifications] ✅ Realtime channel subscribed:', channelName);
             } else if (subscribeStatus === 'CHANNEL_ERROR') {
               console.error('[useNotifications] ❌ Realtime channel error');
-              onError?.(new Error('Failed to connect to notification channel'));
+              onErrorRef.current?.(new Error('Failed to connect to notification channel'));
             }
           });
 
       } catch (err) {
         console.error('[useNotifications] ❌ Realtime setup failed:', err);
-        onError?.(err instanceof Error ? err : new Error(String(err)));
+        onErrorRef.current?.(err instanceof Error ? err : new Error(String(err)));
       }
     };
 
     setupRealtime();
 
     return () => {
+      isActive = false;
       if (realtimeChannelRef.current) {
         console.log('[useNotifications] 🧹 Cleaning up realtime channel');
         supabase.removeChannel(realtimeChannelRef.current);
         realtimeChannelRef.current = null;
       }
     };
-  }, [userId, salonId, enableRealtime, onNotification, onError]);
+  }, [userId, salonId, enableRealtime]); // Removed onNotification and onError from deps
 
   // ============================================================================
   // SUBSCRIBE TO PUSH

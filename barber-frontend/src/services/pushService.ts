@@ -573,33 +573,67 @@ export async function showLocalNotification(payload: NotificationPayload): Promi
 // ============================================================================
 
 let audioContext: AudioContext | null = null;
+let audioInitialized = false;
 
 /**
  * Initialize audio context (call on first user interaction for iOS)
+ * MUST be called from a user gesture on iOS (tap, click)
  */
 export function initAudioContext(): void {
-  if (!audioContext) {
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      audioContext = new AudioContextClass();
-    } catch {
-      console.warn('[PushService] AudioContext not supported');
+  if (audioInitialized && audioContext) {
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch(() => {});
     }
+    return;
   }
   
-  if (audioContext?.state === 'suspended') {
-    audioContext.resume();
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    audioContext = new AudioContextClass();
+    audioInitialized = true;
+    console.log('[PushService] 🔊 AudioContext initialized');
+    
+    // Resume if suspended (iOS often starts in suspended state)
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().then(() => {
+        console.log('[PushService] 🔊 AudioContext resumed');
+      }).catch((err) => {
+        console.warn('[PushService] AudioContext resume failed:', err);
+      });
+    }
+  } catch (err) {
+    console.warn('[PushService] AudioContext not supported:', err);
   }
 }
 
 /**
  * Play notification sound
+ * NOTE: On iOS, this only works if initAudioContext was called from a user gesture first
  */
 export function playNotificationSound(): void {
+  // Try to init/resume audio context
   if (!audioContext) {
     initAudioContext();
   }
   
+  if (!audioContext) {
+    console.warn('[PushService] Cannot play sound - no AudioContext');
+    return;
+  }
+  
+  // Check if context is suspended (common on iOS)
+  if (audioContext.state === 'suspended') {
+    audioContext.resume().then(() => {
+      playBeep();
+    }).catch(() => {
+      console.warn('[PushService] AudioContext still suspended, cannot play sound');
+    });
+  } else {
+    playBeep();
+  }
+}
+
+function playBeep(): void {
   if (!audioContext) return;
 
   try {
@@ -609,14 +643,18 @@ export function playNotificationSound(): void {
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
 
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    // Use a more noticeable frequency pattern
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 note
+    oscillator.frequency.setValueAtTime(988, audioContext.currentTime + 0.1); // B5 note
     oscillator.type = 'sine';
 
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
 
     oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.2);
+    oscillator.stop(audioContext.currentTime + 0.3);
+    
+    console.log('[PushService] 🔊 Notification sound played');
   } catch (error) {
     console.warn('[PushService] Could not play notification sound:', error);
   }

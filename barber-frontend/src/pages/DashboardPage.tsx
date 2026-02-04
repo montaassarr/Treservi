@@ -12,10 +12,10 @@ import NotificationToast from '../components/NotificationToast';
 import { useSalon } from '../context/SalonContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAppBadge } from '../hooks/useAppBadge';
-import { useNotifications, NotificationData } from '../hooks/useNotifications';
+import { usePushNotifications } from '../hooks/usePushNotifications';
+import { useRealtimeNotifications, RealtimeNotification } from '../hooks/useRealtimeNotifications';
 import { supabase } from '../services/supabaseClient';
 import { QRCodeCanvas } from 'qrcode.react';
-import { detectPlatform } from '../services/pushService';
 
 interface DashboardPageProps {
   salonId: string;
@@ -40,12 +40,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; subtitle: string; timestamp: string }>>([]);
   const [notificationCount, setNotificationCount] = useState(0);
-  const [currentToastNotification, setCurrentToastNotification] = useState<NotificationData | null>(null);
+  const [currentToastNotification, setCurrentToastNotification] = useState<RealtimeNotification | null>(null);
   const seenAppointmentsRef = useRef<Set<string>>(new Set());
   const [hasBootstrappedNotifications, setHasBootstrappedNotifications] = useState(false);
   const [hasReadNotifications, setHasReadNotifications] = useState(false);
   const isLiveRef = useRef(false); // Track if we're receiving live updates (not bootstrap)
-  const [showNotificationBanner, setShowNotificationBanner] = useState(false);
 
   // Initialize app badge hook with Supabase sync
   const {
@@ -62,28 +61,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     userRole: userRole
   });
 
-  // Get platform info for iOS-specific handling
-  const platformInfo = useMemo(() => detectPlatform(), []);
+  const { subscribeToPush } = usePushNotifications();
 
-  // Unified Notification Hook (push + realtime)
-  const {
-    status: notificationStatus,
-    platform,
-    isLoading: notificationLoading,
-    error: notificationError,
-    subscribe: subscribeToNotifications,
-    showNotification: showLocalNotification,
-    playSound,
-    vibrate: vibrateDevice
-  } = useNotifications({
+  // Setup Real-time Notifications (iOS-compatible via WebSocket)
+  const { isSubscribed: isRealtimeSubscribed } = useRealtimeNotifications({
     userId,
     salonId,
     userRole,
-    enableRealtime: true,
-    onNotification: (notification: NotificationData) => {
-      console.log('[DashboardPage] 📬 Notification received:', notification);
-      
-      // Show toast notification (works on all platforms)
+    enabled: true,
+    onNotification: (notification) => {
+      // Show toast notification (works on iOS)
       setCurrentToastNotification(notification);
       
       // Increment notification count
@@ -102,56 +89,20 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
       // Update app badge
       updateBadge(notificationCount + 1);
-      
-      // Play sound and vibrate
-      playSound();
-      vibrateDevice([200, 100, 200]);
     },
     onError: (error) => {
-      console.error('[DashboardPage] ❌ Notification error:', error);
+      console.error('Realtime notification error:', error);
     }
   });
 
-  // Show notification setup banner on iOS if not subscribed
+  // Subscribe to Push Notifications (deferred to not block initial render)
   useEffect(() => {
-    if (platformInfo.isIOS && platformInfo.isPWA && notificationStatus !== 'subscribed') {
-      // Show banner after 3 seconds if on iOS PWA and not yet subscribed
-      const timer = setTimeout(() => {
-        setShowNotificationBanner(true);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [platformInfo.isIOS, platformInfo.isPWA, notificationStatus]);
-
-  // Auto-subscribe on non-iOS platforms (desktop/Android)
-  useEffect(() => {
-    if (!userId || !salonId) return;
-    if (platformInfo.isIOS) return; // iOS requires user gesture, don't auto-subscribe
-
-    // For desktop/Android, attempt subscription after 2 seconds
-    const timer = setTimeout(async () => {
-      if (notificationStatus === 'unsubscribed' || notificationStatus === 'permission-default') {
-        const success = await subscribeToNotifications();
-        if (success) {
-          console.log('✅ Push notifications enabled (auto)');
-        } else {
-          console.log('⚠️ Push notifications not available, using real-time fallback');
-        }
-      }
-    }, 2000);
-
+    if (!userId) return;
+    const timer = setTimeout(() => {
+      subscribeToPush(userId).catch(() => { });
+    }, 2000); // Delay 2 seconds after mount
     return () => clearTimeout(timer);
-  }, [userId, salonId, platformInfo.isIOS, notificationStatus, subscribeToNotifications]);
-
-  // Handler for iOS notification enable button (requires user gesture)
-  const handleEnableNotifications = async () => {
-    console.log('[DashboardPage] 🔔 User tapped enable notifications button');
-    const success = await subscribeToNotifications();
-    if (success) {
-      setShowNotificationBanner(false);
-      console.log('✅ iOS Push notifications enabled via user gesture');
-    }
-  };
+  }, [userId, subscribeToPush]);
 
   // Update page title with salon name
   useEffect(() => {
@@ -159,6 +110,36 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       document.title = `${salon.name} - Dashboard | Reservi`;
     }
   }, [salon]);
+
+  // Play notification sound (iOS compatible)
+  const playNotification = () => {
+    // Vibration
+    if (navigator.vibrate) {
+      navigator.vibrate([200, 100, 200]);
+    }
+
+    // Play notification sound using Web Audio API (iOS compatible)
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.value = 1000;
+      oscillator.type = 'sine';
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+      // Silently fail if audio context not available
+      console.log('Audio notification not supported');
+    }
+  };
 
   // Load notifications from localStorage on mount
   useEffect(() => {
@@ -218,35 +199,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     if (typeof window === 'undefined') return '';
     return `${window.location.origin}/?salon=${salonSlug}&ref=qr_code&route=/book`;
   }, [salonSlug]);
-
-  const playNotification = () => {
-    // Vibration
-    if (navigator.vibrate) {
-      navigator.vibrate([200, 100, 200]);
-    }
-
-    // Play notification sound - simple beep
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      oscillator.frequency.value = 1000; // Higher frequency for faster response
-      oscillator.type = 'sine';
-
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3);
-    } catch (error) {
-      // Silently fail if audio context not available
-      console.log('Audio notification not supported');
-    }
-  };
 
   useEffect(() => {
     if (!supabase || !salonId || !userId) return;
@@ -312,7 +264,23 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         setNotificationCount((prev) => prev + 1); // No cap
         setHasReadNotifications(false);
         localStorage.setItem('dashboard_notifications_read', 'false');
+        
+        // Show toast notification
+        setCurrentToastNotification({
+          id: appointmentId,
+          title,
+          body: subtitle,
+          timestamp: Date.now(),
+          appointmentId,
+          customerName: appointment?.customer_name,
+          serviceName,
+          staffName,
+          amount
+        });
+        
+        // Play notification sound
         playNotification();
+        
         // Badge auto-updates via useAppBadge hook's realtime subscription
       }
     };
@@ -440,35 +408,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         duration={5000}
       />
 
-      {/* iOS Notification Enable Banner - Requires user gesture */}
-      {showNotificationBanner && platformInfo.isIOS && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🔔</span>
-              <div>
-                <p className="font-semibold">Enable Notifications</p>
-                <p className="text-sm opacity-90">Stay updated with new appointments</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleEnableNotifications}
-                disabled={notificationLoading}
-                className="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors disabled:opacity-50"
-              >
-                {notificationLoading ? 'Enabling...' : 'Enable'}
-              </button>
-              <button
-                onClick={() => setShowNotificationBanner(false)}
-                className="text-white/80 hover:text-white px-2"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Notification banner removed - iOS handles permission automatically when PWA is added to home screen */}
 
       {/* Sidebar - Desktop Only */}
       <div className="hidden lg:block h-screen sticky top-0 z-40 bg-white dark:bg-black/20 backdrop-blur-md">
