@@ -554,7 +554,9 @@ serve(async (req) => {
           'Content-Type': 'application/octet-stream',
           'Content-Encoding': 'aes128gcm',
           'TTL': '86400', // 24 hours
-          'Urgency': 'high'
+          'Urgency': 'high',
+          // Some services (Safari/Apple) expect the VAPID public key in Crypto-Key
+          'Crypto-Key': `p256ecdsa=${VAPID_PUBLIC_KEY}`
         }
 
         // Add VAPID authorization
