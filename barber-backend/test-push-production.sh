@@ -64,27 +64,7 @@ fi
 
 say "✅ Salon created: $SALON_ID"
 
-say "STEP 2: Create test staff (production)"
-STAFF_PAYLOAD="{
-  \"salon_id\": \"$SALON_ID\",
-  \"full_name\": \"Push Test Staff\",
-  \"email\": \"staff@reservi.local\",
-  \"phone\": \"95000000\",
-  \"specialty\": \"Barber\"
-}"
-
-STAFF_RESP=$(request_json POST "/staff" "$PROD_KEY" "$STAFF_PAYLOAD")
-STAFF_ID=$(echo "$STAFF_RESP" | jq -r 'if type=="array" then .[0].id else .id end // empty')
-
-if [ -z "$STAFF_ID" ]; then
-  say "ERROR: Failed to create staff"
-  echo "$STAFF_RESP"
-  exit 1
-fi
-
-say "✅ Staff created: $STAFF_ID"
-
-say "STEP 3: Create test service (production)"
+say "STEP 2: Create test service (production)"
 SERVICE_PAYLOAD="{
   \"salon_id\": \"$SALON_ID\",
   \"name\": \"Push Notification Test\",
@@ -103,13 +83,12 @@ fi
 
 say "✅ Service created: $SERVICE_ID"
 
-say "STEP 4: Trigger appointment (will call push-notification edge function)"
+say "STEP 3: Trigger appointment (will call push-notification edge function)"
 APPT_DATE=$(date +%Y-%m-%d)
 APPT_TIME="14:00:00"
 
 APPT_PAYLOAD="{
   \"salon_id\": \"$SALON_ID\",
-  \"staff_id\": \"$STAFF_ID\",
   \"service_id\": \"$SERVICE_ID\",
   \"customer_name\": \"Push Test Customer\",
   \"customer_phone\": \"95123456\",
@@ -133,7 +112,7 @@ fi
 say "✅ Appointment created: $APPT_ID"
 say "   This should have triggered the push-notification edge function"
 
-say "STEP 5: Check push_subscriptions table"
+say "STEP 4: Check push_subscriptions table"
 SUBS_RESP=$(curl -s -X GET "${PROD_URL}/rest/v1/push_subscriptions?select=id,user_id,endpoint" \
   -H "Authorization: Bearer $PROD_KEY" \
   -H "apikey: $PROD_KEY" \
@@ -158,8 +137,6 @@ say "CLEANUP: Delete test records"
 curl -s -X DELETE "${PROD_URL}/rest/v1/appointments?id=eq.$APPT_ID" \
   -H "Authorization: Bearer $PROD_KEY" > /dev/null
 curl -s -X DELETE "${PROD_URL}/rest/v1/services?id=eq.$SERVICE_ID" \
-  -H "Authorization: Bearer $PROD_KEY" > /dev/null
-curl -s -X DELETE "${PROD_URL}/rest/v1/staff?id=eq.$STAFF_ID" \
   -H "Authorization: Bearer $PROD_KEY" > /dev/null
 curl -s -X DELETE "${PROD_URL}/rest/v1/salons?id=eq.$SALON_ID" \
   -H "Authorization: Bearer $PROD_KEY" > /dev/null
