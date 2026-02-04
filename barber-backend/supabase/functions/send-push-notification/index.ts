@@ -452,21 +452,23 @@ serve(async (req) => {
       )
     }
 
-    // Prepare notification payload
-    const notificationPayload = JSON.stringify({
-      title: `🎉 New Appointment`,
-      body: `${customer_name} booked ${serviceName}${appointmentTime ? ` at ${appointmentTime}` : ''}`,
-      icon: '/icon-192.png',
-      badge: '/icon-72.png',
-      tag: `appointment-${appointmentId}`,
-      data: {
-        url: '/dashboard',
-        appointmentId,
-        customerName: customer_name,
-        serviceName,
-        salonId: salon_id
-      }
-    })
+      // Prepare notification payload with sound and rich notification data
+      const notificationPayload = JSON.stringify({
+        title: `📞 New Appointment`,
+        body: `${customer_name} booked ${serviceName}${appointmentTime ? ` at ${appointmentTime}` : ''}`,
+        icon: '/icon-192.png',
+        badge: '/icon-72.png',
+        tag: `appointment-${appointmentId}`,
+        sound: 'notification.mp3',
+        vibrate: [200, 100, 200],
+        data: {
+          url: '/dashboard',
+          appointmentId,
+          customerName: customer_name,
+          serviceName,
+          salonId: salon_id
+        }
+      })
 
     const selectedSubscriptions = subscriptions
 

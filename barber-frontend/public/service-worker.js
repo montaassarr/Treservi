@@ -134,28 +134,49 @@ self.addEventListener('push', (event) => {
     payload = {};
   }
 
-  const title = payload.title || payload.message || 'New Appointment';
+  console.log('[ServiceWorker] Push received:', payload);
+
+  const title = payload.title || payload.message || '📞 New Appointment';
   const body = payload.body || 'You have a new appointment';
   const icon = payload.icon || '/icon-192.png';
   const badge = payload.badge || '/badge-72.png';
   const url = payload?.data?.url || payload?.url || '/dashboard';
   const appointmentId = payload?.data?.appointmentId || null;
   const tag = payload.tag || 'appointment-notification';
+  const sound = payload.sound || 'notification.mp3';
+  
   const actions = payload.actions || [
     { action: 'open', title: 'Open' },
     { action: 'dismiss', title: 'Dismiss' }
   ];
 
+  // Rich notification with sound, vibration, and visual effects
+  const options = {
+    body,
+    icon,
+    badge,
+    tag,
+    requireInteraction: true,
+    actions,
+    data: { url, appointmentId },
+    // Sound - works on mobile devices
+    sound,
+    // Vibration pattern (mobile only) - vibrate for 200ms, pause 100ms, vibrate 200ms
+    vibrate: [200, 100, 200],
+    // Notification priority and behavior
+    silent: false,
+    // Show on lock screen (Android)
+    showTrigger: true
+  };
+
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon,
-      badge,
-      tag,
-      requireInteraction: true,
-      actions,
-      data: { url, appointmentId }
-    })
+    self.registration.showNotification(title, options)
+      .then(() => {
+        console.log('[ServiceWorker] Notification shown:', title);
+      })
+      .catch((error) => {
+        console.error('[ServiceWorker] Failed to show notification:', error);
+      })
   );
 });
 
