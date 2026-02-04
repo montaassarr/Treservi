@@ -45,6 +45,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [hasBootstrappedNotifications, setHasBootstrappedNotifications] = useState(false);
   const [hasReadNotifications, setHasReadNotifications] = useState(false);
   const isLiveRef = useRef(false); // Track if we're receiving live updates (not bootstrap)
+  const [isTestPushSending, setIsTestPushSending] = useState(false);
 
   // Initialize app badge hook with Supabase sync
   const {
@@ -110,6 +111,30 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       document.title = `${salon.name} - Dashboard | Reservi`;
     }
   }, [salon]);
+
+  const handleTestPush = async () => {
+    if (!salonId || !userId) return;
+    setIsTestPushSending(true);
+    try {
+      const now = new Date();
+      const payload = {
+        salon_id: salonId,
+        staff_id: userId,
+        customer_name: 'Test iOS',
+        id: `test-${now.getTime()}`,
+        appointment_date: now.toISOString().split('T')[0],
+        appointment_time: now.toTimeString().slice(0, 5)
+      };
+
+      await supabase.functions.invoke('send-push-notification', {
+        body: payload
+      });
+    } catch (error) {
+      console.error('Test push failed:', error);
+    } finally {
+      setIsTestPushSending(false);
+    }
+  };
 
   // Play notification sound (iOS compatible)
   const playNotification = () => {
@@ -471,6 +496,23 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
                   <QRCodeCanvas value={bookingUrl} size={120} />
                 </div>
+              </div>
+            </div>
+          )}
+          {activeTab === 'settings' && userRole === 'owner' && (
+            <div className="mb-6 bg-white dark:bg-treservi-card-dark rounded-[28px] p-5 border border-gray-100 dark:border-gray-800 shadow-soft-glow">
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Test Push Notification</h3>
+                  <p className="text-sm text-gray-500">Send a test push to verify iOS background notifications.</p>
+                </div>
+                <button
+                  onClick={handleTestPush}
+                  disabled={isTestPushSending}
+                  className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                >
+                  {isTestPushSending ? 'Sending...' : 'Send Test Push'}
+                </button>
               </div>
             </div>
           )}

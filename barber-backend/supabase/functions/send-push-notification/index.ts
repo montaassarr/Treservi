@@ -432,7 +432,7 @@ serve(async (req) => {
     // Get push subscriptions for these users
     const { data: subscriptions, error: subError } = await supabaseAdmin
       .from('push_subscriptions')
-      .select('id, user_id, endpoint, p256dh, auth, platform')
+      .select('id, user_id, endpoint, p256dh, auth, platform, created_at')
       .in('user_id', Array.from(userIdsToNotify))
 
     if (subError || !subscriptions) {
@@ -468,10 +468,48 @@ serve(async (req) => {
       }
     })
 
-    // Send to all subscriptions
+    // Prefer latest iOS/Apple subscriptions and clean up old iOS duplicates
+    const isAppleEndpoint = (endpoint: string) => endpoint.includes('web.push.apple.com')
+    const byUser = new Map<string, typeof subscriptions>()
+    for (const sub of subscriptions) {
+      const list = byUser.get(sub.user_id) || []
+      list.push(sub)
+      byUser.set(sub.user_id, list)
+    }
+
+    const selectedSubscriptions: typeof subscriptions = []
+    const iosDeleteIds: number[] = []
+
+    for (const [userId, subs] of byUser.entries()) {
+      const appleSubs = subs.filter(s => s.platform === 'ios' || isAppleEndpoint(s.endpoint))
+      const otherSubs = subs.filter(s => !appleSubs.includes(s))
+
+      if (appleSubs.length > 0) {
+        appleSubs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        const keep = appleSubs[0]
+        selectedSubscriptions.push(keep)
+        for (const stale of appleSubs.slice(1)) {
+          iosDeleteIds.push(stale.id)
+        }
+      }
+
+      // Keep non-iOS subscriptions as-is
+      selectedSubscriptions.push(...otherSubs)
+    }
+
+    if (iosDeleteIds.length > 0) {
+      await supabaseAdmin
+        .from('push_subscriptions')
+        .delete()
+        .in('id', iosDeleteIds)
+
+      console.log(`[PushNotification] Cleaned ${iosDeleteIds.length} stale iOS subscriptions`)
+    }
+
+    // Send to selected subscriptions
     const results = []
     
-    for (const sub of subscriptions) {
+    for (const sub of selectedSubscriptions) {
       try {
         console.log(`[PushNotification] Sending to ${sub.id} (${sub.platform})`)
         
