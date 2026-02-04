@@ -132,17 +132,33 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   try {
     const payload = event.data ? JSON.parse(event.data.text()) : {};
-    const title = payload.title || payload.message || 'New Notification';
-    const body = payload.body || '';
+    const title = payload.title || payload.message || 'New Appointment';
+    const body = payload.body || 'You have a new appointment';
     const icon = payload.icon || '/icon-192.png';
-    const url = payload?.data?.url || '/';
+    const badge = payload.badge || '/badge-72.png';
+    const appointmentId = payload?.data?.appointmentId || null;
+
+    console.log('[ServiceWorker] Push notification received:', { title, body });
 
     event.waitUntil(
       self.registration.showNotification(title, {
         body,
         icon,
-        data: { url }
+        badge,
+        tag: 'appointment-notification',
+        requireInteraction: true,
+        actions: [
+          { action: 'open', title: 'Open' },
+          { action: 'dismiss', title: 'Dismiss' }
+        ],
+        data: { appointmentId }
       })
+        .then(() => {
+          console.log('[ServiceWorker] Notification displayed successfully');
+        })
+        .catch((err) => {
+          console.error('[ServiceWorker] Failed to show notification:', err);
+        })
     );
   } catch (error) {
     event.waitUntil(

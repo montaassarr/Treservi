@@ -35,7 +35,7 @@ export const useNotificationManager = ({
   const channelRef = useRef<any>(null);
   const isInitializedRef = useRef(false);
 
-  // iOS-Safe: Load notifications from localStorage on mount
+  // Load notifications from localStorage on mount
   useEffect(() => {
     if (!enabled || isInitializedRef.current) return;
 
@@ -52,20 +52,18 @@ export const useNotificationManager = ({
         }
       }
     } catch (e) {
-      // Silently fail on iOS localStorage issues
-      console.log('localStorage read failed, proceeding with empty notifications');
+      console.log('[useNotificationManager] localStorage read failed');
     }
 
     isInitializedRef.current = true;
   }, [enabled]);
 
-  // Persist notifications to localStorage (iOS-safe)
+  // Persist notifications to localStorage
   useEffect(() => {
     try {
       localStorage.setItem('dashboard_notifications', JSON.stringify(notifications));
     } catch (e) {
-      // Silently fail on iOS localStorage quota
-      console.log('localStorage write failed');
+      console.log('[useNotificationManager] localStorage write failed');
     }
   }, [notifications]);
 
@@ -76,7 +74,7 @@ export const useNotificationManager = ({
     const setupRealtimeNotifications = () => {
       try {
         const channel = supabase
-          .channel(`notifications-${salonId}`)
+          .channel(`notifications-${salonId}-${userId}`)
           .on(
             'postgres_changes',
             {
@@ -95,6 +93,8 @@ export const useNotificationManager = ({
               // Skip if already seen
               if (seenAppointmentsRef.current.has(appointmentId)) return;
               seenAppointmentsRef.current.add(appointmentId);
+
+              console.log('[useNotificationManager] New appointment detected:', appointmentId);
 
               // Fetch full appointment details
               try {
@@ -147,20 +147,41 @@ export const useNotificationManager = ({
                   });
 
                   setNotificationCount((prev) => prev + 1);
+
+                  // Broadcast to service worker for desktop push notification
+                  if ('serviceWorker' in navigator && navigator.serviceWorker?.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                      type: 'NEW_APPOINTMENT_NOTIFICATION',
+                      data: {
+                        title,
+                        options: {
+                          body: subtitle,
+                          icon: '/icon-192.png',
+                          badge: '/badge-72.png',
+                          tag: 'appointment-notification',
+                          requireInteraction: true,
+                          data: { appointmentId }
+                        }
+                      }
+                    });
+                  }
                 }
               } catch (err) {
-                console.log('Failed to fetch appointment details');
+                console.error('[useNotificationManager] Failed to fetch appointment:', err);
               }
             }
           )
           .subscribe((status) => {
+            console.log('[useNotificationManager] Subscription status:', status);
             if (status === 'SUBSCRIBED') {
               channelRef.current = channel;
+            } else if (status === 'CHANNEL_ERROR') {
+              console.error('[useNotificationManager] Channel error, retrying...');
+              setTimeout(() => setupRealtimeNotifications(), 3000);
             }
           });
       } catch (err) {
-        // Silently handle subscription errors (iOS may not support all features)
-        console.log('Real-time subscription setup failed');
+        console.error('[useNotificationManager] Setup failed:', err);
       }
     };
 
