@@ -1,0 +1,2 @@
+-- Placeholder for remote-applied migration 20260204120000
+-- This migration was applied on remote and is tracked for history alignment.
