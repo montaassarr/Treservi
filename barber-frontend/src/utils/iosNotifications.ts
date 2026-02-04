@@ -20,7 +20,7 @@ export const isIOSPWA = (): boolean => {
 export const isWebApp = (): boolean => {
   const userAgent = navigator.userAgent.toLowerCase();
   // iOS PWA displays as "Mozilla/5.0 (iPhone..." without "Safari" when in standalone
-  return /iphone|ipad|ipot/.test(userAgent) && !userAgent.includes('safari');
+  return /iphone|ipad|ipod/.test(userAgent) && !userAgent.includes('safari');
 };
 
 /**
@@ -37,9 +37,19 @@ export const getNotificationCapability = (): NotificationCapability => {
   const isIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
   const hasWebPush = 'serviceWorker' in navigator && 'PushManager' in window;
   const hasNotificationAPI = 'Notification' in window;
+  const isInstalledPWA = isIOSPWA();
 
   if (isIOS) {
-    // iOS PWAs don't support Web Push, use Realtime instead
+    // iOS Web Push works only for installed PWAs (iOS 16.4+)
+    if (hasWebPush && isInstalledPWA && hasNotificationAPI) {
+      return {
+        supported: true,
+        type: 'webpush',
+        description: 'iOS PWA detected: Web Push notifications supported',
+        requiresPermission: true
+      };
+    }
+
     return {
       supported: true,
       type: 'realtime',
@@ -80,13 +90,13 @@ export const getNotificationCapability = (): NotificationCapability => {
 export const requestAppropriateNotificationPermission = async (): Promise<boolean> => {
   const capability = getNotificationCapability();
 
-  // iOS doesn't need permission for realtime notifications
+  // iOS realtime doesn't need permission
   if (capability.type === 'realtime' && /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase())) {
     console.log('iOS detected: Real-time notifications ready (no permission needed)');
     return true;
   }
 
-  // Desktop/Android may need notification permission
+  // Web push requires permission on all platforms (including iOS PWA)
   if (capability.type === 'webpush' && 'Notification' in window) {
     try {
       const permission = await Notification.requestPermission();
@@ -116,8 +126,9 @@ export const showNativeNotification = async (
   } = {}
 ): Promise<void> => {
   const isIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+  const capability = getNotificationCapability();
 
-  if (isIOS) {
+  if (isIOS && capability.type === 'realtime') {
     // iOS PWA: Use vibration + visual notification (via React component)
     // The actual UI notification is handled by useRealtimeNotifications hook
     try {
@@ -209,7 +220,10 @@ export const getNotificationSetupMessage = (): string => {
   const isIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
 
   if (isIOS) {
-    return 'iOS notifications are ready! You\'ll receive live appointment updates.';
+    if (capability.type === 'webpush') {
+      return 'iOS PWA detected: enable notifications to receive push alerts.';
+    }
+    return 'Install the app to Home Screen to enable push notifications on iOS.';
   }
 
   if (capability.type === 'webpush') {

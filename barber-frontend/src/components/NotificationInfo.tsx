@@ -23,7 +23,7 @@ const NotificationInfo: React.FC<NotificationInfoProps> = ({ className = '' }) =
     }
   }, []);
 
-  const isIOS = /iphone|ipad|ipot/.test(navigator.userAgent.toLowerCase());
+  const isIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
   const message = getNotificationSetupMessage();
 
   // Determine status icon and color
