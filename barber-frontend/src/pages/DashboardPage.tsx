@@ -14,7 +14,6 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAppBadge } from '../hooks/useAppBadge';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useRealtimeNotifications, RealtimeNotification } from '../hooks/useRealtimeNotifications';
-import { getNotificationCapability, showNativeNotification, getNotificationSetupMessage } from '../utils/iosNotifications';
 import { supabase } from '../services/supabaseClient';
 import { QRCodeCanvas } from 'qrcode.react';
 
@@ -63,16 +62,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   });
 
   const { subscribeToPush } = usePushNotifications();
-  const [notificationCapability, setNotificationCapability] = useState(getNotificationCapability());
 
-  // Setup Real-time Notifications (iOS-compatible via WebSocket)
+  // Setup Real-time Notifications (Works for all platforms as fallback)
   const { isSubscribed: isRealtimeSubscribed } = useRealtimeNotifications({
     userId,
     salonId,
     userRole,
     enabled: true,
     onNotification: (notification) => {
-      // Show toast notification (works on iOS)
+      // Show toast notification (works on all platforms)
       setCurrentToastNotification(notification);
       
       // Increment notification count
@@ -91,41 +89,30 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
       // Update app badge
       updateBadge(notificationCount + 1);
-
-      // Show platform-appropriate notification feedback
-      showNativeNotification(notification.title, {
-        body: notification.body,
-        tag: notification.id,
-        icon: '/icon-192.png',
-        badge: '/icon-72.png'
-      }).catch(error => {
-        console.log('Native notification feedback unavailable:', error);
-      });
     },
     onError: (error) => {
       console.error('Realtime notification error:', error);
     }
   });
 
-  // Subscribe to Push Notifications - only if not iOS
+  // Subscribe to Push Notifications (iOS 16.4+ and all browsers)
   useEffect(() => {
     if (!userId) return;
 
-    // Check notification capability on mount
-    const capability = getNotificationCapability();
-    setNotificationCapability(capability);
-
-    // iOS doesn't need Web Push subscription, it uses realtime
-    if (capability.type === 'realtime') {
-      console.log('iOS/Realtime-only device detected: Skipping Web Push subscription');
-      return;
-    }
-
+    // Attempt push notification subscription after 2 seconds
     const timer = setTimeout(() => {
-      subscribeToPush(userId).catch((error) => {
-        console.log('Push subscription skipped or failed:', error);
-      });
-    }, 2000); // Delay 2 seconds after mount
+      subscribeToPush(userId)
+        .then((success) => {
+          if (success) {
+            console.log('✅ Push notifications enabled');
+          } else {
+            console.log('⚠️ Push notifications not available, using real-time fallback');
+          }
+        })
+        .catch((error) => {
+          console.log('Push subscription failed, using real-time fallback:', error);
+        });
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [userId, subscribeToPush]);
