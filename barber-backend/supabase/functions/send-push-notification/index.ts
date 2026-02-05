@@ -589,6 +589,23 @@ serve(async (req) => {
 
     console.log(`[PushNotification] Complete: ${successful} sent, ${failed} failed`)
 
+    // Log to database for debugging (best effort)
+    try {
+      await supabaseAdmin
+        .from('push_notification_logs')
+        .insert({
+          trigger_type: 'edge_function',
+          appointment_id: appointmentId || null,
+          salon_id,
+          status: 'SUCCESS',
+          message: `Successfully sent ${successful} notifications, ${failed} failed`,
+          raw_response: JSON.stringify({ sent: successful, failed, results })
+        })
+        .select()
+    } catch (logError) {
+      console.error('[PushNotification] Failed to log success:', logError)
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -605,6 +622,21 @@ serve(async (req) => {
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     console.error('[PushNotification] Error:', errorMsg)
+    
+    // Try to log error to database for debugging (best effort)
+    try {
+      await supabaseAdmin
+        .from('push_notification_logs')
+        .insert({
+          trigger_type: 'edge_function',
+          status: 'ERROR',
+          error_details: errorMsg,
+          raw_response: JSON.stringify({ error: errorMsg })
+        })
+        .select()
+    } catch (logError) {
+      console.error('[PushNotification] Failed to log error:', logError)
+    }
     
     return new Response(
       JSON.stringify({ error: errorMsg }),
