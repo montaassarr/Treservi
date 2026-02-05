@@ -17,10 +17,10 @@ import { useNavigate } from 'react-router-dom';
 
 import { isValidTunisianPhone } from '../utils/validationUtils';
 
-// Translations taken from hamdi-salon
-const translations: Record<Language, Translations> = {
+// Generic translations with dynamic salon name
+const getTranslations = (salonName: string = 'Salon'): Record<Language, Translations> => ({
   en: {
-    greeting: "Welcome to Hamdi Salon",
+    greeting: `Welcome to ${salonName}`,
     subtitle: "Book your next style upgrade.",
     filters: { all: "All", barber: "Barbers", colorist: "Colorists", stylist: "Stylists" },
     todaySchedule: "Today's Schedule",
@@ -47,7 +47,7 @@ const translations: Record<Language, Translations> = {
     from: "From"
   },
   fr: {
-    greeting: "Bienvenue au Salon Hamdi",
+    greeting: `Bienvenue au ${salonName}`,
     subtitle: "Réservez votre prochaine séance.",
     filters: { all: "Tous", barber: "Barbiers", colorist: "Coloristes", stylist: "Stylistes" },
     todaySchedule: "Programme d'aujourd'hui",
@@ -74,7 +74,7 @@ const translations: Record<Language, Translations> = {
     from: "Dès"
   },
   ar: {
-    greeting: "مرحباً بكم في صالون حمدي",
+    greeting: `مرحباً بكم في ${salonName}`,
     subtitle: "احجز موعدك القادم للأناقة.",
     filters: { all: "الكل", barber: "حلاقين", colorist: "صبغة", stylist: "مصففين" },
     todaySchedule: "مواعيد اليوم",
@@ -101,7 +101,7 @@ const translations: Record<Language, Translations> = {
     from: "من"
   },
   tn: {
-    greeting: "Marhba bik fi Salon Hamdi",
+    greeting: `Marhba bik fi ${salonName}`,
     subtitle: "Ahjez rendez-vous mte3ek el jay.",
     filters: { all: "El Kol", barber: "Halleqin", colorist: "Sabbegh", stylist: "Styliste" },
     todaySchedule: "Awqat Lyoum",
@@ -127,7 +127,7 @@ const translations: Record<Language, Translations> = {
     done: "C'est bon",
     from: "Men"
   }
-};
+});
 
 export default function BookingPage() {
   const { salon } = useSalon();
@@ -174,6 +174,7 @@ export default function BookingPage() {
     notes: '',
   });
 
+  const translations = getTranslations(salon?.name || 'Salon');
   const t = translations[lang];
 
   useEffect(() => {
