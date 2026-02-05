@@ -345,7 +345,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
       const newApt: Appointment = {
         id: Date.now().toString(),
         customerName: formData.customerName || 'New Client',
-        customerFirstName: mockData[i].customerName.split(' ')[0],
+        customerFirstName: (formData.customerName || 'New Client').split(' ')[0],
         service: formData.service || 'Classic Cut',
         time: formData.time || '09:00 AM',
         status: (formData.status as any) || 'Pending',

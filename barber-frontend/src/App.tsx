@@ -224,7 +224,7 @@ const AppRoutes: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const isPWALaunch = params.get('source') === 'pwa' || window.matchMedia('(display-mode: standalone)').matches;
 
-    // Root path - check for salon param or restore previous state
+    // Root path - check for salon param or restore previous state (PWA only)
     if (path === '/') {
       const deepLink = parseDeepLink(params);
 
@@ -237,13 +237,15 @@ const AppRoutes: React.FC = () => {
         return;
       }
 
-      // Try to restore previous app state (like Facebook does)
-      // This works for PWA launched from home screen
-      const savedState = restoreAppState();
-      if (savedState && savedState.salonSlug) {
-        console.log('[App] Restoring state to:', savedState);
-        navigate(`/${savedState.salonSlug}${savedState.route}`, { replace: true });
-        return;
+      // ONLY restore previous app state for PWA launches (home screen icon)
+      // Regular web visits should always show the generic landing page
+      if (isPWALaunch) {
+        const savedState = restoreAppState();
+        if (savedState && savedState.salonSlug) {
+          console.log('[App] Restoring PWA state to:', savedState);
+          navigate(`/${savedState.salonSlug}${savedState.route}`, { replace: true });
+          return;
+        }
       }
 
       // If user is authenticated and PWA, go to dashboard
@@ -252,11 +254,13 @@ const AppRoutes: React.FC = () => {
         return;
       }
 
-      // If user is authenticated, show dashboard
+      // If user is authenticated (but not PWA), show dashboard
       if (isAuthenticated && !isLoadingAuth && userSalonSlug) {
         navigate(`/${userSalonSlug}/dashboard`, { replace: true });
         return;
       }
+      
+      // Otherwise, stay on landing page (generic, no redirect)
     }
 
     // Authenticated users redirect
