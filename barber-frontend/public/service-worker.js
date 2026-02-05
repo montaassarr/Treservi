@@ -1,53 +1,37 @@
-/**
- * Service Worker for Treservi PWA
- * 
- * Handles:
- * - Offline caching (network-first strategy for HTML, cache-first for assets)
- * - Background sync
- * 
- * Compatible with iOS 16.4+, Android, and Desktop browsers
- */
+// Service Worker for Treservi PWA
+// Handles offline caching, badge updates, and push notifications
 
-const CACHE_NAME = 'treservi-v3';
-const OFFLINE_URL = '/offline.html';
-
-// Resources to cache on install
-const PRECACHE_URLS = [
+const CACHE_NAME = 'treservi-v1';
+const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/offline.html'
+  '/offline.html',
 ];
 
 // ============================================================================
-// INSTALL EVENT
+// INSTALL EVENT - Cache essential resources
 // ============================================================================
 
 self.addEventListener('install', (event) => {
-  console.log('[ServiceWorker] Installing...');
-  
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('[ServiceWorker] Caching app shell');
-        return cache.addAll(PRECACHE_URLS);
+        return cache.addAll(urlsToCache);
       })
       .catch((error) => {
         console.error('[ServiceWorker] Cache failed:', error);
       })
   );
-  
-  // Activate immediately
   self.skipWaiting();
 });
 
 // ============================================================================
-// ACTIVATE EVENT
+// ACTIVATE EVENT - Clean up old caches
 // ============================================================================
 
 self.addEventListener('activate', (event) => {
-  console.log('[ServiceWorker] Activating...');
-  
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -60,13 +44,11 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  
-  // Take control of all clients immediately
   return self.clients.claim();
 });
 
 // ============================================================================
-// FETCH EVENT - Caching Strategy
+// FETCH EVENT - Efficient caching strategy
 // ============================================================================
 
 self.addEventListener('fetch', (event) => {
@@ -91,7 +73,6 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|woff|woff2|webp)$/)) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
-        // Update cache in background
         const fetchPromise = fetch(event.request)
           .then((response) => {
             if (response && response.status === 200 && response.type === 'basic') {
@@ -115,7 +96,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .catch(() => {
-          return caches.match(OFFLINE_URL);
+          return caches.match('/offline.html');
         })
     );
     return;
@@ -137,7 +118,7 @@ self.addEventListener('push', (event) => {
 
   console.log('[ServiceWorker] 🔔 Push received:', payload);
 
-  const title = payload.title || payload.message || '📞 New Appointment';
+  const title = payload.title || payload.message || 'New Appointment';
   const body = payload.body || 'You have a new appointment';
   const icon = payload.icon || '/icon-192.png';
   const badge = payload.badge || '/badge-72.png';
@@ -150,7 +131,6 @@ self.addEventListener('push', (event) => {
     { action: 'dismiss', title: 'Dismiss' }
   ];
 
-  // Rich notification with vibration and visual effects
   const options = {
     body,
     icon,
@@ -159,9 +139,7 @@ self.addEventListener('push', (event) => {
     requireInteraction: true,
     actions,
     data: { url, appointmentId, playSound: true },
-    // Vibration pattern (mobile only) - vibrate for 200ms, pause 100ms, vibrate 200ms
     vibrate: [200, 100, 200],
-    // Notification priority and behavior
     silent: false
   };
 
@@ -170,7 +148,6 @@ self.addEventListener('push', (event) => {
       .then(() => {
         console.log('[ServiceWorker] ✅ Notification shown:', title);
         
-        // Play notification sound by opening all clients and requesting them to play sound
         return self.clients.matchAll().then((clients) => {
           clients.forEach((client) => {
             client.postMessage({
@@ -256,7 +233,6 @@ self.addEventListener('message', (event) => {
       break;
       
     case 'GET_SUBSCRIPTION':
-      // Return current subscription status
       self.registration.pushManager.getSubscription()
         .then((subscription) => {
           if (event.ports && event.ports[0]) {
@@ -288,14 +264,12 @@ async function syncAppointments() {
   try {
     console.log('[ServiceWorker] Syncing appointments...');
     
-    // Fetch pending appointment updates from cache
     const cache = await caches.open(CACHE_NAME);
     const pendingUpdates = await cache.match('/api/pending-updates');
 
     if (pendingUpdates) {
       const data = await pendingUpdates.json();
 
-      // Send updates to server
       for (const update of data.updates) {
         await fetch(update.url, {
           method: update.method,
@@ -304,7 +278,6 @@ async function syncAppointments() {
         });
       }
 
-      // Clear pending updates
       await cache.delete('/api/pending-updates');
       console.log('[ServiceWorker] Appointments synced successfully');
     }
@@ -339,4 +312,4 @@ self.addEventListener('pushsubscriptionchange', (event) => {
   );
 });
 
-console.log('[ServiceWorker] Script loaded - v3');
+console.log('[ServiceWorker] Script loaded - v1');

@@ -1,108 +1,107 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  detectPlatform,
-  getSubscriptionStatus,
-  setupPushNotifications,
-  teardownPushNotifications,
-  type PlatformInfo,
-  type SubscriptionStatus
-} from '../services/pushService';
+import { useState, useCallback, useEffect } from 'react';
+import { supabase } from '../services/supabaseClient';
 
-interface UsePushNotificationsOptions {
-  userId?: string;
-  salonId?: string;
-  enabled?: boolean;
-}
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
-interface UsePushNotificationsResult {
-  status: SubscriptionStatus;
-  isSupported: boolean;
-  isLoading: boolean;
-  error: string | null;
-  platform: PlatformInfo | null;
-  enable: () => Promise<void>;
-  disable: () => Promise<void>;
-  refreshStatus: () => Promise<void>;
-}
+export const usePushNotifications = () => {
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission>(Notification.permission);
 
-export function usePushNotifications(
-  options: UsePushNotificationsOptions
-): UsePushNotificationsResult {
-  const { userId, salonId, enabled = true } = options;
-  const [status, setStatus] = useState<SubscriptionStatus>('unsubscribed');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const urlBase64ToUint8Array = (base64String: string) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
 
-  const platform = useMemo<PlatformInfo | null>(() => {
-    if (typeof window === 'undefined') return null;
-    return detectPlatform();
-  }, []);
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
 
-  const isSupported = !!platform?.supportsWebPush;
-
-  const refreshStatus = useCallback(async () => {
-    if (!enabled) return;
-    if (typeof window === 'undefined') return;
-
-    try {
-      const currentStatus = await getSubscriptionStatus();
-      setStatus(currentStatus);
-    } catch (err) {
-      setStatus('error');
-      setError(err instanceof Error ? err.message : 'Failed to read status');
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
     }
-  }, [enabled]);
+    return outputArray;
+  };
 
-  const enable = useCallback(async () => {
-    if (!userId) {
-      setError('Missing user ID');
-      return;
+  const subscribeToPush = useCallback(async (userId: string) => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      return false;
     }
 
-    setIsLoading(true);
-    setError(null);
+    if (!VAPID_PUBLIC_KEY) {
+      return false;
+    }
+
     try {
-      const result = await setupPushNotifications(userId, salonId);
-      setStatus(result.status);
-      if (!result.success) {
-        setError(result.error || 'Failed to enable notifications');
+      if (Notification.permission === 'denied') {
+        return false;
       }
-    } catch (err) {
-      setStatus('error');
-      setError(err instanceof Error ? err.message : 'Failed to enable notifications');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId, salonId]);
 
-  const disable = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await teardownPushNotifications();
-      setStatus('unsubscribed');
-    } catch (err) {
-      setStatus('error');
-      setError(err instanceof Error ? err.message : 'Failed to disable notifications');
-    } finally {
-      setIsLoading(false);
+      const permissionResult = await Notification.requestPermission();
+      setPermission(permissionResult);
+
+      if (permissionResult !== 'granted') {
+        return false;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        try {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+          });
+        } catch {
+          return false;
+        }
+      }
+
+      setIsSubscribed(true);
+
+      const { endpoint, keys } = subscription.toJSON();
+      if (!keys?.p256dh || !keys?.auth) return false;
+
+      const { error } = await supabase
+        .from('push_subscriptions')
+        .upsert({
+          user_id: userId,
+          endpoint,
+          p256dh: keys.p256dh,
+          auth: keys.auth,
+          user_agent: navigator.userAgent,
+          last_used_at: new Date().toISOString()
+        }, { onConflict: 'endpoint' });
+
+      if (error) {
+        console.error('Failed to save push subscription to DB:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('Push subscription aborted');
+      } else {
+        console.error('Failed to subscribe to push:', error);
+      }
+      return false;
     }
   }, []);
 
   useEffect(() => {
-    if (!enabled) return;
-    if (typeof window === 'undefined') return;
-    refreshStatus();
-  }, [enabled, refreshStatus]);
+    const checkSubscription = async () => {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      setIsSubscribed(!!subscription);
+    };
+    checkSubscription();
+  }, []);
 
   return {
-    status,
-    isSupported,
-    isLoading,
-    error,
-    platform,
-    enable,
-    disable,
-    refreshStatus
+    subscribeToPush,
+    permission,
+    isSubscribed
   };
-}
+};
