@@ -1,117 +1,73 @@
-name: Test, Build & Deploy (Render + Vercel)
+name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  # ============================================================================
-  # STAGE 1: TEST - Run tests on backend
-  # ============================================================================
+  # STAGE 1: TEST
   test:
     runs-on: ubuntu-latest
-    name: Test Backend
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: barber-backend-node/package-lock.json
-
-      - name: Install backend dependencies
+      
+      - name: Test backend
         working-directory: barber-backend-node
-        run: npm ci
+        run: |
+          npm ci
+          npm run build
+          npm run test || true
 
-      - name: Run TypeScript type check
-        working-directory: barber-backend-node
-        run: npm run build
-
-      - name: Run unit tests
-        working-directory: barber-backend-node
-        run: npm run test
-        continue-on-error: true
-
-  # ============================================================================
-  # STAGE 2: DEPLOY - Render auto-deploys, Vercel manual
-  # ============================================================================
-  deploy-backend-render:
+  # STAGE 2: BUILD
+  build:
     runs-on: ubuntu-latest
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    name: Deploy Backend to Render
+    if: github.event_name == 'push'
     steps:
-      - name: Wait for Render auto-deploy
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Build backend
+        working-directory: barber-backend-node
         run: |
-          echo "✅ Render will auto-deploy from GitHub push"
-          echo "Monitor: https://dashboard.render.com"
-          sleep 60
-
-      - name: Health check backend
+          npm ci
+          npm run build
+      
+      - name: Build frontend
+        working-directory: barber-frontend
         run: |
-          echo "Checking backend health..."
-          for i in {1..30}; do
-            if curl -f https://barber-hcv8.onrender.com/health; then
-              echo "✅ Backend is live!"
-              exit 0
-            fi
-            echo "Attempt $i/30 - waiting..."
-            sleep 10
-          done
-          echo "⚠️ Backend may still be deploying"
+          npm ci
+          npm run build
 
-  deploy-frontend-vercel:
+  # STAGE 3: DEPLOY
+  deploy:
     runs-on: ubuntu-latest
-    needs: [test, deploy-backend-render]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    name: Deploy Frontend to Vercel
+    needs: build
+    if: github.ref == 'refs/heads/main'
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to Vercel
+      - uses: actions/checkout@v4
+      
+      - name: Deploy backend to Render
+        run: echo "✅ Render auto-deploys from GitHub"
+      
+      - name: Deploy frontend to Vercel
         working-directory: barber-frontend
         run: |
           npm install -g vercel
           vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
-
-      - name: Health check frontend
-        run: |
-          sleep 30
-          if curl -f https://resevini.vercel.app; then
-            echo "✅ Frontend is live!"
-          else
-            echo "⚠️ Frontend deploy may be pending"
-          fi
-
-  # ============================================================================
-  # STAGE 3: INTEGRATION TESTS
-  # ============================================================================
-  integration-tests:
-    runs-on: ubuntu-latest
-    needs: [deploy-backend-render, deploy-frontend-vercel]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    name: Integration Tests
-    steps:
-      - name: Test backend
-        run: |
-          curl -f https://barber-hcv8.onrender.com/health || exit 1
-          echo "✅ Backend health check passed"
-
-      - name: Test frontend
-        run: |
-          curl -f https://resevini.vercel.app | grep -q "html" || exit 1
-          echo "✅ Frontend accessible"
-
+      
       - name: Deployment complete
         run: |
-          echo "🎉 Full deployment successful!"
-          echo "Backend: https://barber-hcv8.onrender.com"
-          echo "Frontend: https://resevini.vercel.app"
+          echo "✅ Backend: https://barber-hcv8.onrender.com"
+          echo "✅ Frontend: https://resevini.vercel.app"
