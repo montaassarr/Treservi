@@ -1,92 +1,44 @@
-version: "3.9"
-
-# Compose stack: Node.js + MongoDB + React Frontend
-# All containers use reservi-network
-# Ports: 3000 (frontend), 4000 (backend API), 27017 (MongoDB)
+version: '3.8'
 
 services:
-  # MongoDB Database
-  mongodb:
-    image: mongo:7.0
-    container_name: reservi-mongodb
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
-      MONGO_INITDB_DATABASE: reservi
-    volumes:
-      - mongodb-data:/data/db
-    ports:
-      - "27017:27017"
-    networks:
-      - reservi-network
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Node.js Backend API
   backend:
     build:
       context: ./barber-backend-node
       dockerfile: Dockerfile
-    container_name: reservi-backend
-    restart: unless-stopped
-    depends_on:
-      mongodb:
-        condition: service_healthy
-    environment:
-      NODE_ENV: development
-      PORT: 4000
-      MONGODB_URI: mongodb://REDACTED:REDACTED@mongodb:27017/reservi?authSource=admin
-      JWT_SECRET: ${JWT_SECRET:REDACTED}
-      JWT_EXPIRES_IN: 7d
-      CORS_ORIGIN: http://localhost:3000
-      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-owner@barbershop.com}
-      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-ChangeMe123!}
-      SEED_SALON_NAME: ${SEED_SALON_NAME:-Demo Salon}
-      SEED_SALON_SLUG: ${SEED_SALON_SLUG:-demo-salon}
     ports:
-      - "4000:4000"
-    networks:
-      - reservi-network
+      - "10000:10000"
+    environment:
+      - NODE_ENV=production
+      - PORT=10000
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:10000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - app-network
 
-  # React Frontend
   frontend:
     build:
       context: ./barber-frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: http://localhost:4000
-        VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY:-}
-    container_name: reservi-frontend
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+        - VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY}
+    ports:
+      - "80:80"
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
-    environment:
-      VITE_API_BASE_URL: http://localhost:4000
-      VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY:-}
-    ports:
-      - "3000:80"
     networks:
-      - reservi-network
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  mongodb-data:
-    driver: local
+      - app-network
 
 networks:
-  reservi-network:
+  app-network:
     driver: bridge
