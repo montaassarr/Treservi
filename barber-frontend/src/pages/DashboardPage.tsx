@@ -119,19 +119,19 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         {/* Main Content - scrollable with bottom padding for mobile nav */}
-        <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 pt-[calc(env(safe-area-inset-top)+5rem)] md:pt-6 pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-6">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 sm:px-4 md:px-6 pt-[calc(env(safe-area-inset-top)+5rem)] md:pt-6 pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-6">
           {bookingUrl && userRole === 'owner' && (
-            <div className="mb-6 bg-white dark:bg-treservi-card-dark rounded-[28px] p-5 border border-gray-100 dark:border-gray-800 shadow-soft-glow">
+            <div className="mb-6 bg-white dark:bg-treservi-card-dark rounded-[20px] sm:rounded-[28px] p-4 sm:p-5 border border-gray-100 dark:border-gray-800 shadow-soft-glow max-w-full">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Booking QR Code</h3>
-                  <p className="text-sm text-gray-500">Share this link for online booking.</p>
-                  <a href={bookingUrl} className="text-sm text-emerald-600 break-all" target="_blank" rel="noreferrer">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Booking QR Code</h3>
+                  <p className="text-xs sm:text-sm text-gray-500">Share this link for online booking.</p>
+                  <a href={bookingUrl} className="text-xs sm:text-sm text-emerald-600 break-all block overflow-hidden" target="_blank" rel="noreferrer">
                     {bookingUrl}
                   </a>
                 </div>
-                <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
-                  <QRCodeCanvas value={bookingUrl} size={120} />
+                <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex-shrink-0 self-center">
+                  <QRCodeCanvas value={bookingUrl} size={100} />
                 </div>
               </div>
             </div>

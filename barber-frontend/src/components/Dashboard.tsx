@@ -63,6 +63,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
   const [chartData, setChartData] = useState<ChartData[]>(defaultChartData);
   const [stats, setStats] = useState({ bookings: 0, revenue: 0 });
   const [topBarbers, setTopBarbers] = useState<Barber[]>(defaultTopBarbers);
+  const [barberStats, setBarberStats] = useState<Map<string, { count: number; services: Set<string> }>>(new Map());
   const [comments, setComments] = useState<Comment[]>(defaultComments);
   const [appointments, setAppointments] = useState<Appointment[]>(defaultAppointments);
   const [servicesList, setServicesList] = useState<Service[]>([]);
@@ -148,25 +149,33 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
       });
       setChartData(chartBuckets.map(({ name, value }) => ({ name, value })));
 
-      const barberStats = new Map<string, number>();
+      const barberStatsMap = new Map<string, { count: number; services: Set<string> }>();
       appointmentsData.forEach((apt) => {
         if (apt.staff_id) {
-          barberStats.set(apt.staff_id, (barberStats.get(apt.staff_id) || 0) + 1);
+          const existing = barberStatsMap.get(apt.staff_id) || { count: 0, services: new Set<string>() };
+          existing.count += 1;
+          if (apt.service?.name) {
+            existing.services.add(apt.service.name);
+          }
+          barberStatsMap.set(apt.staff_id, existing);
         }
       });
 
-      const topBarbersData: Barber[] = Array.from(barberStats.entries())
-        .sort((a, b) => b[1] - a[1])
+      setBarberStats(barberStatsMap);
+
+      const topBarbersData: Barber[] = Array.from(barberStatsMap.entries())
+        .sort((a, b) => b[1].count - a[1].count)
         .slice(0, 3)
-        .map(([staffId, count], index) => {
+        .map(([staffId, stats], index) => {
           const staff = staffById.get(staffId);
           const name = staff?.full_name || staff?.email || `Staff ${index + 1}`;
+          const servicesText = Array.from(stats.services).join(', ') || 'No services';
           return {
             id: staffId,
             name,
             firstName: name.split(' ')[0],
             rating: 0,
-            earnings: formatPrice(0),
+            earnings: servicesText,
             avatarUrl: staff?.avatar_url
           };
         });
@@ -603,15 +612,13 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                           />
                         </div>
                         <div>
-                          <p className="text-xs sm:text-sm font-bold">{barber.firstName}</p>
-                          <div className="text-[10px] sm:text-xs font-medium text-gray-400">
-                            {(barber as any).clientCount} Clients
-                          </div>
+                          <p className=\"text-xs sm:text-sm font-bold\">{barber.firstName}</p>
+                          <div className=\"text-[10px] sm:text-xs font-medium text-gray-400 truncate max-w-[120px]\">\n                            {barber.earnings}\n                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-xs sm:text-sm font-bold text-treservi-accent">
-                          {barber.earnings}
+                      <div className=\"text-right flex-shrink-0\">
+                        <div className=\"text-xs sm:text-sm font-bold text-treservi-accent\">
+                          {(barberStats.get(barber.id)?.count || 0)} appts
                         </div>
                       </div>
                     </div>

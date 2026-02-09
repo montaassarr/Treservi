@@ -39,6 +39,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStaff, setFilterStaff] = useState<string>('all');
   const [showCalendar, setShowCalendar] = useState(false);
 
   const staffById = React.useMemo(() => {
@@ -257,10 +258,11 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
     }
   };
 
-  const filteredAppointments =
-    filterStatus === 'all'
-      ? appointments
-      : appointments.filter(apt => apt.status === filterStatus);
+  const filteredAppointments = appointments.filter(apt => {
+    const statusMatch = filterStatus === 'all' || apt.status === filterStatus;
+    const staffMatch = filterStaff === 'all' || apt.staff_id === filterStaff;
+    return statusMatch && staffMatch;
+  });
 
   const clayCard =
     'bg-white dark:bg-treservi-card-dark rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100/60 dark:border-gray-800/60 backdrop-blur-sm';
@@ -320,20 +322,35 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
         </div>
       )}
 
-      {/* Filter */}
-      <div className="flex items-center gap-2">
-        <Filter className="w-5 h-5 text-gray-400" />
-        <select
-          value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value)}
-          className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 border-none outline-none text-sm font-medium"
-        >
-          <option value="all">All Appointments</option>
-          <option value="Pending">Pending</option>
-          <option value="Confirmed">Confirmed</option>
-          <option value="Completed">Completed</option>
-          <option value="Cancelled">Cancelled</option>
-        </select>
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Users className="w-5 h-5 text-gray-400" />
+          <select
+            value={filterStaff}
+            onChange={e => setFilterStaff(e.target.value)}
+            className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 border-none outline-none text-sm font-medium min-w-[160px]"
+          >
+            <option value="all">All Staff</option>
+            {staff.map(member => (
+              <option key={member.id} value={member.id}>{member.full_name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Filter className="w-5 h-5 text-gray-400" />
+          <select
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            className="px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 border-none outline-none text-sm font-medium"
+          >
+            <option value="all">All Appointments</option>
+            <option value="Pending">Pending</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
       </div>
 
       {/* Appointments - Table on Desktop, Cards on Mobile */}
@@ -348,7 +365,6 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                 <th className="pb-4 font-normal">Service</th>
                 <th className="pb-4 font-normal">Date & Time</th>
                 <th className="pb-4 font-normal">Status</th>
-                <th className="pb-4 font-normal text-right">Amount</th>
                 <th className="pb-4 font-normal pr-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -423,9 +439,6 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                       >
                         {apt.status}
                       </span>
-                    </td>
-                    <td className="py-4 text-right font-bold whitespace-nowrap">
-                      {formatPrice(Number(apt.amount))}
                     </td>
                     <td className="py-4 pr-4 text-right rounded-r-2xl">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -512,10 +525,6 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 text-xs">Date</span>
                     <span className="font-medium text-gray-900 dark:text-gray-100">{apt.appointment_date}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500 text-xs">Amount</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatPrice(Number(apt.amount))}</span>
                   </div>
                 </div>
 

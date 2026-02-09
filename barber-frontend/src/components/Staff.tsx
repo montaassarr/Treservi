@@ -226,17 +226,17 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Staff List */}
-        <div className={`lg:col-span-2 ${clayCard} p-6`}>
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-[18px] bg-gradient-to-br from-emerald-500 to-teal-600 shadow-inner shadow-white/60 flex items-center justify-center ring-2 ring-emerald-400 ring-offset-2">
-                <Users className="text-white" />
+        <div className={`lg:col-span-2 ${clayCard} p-4 sm:p-6 overflow-hidden`}>
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-[16px] sm:rounded-[18px] bg-gradient-to-br from-emerald-500 to-teal-600 shadow-inner shadow-white/60 flex items-center justify-center ring-2 ring-emerald-400 ring-offset-2 flex-shrink-0">
+                <Users className="text-white w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div>
-                <h2 className="text-xl font-bold">Staff Roster</h2>
-                <p className="text-sm text-gray-500">{staff.length} members</p>
+              <div className="min-w-0">
+                <h2 className="text-lg sm:text-xl font-bold truncate">Staff Roster</h2>
+                <p className="text-xs sm:text-sm text-gray-500">{staff.length} members</p>
               </div>
             </div>
           </div>
@@ -260,7 +260,7 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
               </div>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {staff.map((member) => (
                 <button
                   key={member.id}
