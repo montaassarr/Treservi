@@ -39,7 +39,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
         path: req.path,
         statusCode: res.statusCode,
         duration,
-        size: JSON.stringify(responseBody).length
+        size: responseBody ? JSON.stringify(responseBody).length : 0
       },
       isError ? 'RESPONSE_ERROR' : 'RESPONSE'
     );
