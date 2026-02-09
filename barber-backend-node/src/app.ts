@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import mongoose from 'mongoose';
 import { env } from './config/env.js';
 import { authRouter } from './routes/auth.js';
 import { salonsRouter } from './routes/salons.js';
@@ -21,8 +22,44 @@ export const createApp = () => {
   );
   app.use(express.json());
 
-  app.get('/health', (_req, res) => {
-    res.json({ status: 'ok' });
+  // Health check endpoint with detailed monitoring
+  app.get('/health', async (_req, res) => {
+    const health = {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      mongodb: 'disconnected',
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
+      },
+      environment: env.nodeEnv
+    };
+
+    try {
+      if (mongoose.connection.readyState === 1) {
+        health.mongodb = 'connected';
+      }
+    } catch (error) {
+      health.mongodb = 'error';
+    }
+
+    const statusCode = health.mongodb === 'connected' ? 200 : 503;
+    res.status(statusCode).json(health);
+  });
+
+  // Readiness probe for Kubernetes/Docker health checks
+  app.get('/ready', async (_req, res) => {
+    if (mongoose.connection.readyState === 1) {
+      res.status(200).json({ ready: true });
+    } else {
+      res.status(503).json({ ready: false, reason: 'database not connected' });
+    }
+  });
+
+  // Liveness probe
+  app.get('/live', (_req, res) => {
+    res.status(200).json({ alive: true });
   });
 
   app.use('/api/auth', authRouter);
@@ -35,8 +72,17 @@ export const createApp = () => {
   app.use('/api/admin', adminRouter);
 
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ Error:', err);
+    
+    // Log error details for monitoring
+    if (err instanceof Error) {
+      console.error('Error stack:', err.stack);
+    }
+    
+    res.status(500).json({ 
+      error: 'Internal server error',
+      ...(env.nodeEnv === 'development' && err instanceof Error && { message: err.message })
+    });
   });
 
   return app;
