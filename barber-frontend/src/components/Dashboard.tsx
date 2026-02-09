@@ -334,9 +334,9 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
               <div className="flex items-center justify-between mt-4 sm:mt-6 md:mt-8">
                 <div className="flex -space-x-3">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="w-10 h-10 rounded-full border-2 border-white dark:border-treservi-card-dark bg-gray-200 dark:bg-gray-700" />
+                    <div key={i} className="w-10 h-10 rounded-full border-2 border-white dark:border-treservi-card-dark bg-gradient-to-br from-emerald-500 to-teal-600 ring-2 ring-emerald-400" />
                   ))}
-                  <div className="w-10 h-10 rounded-full border-2 border-white dark:border-treservi-card-dark bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-500">
+                  <div className="w-10 h-10 rounded-full border-2 border-white dark:border-treservi-card-dark bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-xs font-bold text-white ring-2 ring-emerald-400">
                     ...
                   </div>
                 </div>
@@ -593,7 +593,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                   topBarbers.slice(0, 3).map(barber => (
                     <div key={barber.id} className="flex items-center justify-between p-2 sm:p-3 bg-white/10 rounded-xl border border-white/5 hover:bg-white/15 transition-colors">
                       <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="relative w-8 h-8 rounded-[12px] bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100 shadow-[4px_6px_10px_rgba(0,0,0,0.12)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <div className="relative w-8 h-8 rounded-[12px] bg-gradient-to-br from-emerald-500 to-teal-600 shadow-[4px_6px_10px_rgba(0,0,0,0.12)] flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-emerald-400">
                           <img
                             alt={barber.name}
                             className="w-full h-full object-cover"
