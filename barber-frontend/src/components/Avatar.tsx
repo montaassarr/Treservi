@@ -38,9 +38,9 @@ const Avatar: React.FC<AvatarComponentProps> = ({
         rounded-full
         flex items-center justify-center
         font-semibold
-        ${showRing ? `ring-2 ${colorScheme.ring} ring-offset-2` : ''}
-        ${finalAvatarUrl && !imageError ? '' : colorScheme.bg}
-        ${finalAvatarUrl && !imageError ? '' : colorScheme.text}
+        ${showRing ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}
+        bg-gradient-to-br from-emerald-500 to-teal-600
+        text-white
         transition-all duration-200
         hover:scale-105
         shadow-md

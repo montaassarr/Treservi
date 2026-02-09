@@ -11,15 +11,24 @@ staffRouter.get('/public', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'salonId is required' });
   }
 
-  const staff = await User.find({ salonId, role: 'staff' })
-    .select('fullName specialty avatarUrl')
+  // Get staff members AND salon owner (who also cuts hair)
+  const staff = await User.find({ 
+    salonId, 
+    $or: [
+      { role: 'staff' },
+      { role: 'owner' },
+      { role: 'super_admin', salonId: { $exists: true } }
+    ]
+  })
+    .select('fullName specialty avatarUrl role')
     .sort({ createdAt: -1 });
 
   const sanitized = staff.map((member) => ({
     id: member.id,
     fullName: member.fullName ?? '',
-    specialty: member.specialty ?? '',
-    avatarUrl: member.avatarUrl ?? ''
+    specialty: member.specialty ?? 'Barber',
+    avatarUrl: member.avatarUrl ?? '',
+    role: member.role
   }));
 
   return res.json({ staff: sanitized });
@@ -31,7 +40,16 @@ staffRouter.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ error: 'salonId is required' });
   }
 
-  const staff = await User.find({ salonId, role: 'staff' }).sort({ createdAt: -1 });
+  // Include staff members AND salon owner
+  const staff = await User.find({ 
+    salonId,
+    $or: [
+      { role: 'staff' },
+      { role: 'owner' },
+      { role: 'super_admin', salonId: { $exists: true } }
+    ]
+  }).sort({ createdAt: -1 });
+  
   return res.json({ staff });
 });
 
