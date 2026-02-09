@@ -3,11 +3,11 @@ services:
     image: mongo:7
     container_name: reservi-mongodb
     ports:
-      - "27017:27017"
+      - "27018:27017"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=admin123
-      - MONGO_INITDB_DATABASE=barber
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: barber
     volumes:
       - mongodb_data:/data/db
     networks:
@@ -28,7 +28,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=10000
-      - MONGO_URI=mongodb://REDACTED:REDACTED@mongodb:27017/barber?authSource=admin
+      - MONGODB_URI=mongodb://REDACTED:REDACTED@mongodb:27017/barber?authSource=admin
       - JWT_SECRET=REDACTED
       - CORS_ORIGIN=http://localhost:3000,http://localhost:5173
       - SEED_ADMIN_EMAIL=owner@barbershop.com
