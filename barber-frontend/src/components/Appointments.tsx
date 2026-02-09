@@ -377,7 +377,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                     </td>
                     <td className="py-4 text-gray-500">
                       <div className="flex items-center gap-2">
-                        <div className="relative w-6 h-6 rounded-[10px] bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100 shadow-[4px_6px_10px_rgba(0,0,0,0.12)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <div className="relative w-6 h-6 rounded-[10px] bg-gradient-to-br from-emerald-500 to-teal-600 shadow-[4px_6px_10px_rgba(0,0,0,0.12)] flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-emerald-400">
                           <img
                             alt={apt.staff?.full_name || 'Staff'}
                             className="w-full h-full object-cover"
