@@ -27,7 +27,7 @@ export const Step4Contact: React.FC<Props> = ({ bookingData, onNameChange, onPho
         
         <div className="space-y-4">
           <div className="flex items-center gap-4 pb-4 border-b border-gray-700">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border-2 border-gray-600">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center ring-2 ring-emerald-400 ring-offset-2">
               <span className="text-lg font-bold text-white">{bookingData.selectedStaff?.firstName}</span>
             </div>
             <div>

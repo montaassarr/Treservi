@@ -41,6 +41,10 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showCalendar, setShowCalendar] = useState(false);
 
+  const staffById = React.useMemo(() => {
+    return new Map(staff.map((member) => [member.id, member]));
+  }, [staff]);
+
   const [formData, setFormData] = useState<Partial<CreateAppointmentInput>>({
     customer_name: '',
     customer_email: '',
@@ -357,7 +361,10 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                   </td>
                 </tr>
               ) : (
-                filteredAppointments.map(apt => (
+                filteredAppointments.map(apt => {
+                  const staffMember = apt.staff || (apt.staff_id ? staffById.get(apt.staff_id) : undefined);
+
+                  return (
                   <tr
                     key={apt.id}
                     className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
@@ -379,13 +386,13 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                       <div className="flex items-center gap-2">
                         <div className="relative w-6 h-6 rounded-[10px] bg-gradient-to-br from-emerald-500 to-teal-600 shadow-[4px_6px_10px_rgba(0,0,0,0.12)] flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-emerald-400">
                           <img
-                            alt={apt.staff?.full_name || 'Staff'}
+                            alt={staffMember?.full_name || 'Staff'}
                             className="w-full h-full object-cover"
-                            src={apt.staff?.avatar_url || '/avatar-staff.svg'}
+                            src={staffMember?.avatar_url || '/avatar-staff.svg'}
                           />
                           <div className="absolute inset-0 rounded-[10px] shadow-inner shadow-white/50"></div>
                         </div>
-                        <span>{apt.staff?.full_name || 'Unassigned'}</span>
+                        <span>{staffMember?.full_name || 'Unassigned'}</span>
                       </div>
                     </td>
                     <td className="py-4 text-gray-500 whitespace-nowrap">
@@ -438,7 +445,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -452,7 +460,10 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
               <p className="text-lg font-semibold text-gray-400">No appointments</p>
             </div>
           ) : (
-            filteredAppointments.map(apt => (
+            filteredAppointments.map(apt => {
+              const staffMember = apt.staff || (apt.staff_id ? staffById.get(apt.staff_id) : undefined);
+
+              return (
               <div key={apt.id} className="bg-gray-50 dark:bg-white/5 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
                 {/* Header: Time, Name, Status */}
                 <div className="flex items-start justify-between gap-2 mb-3">
@@ -489,7 +500,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 text-xs">Staff</span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{apt.staff?.full_name || 'Unassigned'}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{staffMember?.full_name || 'Unassigned'}</span>
                   </div>
                   {apt.customer_phone && (
                     <div className="flex items-center justify-between">
@@ -525,7 +536,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                   </button>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
