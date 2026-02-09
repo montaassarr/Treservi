@@ -272,13 +272,15 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
                   }`}
                 >
                   {/* Avatar */}
-                  <div className="relative w-14 h-14 rounded-[20px] bg-gradient-to-br from-emerald-500 to-teal-600 shadow-[6px_10px_18px_rgba(0,0,0,0.12)] flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-emerald-400 ring-offset-2">
-                    <img
-                      alt={member.full_name}
-                      className="w-full h-full object-cover"
-                      src={member.avatar_url || '/avatar-staff.svg'}
+                  <div className="relative flex-shrink-0">
+                    <Avatar
+                      name={member.full_name}
+                      role={member.role}
+                      avatarUrl={member.avatar_url}
+                      size="xl"
+                      className="w-14 h-14 text-sm"
+                      showRing
                     />
-                    <div className="absolute inset-0 rounded-[20px] shadow-inner shadow-white/50"></div>
                   </div>
 
                   {/* Info */}

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BookingStaff as Staff, Translations } from '../../types';
 import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Avatar from '../Avatar';
 
 interface Props {
   staff: Staff;
@@ -118,8 +119,8 @@ export const Step2DateTime: React.FC<Props> = ({ staff, selectedDate, selectedTi
         animate={{ opacity: 1, y: 0 }}
         className={`${staff.bgColor} p-4 rounded-3xl flex items-center gap-4 bg-opacity-50`}
       >
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center ring-2 ring-emerald-400 ring-offset-2">
-          <span className="text-lg font-bold text-white">{staff.firstName}</span>
+        <div className="relative">
+          <Avatar name={staff.name} role="staff" size="xl" showRing />
         </div>
         <div>
           <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{t.specialist}</p>
