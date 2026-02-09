@@ -29,20 +29,29 @@ seedRouter.post('/init', async (req, res) => {
       console.log('✅ Salon already exists:', salon?.name);
     }
 
-    // Create admin user
+    // Create admin user (as super admin for full access)
     const existingUser = await User.findOne({ email: env.seedAdminEmail.toLowerCase() });
     if (!existingUser) {
       const passwordHash = await hashPassword(env.seedAdminPassword);
       const user = await User.create({
         email: env.seedAdminEmail.toLowerCase(),
         passwordHash,
-        role: 'owner',
+        role: 'super_admin',
+        isSuperAdmin: true,
         salonId: salon?.id,
-        fullName: 'Owner Admin'
+        fullName: 'Owner Admin (Super Admin)'
       });
-      console.log('✅ Admin user created:', user.email);
+      console.log('✅ Admin user created as super admin:', user.email);
     } else {
-      console.log('✅ Admin user already exists:', existingUser.email);
+      // Update existing user to super admin if not already
+      if (!existingUser.isSuperAdmin) {
+        existingUser.role = 'super_admin';
+        existingUser.isSuperAdmin = true;
+        await existingUser.save();
+        console.log('✅ Updated existing user to super admin:', existingUser.email);
+      } else {
+        console.log('✅ Admin user already exists as super admin:', existingUser.email);
+      }
     }
 
     // Create super admin
@@ -67,7 +76,15 @@ seedRouter.post('/init', async (req, res) => {
       message: 'Database seeded successfully',
       data: {
         salon: salon?.name,
-        users: ['owner@barbershop.com', 'superadmin@barbershop.com']
+        users: [
+          { email: 'owner@barbershop.com', role: 'super_admin', note: 'Use this for full admin access' },
+          { email: 'superadmin@barbershop.com', role: 'super_admin', note: 'Alternative super admin' }
+        ],
+        credentials: {
+          email: 'owner@barbershop.com',
+          password: 'ChangeMe123!',
+          access: 'Full super admin access to admin dashboard'
+        }
       }
     });
   } catch (error) {
