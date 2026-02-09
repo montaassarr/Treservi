@@ -56,18 +56,15 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Deploy backend to Render
-        run: echo "✅ Render auto-deploys from GitHub"
-      
-      - name: Deploy frontend to Vercel
-        working-directory: barber-frontend
+      - name: Deploy summary
         run: |
-          npm install -g vercel
-          vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
-      
-      - name: Deployment complete
-        run: |
-          echo "✅ Backend: https://barber-hcv8.onrender.com"
-          echo "✅ Frontend: https://resevini.vercel.app"
+          echo "✅ Backend: Render auto-deploys from GitHub"
+          echo "✅ Frontend: Vercel auto-deploys from GitHub"
+          echo ""
+          echo "Monitor deployments:"
+          echo "  Backend: https://dashboard.render.com/web/srv-barber-hcv8"
+          echo "  Frontend: https://vercel.com/montaassarrs-projects/barber"
+          echo ""
+          echo "Live URLs:"
+          echo "  Backend: https://barber-hcv8.onrender.com"
+          echo "  Frontend: https://resevini.vercel.app"
