@@ -13,8 +13,8 @@ import {
   CheckCircle,
   X
 } from 'lucide-react';
-import { supabase } from '../services/supabaseClient';
 import { useLanguage } from '../context/LanguageContext';
+import { apiClient } from '../services/apiClient';
 
 interface SettingsProps {
   salonId: string;
@@ -80,17 +80,10 @@ const Settings: React.FC<SettingsProps> = ({ salonId }) => {
   }, [salonId]);
 
   const loadSettings = async () => {
-    if (!supabase || !salonId) return;
+    if (!salonId) return;
     
     try {
-      const { data, error } = await supabase
-        .from('salons')
-        .select('*')
-        .eq('id', salonId)
-        .single();
-
-      if (error) throw error;
-
+      const data = await apiClient.getSalonById(salonId);
       if (data) {
         setSettings({
           name: data.name || '',
@@ -116,32 +109,15 @@ const Settings: React.FC<SettingsProps> = ({ salonId }) => {
   };
 
   const handleSave = async () => {
-    if (!supabase || !salonId) return;
+    if (!salonId) return;
     
     setSaving(true);
     setError(null);
     setSuccess(false);
 
     try {
-      const { error } = await supabase
-        .from('salons')
-        .update({
-          name: settings.name,
-          address: settings.address,
-          city: settings.city,
-          country: settings.country,
-          contact_phone: settings.contact_phone,
-          contact_email: settings.contact_email,
-          logo_url: settings.logo_url,
-          opening_time: settings.opening_time,
-          closing_time: settings.closing_time,
-          open_days: settings.open_days,
-          latitude: settings.latitude,
-          longitude: settings.longitude,
-        })
-        .eq('id', salonId);
-
-      if (error) throw error;
+      console.warn('Settings: update endpoint not implemented');
+      throw new Error('Save not available yet');
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -164,24 +140,11 @@ const Settings: React.FC<SettingsProps> = ({ salonId }) => {
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !supabase) return;
+    if (!file) return;
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${salonId}-logo.${fileExt}`;
-      const filePath = `salon-logos/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('public')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('public')
-        .getPublicUrl(filePath);
-
-      setSettings(prev => ({ ...prev, logo_url: publicUrl }));
+      console.warn('Settings: image upload not implemented');
+      throw new Error('Image upload not available yet');
     } catch (err: any) {
       console.error('Error uploading image:', err);
       setError('Failed to upload image');

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Scissors, Lock, Mail, ArrowRight } from 'lucide-react';
-import { supabase } from '../services/supabaseClient';
+import { apiClient } from '../services/apiClient';
 
 interface LoginProps {
   onLogin: (email: string) => void;
@@ -26,26 +26,14 @@ const Login: React.FC<LoginProps> = ({
     setIsLoading(true);
 
     try {
-      // Sign in with Supabase
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        setError(signInError.message);
-        setIsLoading(false);
-        return;
-      }
-
-      if (data.user) {
-        // Store the user session
-        localStorage.setItem('user_email', data.user.email || '');
-        onLogin(data.user.email || '');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred');
+      const result = await apiClient.login(email, password);
+      localStorage.setItem('user_email', result.user.email || '');
+      localStorage.setItem('user_id', result.user.id);
+      onLogin(result.user.email || '');
+    } catch (err: any) {
+      setError(err?.message || 'An unexpected error occurred');
       console.error(err);
+    } finally {
       setIsLoading(false);
     }
   };

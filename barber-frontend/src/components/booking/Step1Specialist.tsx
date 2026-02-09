@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BookingStaff as Staff, Translations } from '../../types';
 import { Star, ArrowUpRight, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Avatar from '../Avatar';
 
 interface Props {
   onSelect: (staff: Staff) => void;
@@ -66,10 +67,12 @@ export const Step1Specialist: React.FC<Props> = ({ onSelect, staffList, t, selec
             >
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-sm">
-                    <span className="text-2xl font-bold text-white">{staff.firstName}</span>
-                  </div>
-                  {/* Rating removed as per request */}
+                  <Avatar
+                    name={staff.name}
+                    role="staff"
+                    avatarUrl={staff.avatarUrl}
+                    size="xl"
+                  />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">{staff.name}</h3>

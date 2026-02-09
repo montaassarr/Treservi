@@ -22,8 +22,8 @@ import {
 import { fetchServices } from '../services/serviceService';
 import { fetchStaff } from '../services/staffService';
 import { formatPrice } from '../utils/format';
-import { supabase } from '../services/supabaseClient';
 import DailyScheduleView from './DailyScheduleView';
+import Avatar from './Avatar';
 
 interface AppointmentsProps {
   salonId: string;
@@ -104,16 +104,11 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
       });
       
       // Update appointments to Completed in the database
-      if (appointmentsToComplete.length > 0 && supabase) {
+      if (appointmentsToComplete.length > 0) {
         await Promise.all(
-          appointmentsToComplete.map(id => 
-            supabase
-              .from('appointments')
-              .update({ status: 'Completed' })
-              .eq('id', id)
-          )
+          appointmentsToComplete.map((id) => updateAppointment(id, { status: 'Completed' }))
         );
-        
+
         // Update local state
         loadedAppointments.forEach((apt: AppointmentData) => {
           if (appointmentsToComplete.includes(apt.id)) {
@@ -134,23 +129,6 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
 
   useEffect(() => {
     loadData();
-
-    if (!supabase) return;
-    const channel = supabase
-      .channel('appointments-owner')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'appointments',
-        filter: `salon_id=eq.${salonId}`,
-      }, () => {
-        loadData();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [salonId]);
 
   const resetForm = () => {
@@ -386,9 +364,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                   >
                     <td className="py-4 pl-4 first:rounded-l-2xl">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                          {apt.customer_name.charAt(0).toUpperCase()}
-                        </div>
+                        <Avatar name={apt.customer_name} role="customer" size="sm" showRing={false} />
                         <div>
                           <p className="font-semibold text-gray-900 dark:text-gray-100">
                             {apt.customer_name}
@@ -400,7 +376,17 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                       </div>
                     </td>
                     <td className="py-4 text-gray-500">
-                      {apt.staff?.full_name || 'Unassigned'}
+                      <div className="flex items-center gap-2">
+                        <div className="relative w-6 h-6 rounded-[10px] bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100 shadow-[4px_6px_10px_rgba(0,0,0,0.12)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                          <img
+                            alt={apt.staff?.full_name || 'Staff'}
+                            className="w-full h-full object-cover"
+                            src={apt.staff?.avatar_url || '/avatar-staff.svg'}
+                          />
+                          <div className="absolute inset-0 rounded-[10px] shadow-inner shadow-white/50"></div>
+                        </div>
+                        <span>{apt.staff?.full_name || 'Unassigned'}</span>
+                      </div>
                     </td>
                     <td className="py-4 text-gray-500 whitespace-nowrap">
                       {apt.service?.name || 'N/A'}
@@ -476,9 +462,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                       <span className="text-sm font-bold text-gray-900 dark:text-white">{apt.appointment_time}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                        {apt.customer_name.charAt(0).toUpperCase()}
-                      </div>
+                      <Avatar name={apt.customer_name} role="customer" size="sm" showRing={false} />
                       <span className="text-sm font-semibold text-gray-900 dark:text-white">{apt.customer_name}</span>
                     </div>
                   </div>

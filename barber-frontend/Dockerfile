@@ -11,12 +11,12 @@ RUN npm ci --legacy-peer-deps
 # Copy source
 COPY . .
 
-# Build with Supabase environment passed at build time
-ARG VITE_SUPABASE_URL
-ARG VITE_SUPABASE_ANON_KEY
-ENV VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
-ENV VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
-RUN npm run build
+# Build with API environment passed at build time
+ARG VITE_API_BASE_URL
+ARG VITE_VAPID_PUBLIC_KEY
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY}
+RUN npm ci --legacy-peer-deps --include=dev && npm run build --
 
 # Stage 2: serve static assets with nginx
 FROM nginx:stable-alpine AS runner

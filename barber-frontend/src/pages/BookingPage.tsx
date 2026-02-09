@@ -9,10 +9,9 @@ import { Step4Contact } from '../components/booking/Step4Contact';
 import { BookingState, Language, Translations, BookingStaff as Staff, BookingService as Service } from '../types';
 import { ArrowLeft, CheckCircle, MessageCircle, Globe, MapPin, Navigation } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { supabase } from '../services/supabaseClient';
-import { fetchStaff } from '../services/staffService';
+import { fetchPublicStaff } from '../services/staffService';
 import { fetchServices } from '../services/serviceService';
-import { createAppointment, checkDuplicateBooking, checkSlotAvailability, checkSpamBookings } from '../services/appointmentService';
+import { createPublicAppointment, checkDuplicateBooking, checkSlotAvailability, checkSpamBookings, fetchAppointments } from '../services/appointmentService';
 import { useNavigate } from 'react-router-dom';
 
 import { isValidTunisianPhone } from '../utils/validationUtils';
@@ -186,7 +185,9 @@ export default function BookingPage() {
       
       // Load staff FIRST (priority) - show to user immediately
       try {
-        const { data: staff, error: staffError } = await fetchStaff(salon.id);
+        console.log('[BookingPage] Fetching staff for salon:', salon.id);
+        const { data: staff, error: staffError } = await fetchPublicStaff(salon.id);
+        console.log('[BookingPage] Staff fetched:', staff, 'Error:', staffError);
         if (staff) {
           const mappedStaff: Staff[] = staff.map(s => ({
             id: s.id,
@@ -196,8 +197,10 @@ export default function BookingPage() {
             price: 0,
             firstName: s.full_name.split(' ')[0],
             bgColor: 'bg-gray-50', 
-            category: (s.specialty === 'Barber' || s.specialty === 'Colorist') ? s.specialty : 'Stylist'
+            category: (s.specialty === 'Barber' || s.specialty === 'Colorist') ? s.specialty : 'Stylist',
+            avatarUrl: s.avatar_url
           }));
+          console.log('[BookingPage] Mapped staff:', mappedStaff);
           setStaffData(mappedStaff);
         }
         setStaffLoaded(true);
@@ -240,31 +243,27 @@ export default function BookingPage() {
 
   useEffect(() => {
     const loadBookedTimes = async () => {
-      if (!supabase || !salon?.id || !booking.selectedStaff || !booking.selectedDate) {
+      if (!salon?.id || !booking.selectedStaff || !booking.selectedDate) {
         setBookedTimes([]);
         return;
       }
 
       const dateKey = booking.selectedDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' });
       console.log('Loading booked times for date:', dateKey, 'staff:', booking.selectedStaff.id);
-      
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('appointment_time, status')
-        .eq('salon_id', salon.id)
-        .eq('staff_id', booking.selectedStaff.id)
-        .eq('appointment_date', dateKey)
-        .in('status', ['Confirmed', 'Pending', 'confirmed', 'pending']);
 
+      const { data, error } = await fetchAppointments(salon.id);
       if (error) {
         console.error('Error loading booked times:', error);
         setBookedTimes([]);
         return;
       }
 
-      console.log('Booked appointments:', data);
-      
       const times = (data || [])
+        .filter((item: any) =>
+          item.appointment_date === dateKey &&
+          String(item.staff_id) === String(booking.selectedStaff?.id) &&
+          ['Confirmed', 'Pending', 'confirmed', 'pending'].includes(item.status)
+        )
         .map((item: any) => (item.appointment_time || '').slice(0, 5))
         .filter((time: string) => Boolean(time));
       
@@ -273,32 +272,6 @@ export default function BookingPage() {
     };
 
     loadBookedTimes();
-
-    if (!supabase || !salon?.id || !booking.selectedStaff) return;
-    const channel = supabase
-      .channel(`booking-slots-${booking.selectedStaff.id}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'appointments',
-      }, (payload) => {
-        const record: any = payload.eventType === 'DELETE' ? payload.old : payload.new;
-        if (!record) return;
-        if (record.salon_id !== salon.id) return;
-        if (record.staff_id !== booking.selectedStaff.id) return;
-
-        if (booking.selectedDate) {
-          const dateKey = booking.selectedDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' });
-          if (record.appointment_date !== dateKey) return;
-        }
-
-        loadBookedTimes();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [salon?.id, booking.selectedStaff?.id, booking.selectedDate]);
   
   const nextStep = () => setBooking(prev => ({ ...prev, step: prev.step + 1 }));
@@ -338,7 +311,7 @@ export default function BookingPage() {
         }
 
         // All validations passed - create appointment
-        await createAppointment({
+        await createPublicAppointment({
           salon_id: salon.id,
           staff_id: booking.selectedStaff.id,
           service_id: booking.selectedService.id,

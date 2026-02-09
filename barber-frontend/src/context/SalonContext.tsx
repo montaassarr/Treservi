@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../services/supabaseClient';
+import { apiClient } from '../services/apiClient';
 
 interface Salon {
   id: string;
@@ -59,8 +59,8 @@ export const SalonProvider: React.FC<SalonProviderProps> = ({ children }) => {
     // Debug log
     console.log('[SalonContext] fetchSalon called with param:', salonParam);
     
-    if (!salonParam || !supabase) {
-      console.log('[SalonContext] No slug/id or supabase client, aborting.');
+    if (!salonParam) {
+      console.log('[SalonContext] No slug/id, aborting.');
       setIsLoading(false);
       return;
     }
@@ -69,34 +69,21 @@ export const SalonProvider: React.FC<SalonProviderProps> = ({ children }) => {
       setIsLoading(true);
       setError(null);
 
-      // Try fetching by slug first
-      let { data, error: fetchError } = await supabase
-          .from('salons')
-          .select('*')
-          .eq('slug', salonParam)
-          .single();
+      let data: Salon | null = null;
 
-      // If failed and looks like UUID, try by ID
-      if ((!data || fetchError) && /^[0-9a-fA-F-]{36}$/.test(salonParam)) {
+      try {
+        data = await apiClient.getSalonBySlug(salonParam);
+      } catch (slugError) {
+        if (/^[0-9a-fA-F-]{24}$/.test(salonParam)) {
           console.log('[SalonContext] Slug lookup failed, trying ID lookup for:', salonParam);
-          const { data: byId, error: errId } = await supabase
-            .from('salons')
-            .select('*')
-            .eq('id', salonParam)
-            .single();
-          
-          if (byId && !errId) {
-             data = byId;
-             fetchError = null;
-          }
+          data = await apiClient.getSalonById(salonParam);
+        } else {
+          throw slugError;
+        }
       }
 
-      if (fetchError) {
-        if (fetchError.code === 'PGRST116') {
-          setError('Salon not found');
-        } else {
-          setError('Failed to load salon');
-        }
+      if (!data) {
+        setError('Salon not found');
         setSalon(null);
       } else {
         console.log('[SalonContext] Salon loaded:', data);
@@ -104,7 +91,7 @@ export const SalonProvider: React.FC<SalonProviderProps> = ({ children }) => {
       }
     } catch (err) {
       console.error('[SalonContext] Error fetching salon:', err);
-      setError('An unexpected error occurred');
+      setError('Failed to load salon');
       setSalon(null);
     } finally {
       setIsLoading(false);

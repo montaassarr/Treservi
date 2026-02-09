@@ -2,7 +2,7 @@ import React from 'react';
 import { useSalon } from '../context/SalonContext';
 import { useParams, Navigate } from 'react-router-dom';
 import { Scissors, Lock, Mail, ArrowRight } from 'lucide-react';
-import { supabase } from '../services/supabaseClient';
+import { apiClient } from '../services/apiClient';
 
 interface LoginPageProps {
   onLogin: (email: string) => void;
@@ -28,23 +28,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isLoadingAuth, isAuthent
     setIsLoading(true);
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        setLoginError(signInError.message);
-        setIsLoading(false);
-        return;
-      }
-
-      if (data.user) {
-        localStorage.setItem('user_email', data.user.email || '');
-        onLogin(data.user.email || '');
-      }
-    } catch (err) {
-      setLoginError('An unexpected error occurred');
+      const result = await apiClient.login(email, password);
+      localStorage.setItem('user_email', result.user.email || '');
+      localStorage.setItem('user_id', result.user.id);
+      onLogin(result.user.email || '');
+    } catch (err: any) {
+      setLoginError(err?.message || 'An unexpected error occurred');
+    } finally {
       setIsLoading(false);
     }
   };

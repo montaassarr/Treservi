@@ -9,15 +9,16 @@ import {
 } from 'recharts';
 import { MoreHorizontal, ArrowUpRight, ArrowRight, Star, Plus, Pencil, Trash2, X, Check, Calendar, User, DollarSign, Clock, Scissors } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { supabase } from '../services/supabaseClient';
 import ResponsiveGrid from './ResponsiveGrid';
 import DailyScheduleView from './DailyScheduleView';
 import { Barber, Appointment, Comment, ChartData } from '../types';
-import { deleteAppointment } from '../services/appointmentService';
+import { deleteAppointment, fetchAppointments } from '../services/appointmentService';
 import { formatPrice } from '../utils/format';
 import { DashboardSkeleton } from './SkeletonLoader';
 import { fetchServices } from '../services/serviceService';
 import { Service } from '../types';
+import { fetchStaff } from '../services/staffService';
+import Avatar from './Avatar';
 
 
 // Default/placeholder data while loading
@@ -83,168 +84,116 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
       setIsLoadingData(true);
       setDataError(null);
 
-      // Security check: Verify user is owner
-      if (!supabase) throw new Error('Database connection failed');
-
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.user) throw new Error('Unauthorized access');
-
-      const { data: userData, error: userError } = await supabase
-        .from('staff')
-        .select('role, salon_id')
-        .eq('id', session.user.id)
-        .single();
-
-      if (userError || !userData || userData.role !== 'owner') throw new Error('Access denied: Not an owner');
-      setSalonId(userData.salon_id);
-      setUserId(session.user.id);
-
-      const calculateStartDate = () => {
-        const now = new Date();
-        switch (dateFilter) {
-          case '7d': now.setDate(now.getDate() - 7); break;
-          case '30d': now.setDate(now.getDate() - 30); break;
-          case '90d': now.setDate(now.getDate() - 90); break;
-          case '1y': now.setFullYear(now.getFullYear() - 1); break;
-        }
-        return now.toISOString();
-      };
-
-      // Fetch All Stats Data (Aggregated)
-      const { data: statsData, error: statsError } = await supabase
-        .from('appointments')
-        .select('amount, appointment_date, status, staff_id, customer_phone')
-        .eq('salon_id', userData.salon_id)
-        .gte('appointment_date', calculateStartDate())
-        .neq('status', 'Cancelled');
-
-      if (statsError) throw statsError;
-
-      // Calculate Totals
-      const totalBookings = statsData.length;
-      const totalRevenue = statsData.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-      setStats({ bookings: totalBookings, revenue: totalRevenue });
-
-      // Calculate Chart Data (Group by Day)
-      const groupedData = statsData.reduce((acc: any, curr) => {
-        const date = curr.appointment_date; // YYYY-MM-DD
-        // Format Date to Day Name (e.g., "Mon") if 7d, or "DD MMM" otherwise
-        const d = new Date(date);
-        const key = dateFilter === '7d'
-          ? d.toLocaleDateString('en-US', { weekday: 'short' })
-          : d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-
-        acc[key] = (acc[key] || 0) + 1; // Count bookings
-        return acc;
-      }, {});
-
-      // Fill chart data structure
-      const newChartData = Object.keys(groupedData).map(key => ({
-        name: key,
-        value: groupedData[key]
-      }));
-
-      // If empty (no assignments), provide at least placeholders or empty state
-      setChartData(newChartData.length ? newChartData : defaultChartData);
-
-      // Fetch Staff & Calculate Performance
-      const { data: staffData, error: staffError } = await supabase
-        .from('staff')
-        .select('*')
-        .eq('salon_id', userData.salon_id)
-        .eq('status', 'Active');
-
-      if (staffData) {
-        // Group stats by staff_id
-        const staffStats: Record<string, { clients: Set<string>; revenue: number }> = {};
-
-        statsData.forEach((apt: any) => {
-          const sid = apt.staff_id;
-          if (!sid) return;
-
-          if (!staffStats[sid]) {
-            staffStats[sid] = { clients: new Set(), revenue: 0 };
-          }
-
-          // Track unique clients by phone number (fallback to random if no phone, though phone is required usually)
-          if (apt.customer_phone) {
-            staffStats[sid].clients.add(apt.customer_phone);
-          } else {
-            // Fallback to just counting if no phone (should not happen with new booking)
-            // We generate a unique key if no phone to just count it as +1
-            staffStats[sid].clients.add('anon-' + Math.random());
-          }
-
-          staffStats[sid].revenue += (Number(apt.amount) || 0);
-        });
-
-        const rankedStaff = staffData.map((s: any) => ({
-          id: s.id,
-          name: s.full_name,
-          firstName: s.full_name.split(' ')[0],
-          rating: 0, // No rating data in appointments
-          earnings: formatPrice(staffStats[s.id]?.revenue || 0),
-          clientCount: staffStats[s.id]?.clients.size || 0
-        })).sort((a, b) => {
-          // Sort by revenue desc
-          const revA = parseFloat(a.earnings.replace(/[^0-9.]/g, ''));
-          const revB = parseFloat(b.earnings.replace(/[^0-9.]/g, ''));
-          return revB - revA;
-        }).slice(0, 4);
-
-        setTopBarbers(rankedStaff);
+      if (!salonId) {
+        setChartData(defaultChartData);
+        setStats({ bookings: 0, revenue: 0 });
+        setTopBarbers(defaultTopBarbers);
+        setAppointments(defaultAppointments);
+        setServicesList([]);
+        return;
       }
 
-      // Fetch Recent Appointments (Limit 10)
-      const { data: listData, error: listError } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('salon_id', userData.salon_id)
-        .order('created_at', { ascending: false })
-        .limit(10);
+      const [appointmentsResponse, servicesResponse, staffResponse] = await Promise.all([
+        fetchAppointments(salonId),
+        fetchServices(salonId),
+        fetchStaff(salonId)
+      ]);
 
-      if (listData) {
-        const transformedAppointments: Appointment[] = listData.map((apt: any) => ({
+      if (appointmentsResponse.error) {
+        throw appointmentsResponse.error;
+      }
+
+      const appointmentsData = appointmentsResponse.data ?? [];
+      const servicesData = servicesResponse.data ?? [];
+      const staffData = staffResponse.data ?? [];
+
+      setServicesList(servicesData);
+
+      const serviceById = new Map(servicesData.map((service) => [service.id, service]));
+      const staffById = new Map(staffData.map((member) => [member.id, member]));
+
+      const mappedAppointments: Appointment[] = appointmentsData.map((apt) => {
+        const service = apt.service ?? serviceById.get(apt.service_id || '');
+        const staff = apt.staff ?? staffById.get(apt.staff_id || '');
+        return {
           id: apt.id,
           customerName: apt.customer_name,
           customerFirstName: apt.customer_name.split(' ')[0],
-          service: 'Service', // Join fetching usually better, keeping simple for now
-          time: apt.appointment_time || '00:00',
-          status: apt.status,
-          amount: formatPrice(apt.amount)
-        }));
-        setAppointments(transformedAppointments);
-      }
+          service: service?.name ?? 'Service',
+          time: apt.appointment_time,
+          status: apt.status as Appointment['status'],
+          amount: formatPrice(apt.amount || 0)
+        };
+      });
 
-      // Fetch Services for Modal
-      const { data: servicesData } = await fetchServices(userData.salon_id);
-      if (servicesData) setServicesList(servicesData);
+      const totalRevenue = appointmentsData.reduce((sum, apt) => sum + (apt.amount || 0), 0);
+      setStats({ bookings: appointmentsData.length, revenue: totalRevenue });
+
+      const today = new Date();
+      const daysRange = dateFilter === '30d' ? 30 : dateFilter === '90d' ? 90 : dateFilter === '1y' ? 365 : 7;
+      const chartBuckets = Array.from({ length: daysRange }, (_, index) => {
+        const date = new Date(today);
+        date.setDate(today.getDate() - (daysRange - 1 - index));
+        const label = date.toLocaleDateString('en-US', { weekday: 'short' });
+        const key = date.toISOString().split('T')[0];
+        return { key, name: label, value: 0 };
+      });
+
+      const bucketMap = new Map(chartBuckets.map((bucket) => [bucket.key, bucket]));
+      appointmentsData.forEach((apt) => {
+        const bucket = bucketMap.get(apt.appointment_date);
+        if (bucket) {
+          bucket.value += 1;
+        }
+      });
+      setChartData(chartBuckets.map(({ name, value }) => ({ name, value })));
+
+      const barberStats = new Map<string, number>();
+      appointmentsData.forEach((apt) => {
+        if (apt.staff_id) {
+          barberStats.set(apt.staff_id, (barberStats.get(apt.staff_id) || 0) + 1);
+        }
+      });
+
+      const topBarbersData: Barber[] = Array.from(barberStats.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([staffId, count], index) => {
+          const staff = staffById.get(staffId);
+          const name = staff?.full_name || staff?.email || `Staff ${index + 1}`;
+          return {
+            id: staffId,
+            name,
+            firstName: name.split(' ')[0],
+            rating: 0,
+            earnings: formatPrice(0),
+            avatarUrl: staff?.avatar_url
+          };
+        });
+
+      setTopBarbers(topBarbersData);
+
+      const upcomingAppointments = mappedAppointments
+        .filter((apt) => {
+          const aptDate = appointmentsData.find((item) => item.id === apt.id)?.appointment_date;
+          if (!aptDate) return true;
+          return aptDate >= today.toISOString().split('T')[0];
+        })
+        .slice(0, 8);
+
+      setAppointments(upcomingAppointments);
     } catch (error: any) {
       setDataError(error?.message || 'Failed to load dashboard');
     } finally {
       setIsLoadingData(false);
     }
-  }, [dateFilter]);
+  }, [dateFilter, salonId]);
 
   // Load data on component mount - Security: Verify owner role and fetch real data
   useEffect(() => {
-    let subscription: any;
-
     if (userRole === 'owner') {
       loadDashboardData();
-
-      // Realtime Subscription
-      subscription = supabase
-        .channel('dashboard-realtime')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => {
-          loadDashboardData(); // Refresh all data on any change
-        })
-        .subscribe();
     }
-
-    return () => {
-      if (subscription) supabase.removeChannel(subscription);
-    };
   }, [userRole, dateFilter, loadDashboardData]); // Re-run when filter changes
 
   // Security: Prevent staff from accessing this component
@@ -518,7 +467,10 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                   {appointments.map((apt) => (
                     <tr key={apt.id} className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <td className="py-4 pl-4 first:rounded-l-2xl last:rounded-r-2xl">
-                        <span className="font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">{apt.customerFirstName}</span>
+                        <div className="flex items-center gap-3">
+                          <Avatar name={apt.customerName} role="customer" size="sm" showRing={false} />
+                          <span className="font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">{apt.customerFirstName}</span>
+                        </div>
                       </td>
                       <td className="py-4 text-gray-500 whitespace-nowrap">{apt.service}</td>
                       <td className="py-4 text-gray-500 whitespace-nowrap">{apt.time}</td>
@@ -574,6 +526,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                           <span className="text-sm font-bold text-gray-900 dark:text-white">{apt.time}</span>
                         </div>
                         <div className="flex items-center gap-2">
+                          <Avatar name={apt.customerName} role="customer" size="sm" showRing={false} />
                           <span className="font-semibold text-gray-900 dark:text-white text-sm">{apt.customerFirstName}</span>
                         </div>
                       </div>
@@ -640,6 +593,14 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                   topBarbers.slice(0, 3).map(barber => (
                     <div key={barber.id} className="flex items-center justify-between p-2 sm:p-3 bg-white/10 rounded-xl border border-white/5 hover:bg-white/15 transition-colors">
                       <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="relative w-8 h-8 rounded-[12px] bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100 shadow-[4px_6px_10px_rgba(0,0,0,0.12)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                          <img
+                            alt={barber.name}
+                            className="w-full h-full object-cover"
+                            src={barber.avatarUrl || '/avatar-staff.svg'}
+                          />
+                          <div className="absolute inset-0 rounded-[12px] shadow-inner shadow-white/50"></div>
+                        </div>
                         <div>
                           <p className="text-xs sm:text-sm font-bold">{barber.firstName}</p>
                           <div className="text-[10px] sm:text-xs font-medium text-gray-400">

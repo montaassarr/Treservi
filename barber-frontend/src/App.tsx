@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from './services/supabaseClient';
+import { apiClient, authStorage, AuthUser } from './services/apiClient';
 import { LanguageProvider } from './context/LanguageContext';
 import { SalonProvider } from './context/SalonContext';
 import { parseDeepLink, saveAppState, restoreAppState, saveSalonPreference } from './utils/stateManager';
@@ -40,56 +40,25 @@ const AppRoutes: React.FC = () => {
     ]);
   };
 
-  const fetchUserData = useCallback(async (userId: string, email: string) => {
-    if (!supabase) return;
-    try {
-      // First, check if user is in staff table
-      const { data: staffData } = await supabase
-        .from('staff')
-        .select('id, full_name, role, salon_id, is_super_admin')
-        .eq('id', userId)
-        .single();
-      if (staffData) {
-        // User is a staff member or owner
-        setUserRole(staffData.role);
-        setStaffName(staffData.full_name);
-        setSalonId(staffData.salon_id || '');
-        setIsSuperAdmin(staffData.is_super_admin || false);
+  const applyUserState = useCallback((user: AuthUser) => {
+    setUserEmail(user.email || '');
+    setUserId(user.id || '');
+    setUserRole(user.role || 'owner');
+    setStaffName(user.fullName || '');
+    setSalonId(user.salonId || '');
+    setUserSalonSlug(user.salonSlug || '');
+    setIsSuperAdmin(Boolean(user.isSuperAdmin || user.role === 'super_admin'));
+  }, []);
 
-        // Fetch the salon slug
-        if (staffData.salon_id) {
-          try {
-            const { data: salonData } = await supabase
-              .from('salons')
-              .select('slug')
-              .eq('id', staffData.salon_id)
-              .single();
-
-            if (salonData?.slug) {
-              setUserSalonSlug(salonData.slug);
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      } else {
-        // Fallback: check if owner by email
-        const { data: salonData } = await supabase
-          .from('salons')
-          .select('id, slug')
-          .eq('owner_email', email)
-          .single();
-
-        if (salonData) {
-          setSalonId(salonData.id);
-          setUserSalonSlug(salonData.slug || '');
-          setUserRole('owner');
-          setIsSuperAdmin(false);
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching user data:', err);
-    }
+  const resetAuthState = useCallback(() => {
+    setIsAuthenticated(false);
+    setUserEmail('');
+    setUserId('');
+    setUserRole('owner');
+    setStaffName('');
+    setSalonId('');
+    setUserSalonSlug('');
+    setIsSuperAdmin(false);
   }, []);
 
   // Track route changes to save state for PWA restoration
@@ -115,31 +84,27 @@ const AppRoutes: React.FC = () => {
 
     const initAuth = async () => {
       console.log('[App] Starting initAuth');
-      if (!supabase) {
-        if (mounted) setIsLoadingAuth(false);
-        return;
-      }
-
       try {
-        const { data: { session } } = await withTimeout(
-          supabase.auth.getSession(),
-          4000,
-          { data: { session: null } } as any
-        );
+        const token = authStorage.getToken();
+        if (!token) {
+          if (mounted) resetAuthState();
+          return;
+        }
 
-        if (session?.user && mounted) {
-          console.log('[App] Session found:', session.user.id);
-          setUserEmail(session.user.email || '');
-          setUserId(session.user.id);
+        const me = await withTimeout(apiClient.getMe(), 4000, null as any);
+        if (me && mounted) {
           setIsAuthenticated(true);
-          // Fetch user data asynchronously without blocking
-          await withTimeout(fetchUserData(session.user.id, session.user.email || ''), 4000, undefined as any);
+          applyUserState(me);
         } else if (mounted) {
-          setIsAuthenticated(false);
+          authStorage.clearToken();
+          resetAuthState();
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        if (mounted) setIsAuthenticated(false);
+        if (mounted) {
+          authStorage.clearToken();
+          resetAuthState();
+        }
       } finally {
         if (mounted) {
           console.log('[App] initAuth finished, setting isLoadingAuth false');
@@ -151,30 +116,10 @@ const AppRoutes: React.FC = () => {
     // Start init
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-
-      if (session?.user) {
-        setIsAuthenticated(true);
-        setUserEmail(session.user.email || '');
-        setUserId(session.user.id);
-        // Don't set loading false immediately, wait for user data
-        await withTimeout(fetchUserData(session.user.id, session.user.email || ''), 4000, undefined as any);
-        setIsLoadingAuth(false);
-      } else {
-        setIsAuthenticated(false);
-        setIsLoadingAuth(false);
-        setUserEmail('');
-        setUserId('');
-        // Logic for redirecting logged out users is handled by ProtectedRoute
-      }
-    });
-
     return () => {
       mounted = false;
-      subscription?.unsubscribe();
     };
-  }, [fetchUserData]);
+  }, [applyUserState, resetAuthState, withTimeout]);
 
   // Save current route for PWA state restoration
   useEffect(() => {
@@ -187,27 +132,26 @@ const AppRoutes: React.FC = () => {
     }
   }, [location.pathname]);
 
-  const handleLogin = useCallback(async (email: string) => {
-    // This is essentially a callback for UI updates, but auth state is handled by listener
-    setUserEmail(email);
-  }, []);
+  const handleLogin = useCallback(async (_email: string) => {
+    setIsLoadingAuth(true);
+    try {
+      const me = await withTimeout(apiClient.getMe(), 4000, null as any);
+      if (me) {
+        setIsAuthenticated(true);
+        applyUserState(me);
+      }
+    } catch (error) {
+      console.error('Login sync failed:', error);
+    } finally {
+      setIsLoadingAuth(false);
+    }
+  }, [applyUserState, withTimeout]);
 
   const handleLogout = useCallback(async () => {
     const wasSuperAdmin = isSuperAdmin;
     const previousSlug = userSalonSlug;
-
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
-
-    setIsAuthenticated(false);
-    setUserEmail('');
-    setUserId('');
-    setUserRole('owner');
-    setStaffName('');
-    setSalonId('');
-    setUserSalonSlug('');
-    setIsSuperAdmin(false);
+    authStorage.clearToken();
+    resetAuthState();
 
     if (wasSuperAdmin) {
       navigate('/admin/login', { replace: true });
@@ -216,7 +160,7 @@ const AppRoutes: React.FC = () => {
     } else {
       navigate('/', { replace: true });
     }
-  }, [navigate, isSuperAdmin, userSalonSlug]);
+  }, [navigate, isSuperAdmin, userSalonSlug, resetAuthState]);
 
   // Auto-redirect logic for root path with salon detection (Deep Linking)
   useEffect(() => {
