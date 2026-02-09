@@ -231,8 +231,8 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
         <div className={`lg:col-span-2 ${clayCard} p-6`}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-[18px] bg-gradient-to-br from-gray-50 via-white to-gray-200 shadow-inner shadow-white/60 flex items-center justify-center">
-                <Users className="text-gray-800" />
+              <div className="w-12 h-12 rounded-[18px] bg-gradient-to-br from-emerald-500 to-teal-600 shadow-inner shadow-white/60 flex items-center justify-center ring-2 ring-emerald-400 ring-offset-2">
+                <Users className="text-white" />
               </div>
               <div>
                 <h2 className="text-xl font-bold">Staff Roster</h2>
