@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import { env } from './config/env.js';
+import { logger } from './utils/logger.js';
+import { requestLogger } from './middleware/requestLogger.js';
 import { authRouter } from './routes/auth.js';
 import { salonsRouter } from './routes/salons.js';
 import { servicesRouter } from './routes/services.js';
@@ -10,6 +12,7 @@ import { staffRouter } from './routes/staff.js';
 import { appointmentsRouter } from './routes/appointments.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { adminRouter } from './routes/admin.js';
+import { seedRouter } from './routes/seed.js';
 
 export const createApp = () => {
   const app = express();
@@ -21,6 +24,7 @@ export const createApp = () => {
     })
   );
   app.use(express.json());
+  app.use(requestLogger);
 
   // Health check endpoint with detailed monitoring
   app.get('/health', async (_req, res) => {
@@ -70,13 +74,13 @@ export const createApp = () => {
   app.use('/api/appointments', appointmentsRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/admin', adminRouter);
+  app.use('/api/seed', seedRouter);
 
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error('❌ Error:', err);
-    
-    // Log error details for monitoring
     if (err instanceof Error) {
-      console.error('Error stack:', err.stack);
+      logger.error(`Unhandled error: ${err.message}`, err, 'ERROR_HANDLER');
+    } else {
+      logger.error('Unhandled unknown error', err, 'ERROR_HANDLER');
     }
     
     res.status(500).json({ 
