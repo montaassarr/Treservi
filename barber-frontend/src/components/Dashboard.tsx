@@ -593,13 +593,14 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                   topBarbers.slice(0, 3).map(barber => (
                     <div key={barber.id} className="flex items-center justify-between p-2 sm:p-3 bg-white/10 rounded-xl border border-white/5 hover:bg-white/15 transition-colors">
                       <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="relative w-8 h-8 rounded-[12px] bg-gradient-to-br from-emerald-500 to-teal-600 shadow-[4px_6px_10px_rgba(0,0,0,0.12)] flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-emerald-400">
-                          <img
-                            alt={barber.name}
-                            className="w-full h-full object-cover"
-                            src={barber.avatarUrl || '/avatar-staff.svg'}
+                        <div className="relative flex-shrink-0">
+                          <Avatar
+                            name={barber.name}
+                            role="staff"
+                            avatarUrl={barber.avatarUrl}
+                            size="sm"
+                            showRing
                           />
-                          <div className="absolute inset-0 rounded-[12px] shadow-inner shadow-white/50"></div>
                         </div>
                         <div>
                           <p className="text-xs sm:text-sm font-bold">{barber.firstName}</p>

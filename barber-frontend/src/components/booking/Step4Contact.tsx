@@ -2,6 +2,7 @@ import React from 'react';
 import { BookingState, Translations } from '../../types';
 import { Calendar, Clock, AlertCircle } from 'lucide-react';
 import { isValidTunisianPhone, getTunisianPhoneErrorMessage } from '../../utils/validationUtils';
+import Avatar from '../Avatar';
 
 interface Props {
   bookingData: BookingState;
@@ -27,8 +28,8 @@ export const Step4Contact: React.FC<Props> = ({ bookingData, onNameChange, onPho
         
         <div className="space-y-4">
           <div className="flex items-center gap-4 pb-4 border-b border-gray-700">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center ring-2 ring-emerald-400 ring-offset-2">
-              <span className="text-lg font-bold text-white">{bookingData.selectedStaff?.firstName}</span>
+            <div className="relative">
+              <Avatar name={bookingData.selectedStaff?.name || 'Staff'} role="staff" size="xl" showRing />
             </div>
             <div>
               <p className="text-gray-400 text-xs uppercase font-medium">{t.specialist}</p>

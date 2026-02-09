@@ -384,13 +384,14 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                     </td>
                     <td className="py-4 text-gray-500">
                       <div className="flex items-center gap-2">
-                        <div className="relative w-6 h-6 rounded-[10px] bg-gradient-to-br from-emerald-500 to-teal-600 shadow-[4px_6px_10px_rgba(0,0,0,0.12)] flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-emerald-400">
-                          <img
-                            alt={staffMember?.full_name || 'Staff'}
-                            className="w-full h-full object-cover"
-                            src={staffMember?.avatar_url || '/avatar-staff.svg'}
+                        <div className="relative flex-shrink-0">
+                          <Avatar
+                            name={staffMember?.full_name || 'Staff'}
+                            role="staff"
+                            avatarUrl={staffMember?.avatar_url}
+                            size="xs"
+                            showRing
                           />
-                          <div className="absolute inset-0 rounded-[10px] shadow-inner shadow-white/50"></div>
                         </div>
                         <span>{staffMember?.full_name || 'Unassigned'}</span>
                       </div>
