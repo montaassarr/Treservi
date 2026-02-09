@@ -67,6 +67,9 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
   const [comments, setComments] = useState<Comment[]>(defaultComments);
   const [appointments, setAppointments] = useState<Appointment[]>(defaultAppointments);
   const [servicesList, setServicesList] = useState<Service[]>([]);
+  const [staff, setStaff] = useState<any[]>([]);
+  const [filterStaffId, setFilterStaffId] = useState<string>('all');
+  const [appointmentsData, setAppointmentsData] = useState<any[]>([]);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -109,6 +112,9 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
       const staffData = staffResponse.data ?? [];
 
       setServicesList(servicesData);
+      setStaff(staffData);
+      setFilterStaffId('all');
+      setAppointmentsData(appointmentsData);
 
       const serviceById = new Map(servicesData.map((service) => [service.id, service]));
       const staffById = new Map(staffData.map((member) => [member.id, member]));
@@ -150,6 +156,8 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
       setChartData(chartBuckets.map(({ name, value }) => ({ name, value })));
 
       const barberStatsMap = new Map<string, { count: number; services: Set<string> }>();
+      const ownerStats = { count: 0, services: new Set<string>() };
+      
       appointmentsData.forEach((apt) => {
         if (apt.staff_id) {
           const existing = barberStatsMap.get(apt.staff_id) || { count: 0, services: new Set<string>() };
@@ -158,8 +166,19 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
             existing.services.add(apt.service.name);
           }
           barberStatsMap.set(apt.staff_id, existing);
+        } else {
+          // Count appointments without staff_id as owner's appointments
+          ownerStats.count += 1;
+          if (apt.service?.name) {
+            ownerStats.services.add(apt.service.name);
+          }
         }
       });
+
+      // Add owner to the map if they have appointments
+      if (ownerStats.count > 0 && userId) {
+        barberStatsMap.set('owner-' + userId, ownerStats);
+      }
 
       setBarberStats(barberStatsMap);
 
@@ -167,8 +186,21 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
         .sort((a, b) => b[1].count - a[1].count)
         .slice(0, 3)
         .map(([staffId, stats], index) => {
-          const staff = staffById.get(staffId);
-          const name = staff?.full_name || staff?.email || `Staff ${index + 1}`;
+          let staff;
+          let name;
+          let avatarUrl;
+          
+          if (staffId.startsWith('owner-')) {
+            // This is the owner
+            staff = { full_name: 'You (Owner)', email: 'owner' };
+            name = 'You (Owner)';
+            avatarUrl = undefined;
+          } else {
+            staff = staffById.get(staffId);
+            name = staff?.full_name || staff?.email || `Staff ${index + 1}`;
+            avatarUrl = staff?.avatar_url;
+          }
+          
           const servicesText = Array.from(stats.services).join(', ') || 'No services';
           return {
             id: staffId,
@@ -176,7 +208,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
             firstName: name.split(' ')[0],
             rating: 0,
             earnings: servicesText,
-            avatarUrl: staff?.avatar_url
+            avatarUrl
           };
         });
 
@@ -191,6 +223,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
         .slice(0, 8);
 
       setAppointments(upcomingAppointments);
+      setFilterStaffId('all');
     } catch (error: any) {
       setDataError(error?.message || 'Failed to load dashboard');
     } finally {
@@ -217,7 +250,18 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
     );
   }
 
-  const hasData = appointments.length > 0 || servicesList.length > 0 || topBarbers.length > 0 || comments.length > 0;
+  // Filter appointments based on selected staff
+  const filteredAppointments = React.useMemo(() => {
+    if (filterStaffId === 'all') {
+      return appointments;
+    }
+    return appointments.filter((apt) => {
+      const appointmentData = Array.isArray(appointmentsData) ? appointmentsData.find((item) => item.id === apt.id) : null;
+      return appointmentData?.staff_id === filterStaffId;
+    });
+  }, [appointments, filterStaffId]);
+
+  const hasData = filteredAppointments.length > 0 || servicesList.length > 0 || topBarbers.length > 0 || comments.length > 0;
   const showLoading = isLoadingData && !hasData;
 
   // Loading state
@@ -455,7 +499,18 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                 <button onClick={handleAddNew} className="flex items-center justify-center gap-2 bg-treservi-accent hover:bg-green-600 text-white px-4 py-3 sm:py-2 rounded-full text-sm font-bold shadow-neon-glow transition-all transform hover:scale-105 active:scale-95 min-h-[48px] sm:min-h-0">
                   <Plus size={18} className="sm:w-4 sm:h-4" /> <span className="sm:inline">{t('appointments.newAppointment')}</span>
                 </button>
-                <button className="hidden md:block text-sm font-medium text-gray-500 hover:text-black dark:hover:text-white px-3 py-2">{t('common.viewAll')}</button>
+                <select
+                  value={filterStaffId}
+                  onChange={(e) => setFilterStaffId(e.target.value)}
+                  className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2 sm:py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:border-treservi-accent transition-colors"
+                >
+                  <option value="all">All Staff</option>
+                  {staff.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.full_name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -473,7 +528,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  {appointments.map((apt) => (
+                  {filteredAppointments.map((apt) => (
                     <tr key={apt.id} className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <td className="py-4 pl-4 first:rounded-l-2xl last:rounded-r-2xl">
                         <div className="flex items-center gap-3">
@@ -520,12 +575,12 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
 
             {/* Mobile Card View - Visible on Mobile Only */}
             <div className="sm:hidden space-y-4">
-              {appointments.length === 0 ? (
+              {filteredAppointments.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <p className="text-sm">{t('appointments.noAppointments') || 'No appointments'}</p>
                 </div>
               ) : (
-                appointments.slice(0, 3).map((apt) => (
+                filteredAppointments.slice(0, 3).map((apt) => (
                   <div key={apt.id} className="bg-gray-50 dark:bg-white/5 rounded-[20px] p-4 border border-gray-100 dark:border-white/10 hover:border-treservi-accent transition-colors">
                     {/* Header: Time, Name, Status */}
                     <div className="flex items-start justify-between gap-2 mb-3">

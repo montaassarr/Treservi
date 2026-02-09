@@ -664,7 +664,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Date */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-600">Date</label>
@@ -690,23 +690,6 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                       type="time"
                       value={formData.appointment_time}
                       onChange={e => setFormData({ ...formData, appointment_time: e.target.value })}
-                      className="w-full rounded-full bg-gray-50 border border-transparent focus:border-emerald-500 focus:bg-white py-3 pl-12 pr-4 outline-none shadow-inner"
-                    />
-                  </div>
-                </div>
-
-                {/* Amount */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-600">Amount</label>
-                  <div className="relative">
-                     <span className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold">DT</span>
-                    <input
-                      required
-                      type="number"
-                      step="0.01"
-                      value={formData.amount}
-                      onChange={e => setFormData({ ...formData, amount: Number(e.target.value) })}
-                      placeholder="0.000"
                       className="w-full rounded-full bg-gray-50 border border-transparent focus:border-emerald-500 focus:bg-white py-3 pl-12 pr-4 outline-none shadow-inner"
                     />
                   </div>

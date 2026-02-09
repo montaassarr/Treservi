@@ -260,7 +260,7 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {staff.map((member) => (
                 <button
                   key={member.id}
@@ -327,6 +327,34 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
                       </button>
                     </div>
                   )}
+                </button>
+              ))}
+            </div>
+
+            {/* Mobile Horizontal Scroll View */}
+            <div className="sm:hidden flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+              {staff.map((member) => (
+                <button
+                  key={member.id}
+                  onClick={() => setSelectedStaff(member)}
+                  className={`group flex-shrink-0 w-32 flex flex-col items-center gap-2 p-3 rounded-[20px] text-center transition-all border-2 ${
+                    selectedStaff?.id === member.id
+                      ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500'
+                      : 'bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-[#1c1c1c] dark:via-[#1a1a1a] dark:to-[#111] border-white/70 dark:border-gray-800 hover:border-emerald-500'
+                  }`}
+                >
+                  <Avatar
+                    name={member.full_name}
+                    role={member.role}
+                    avatarUrl={member.avatar_url}
+                    size="lg"
+                  />
+                  <div>
+                    <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">
+                      {member.full_name}
+                    </p>
+                    <p className="text-[10px] text-gray-500 truncate">{member.specialty}</p>
+                  </div>
                 </button>
               ))}
             </div>
