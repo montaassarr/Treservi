@@ -1,0 +1,72 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: reservi-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin123
+      - MONGO_INITDB_DATABASE=barber
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./barber-backend-node
+      dockerfile: Dockerfile
+    container_name: reservi-backend
+    ports:
+      - "10000:10000"
+    environment:
+      - NODE_ENV=development
+      - PORT=10000
+      - MONGO_URI=mongodb://REDACTED:REDACTED@mongodb:27017/barber?authSource=admin
+      - JWT_SECRET=REDACTED
+      - CORS_ORIGIN=http://localhost:3000,http://localhost:5173
+      - SEED_ADMIN_EMAIL=owner@barbershop.com
+      - SEED_ADMIN_PASSWORD=ChangeMe123!
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:10000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./barber-frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=http://localhost:10000
+        - VITE_VAPID_PUBLIC_KEY=your-vapid-public-key
+    container_name: reservi-frontend
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local

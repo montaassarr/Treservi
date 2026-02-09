@@ -612,12 +612,14 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                           />
                         </div>
                         <div>
-                          <p className=\"text-xs sm:text-sm font-bold\">{barber.firstName}</p>
-                          <div className=\"text-[10px] sm:text-xs font-medium text-gray-400 truncate max-w-[120px]\">\n                            {barber.earnings}\n                          </div>
+                          <p className="text-xs sm:text-sm font-bold">{barber.firstName}</p>
+                          <div className="text-[10px] sm:text-xs font-medium text-gray-400 truncate max-w-[120px]">
+                            {barber.earnings}
+                          </div>
                         </div>
                       </div>
-                      <div className=\"text-right flex-shrink-0\">
-                        <div className=\"text-xs sm:text-sm font-bold text-treservi-accent\">
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-xs sm:text-sm font-bold text-treservi-accent">
                           {(barberStats.get(barber.id)?.count || 0)} appts
                         </div>
                       </div>
