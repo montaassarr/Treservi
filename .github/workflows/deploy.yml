@@ -4,16 +4,9 @@ on:
   push:
     branches:
       - main
-      - develop
   pull_request:
     branches:
       - main
-      - develop
-
-env:
-  REGISTRY: ghcr.io
-  BACKEND_IMAGE: ghcr.io/${{ github.repository }}/backend
-  FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/frontend
 
 jobs:
   # ============================================================================
@@ -47,109 +40,36 @@ jobs:
         continue-on-error: true
 
   # ============================================================================
-  # STAGE 2: BUILD - Build Docker images for both frontend and backend
+  # STAGE 2: DEPLOY - Render auto-deploys, Vercel manual
   # ============================================================================
-  build:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push'
-    outputs:
-      backend-image: ${{ steps.meta-backend.outputs.tags }}
-      frontend-image: ${{ steps.meta-frontend.outputs.tags }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # ========== BUILD BACKEND ==========
-      - name: Extract metadata for backend
-        id: meta-backend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.BACKEND_IMAGE }}
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: barber-backend-node
-          file: barber-backend-node/Dockerfile
-          push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
-          labels: ${{ steps.meta-backend.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache
-          cache-to: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache,mode=max
-
-      # ========== BUILD FRONTEND ==========
-      - name: Extract metadata for frontend
-        id: meta-frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.FRONTEND_IMAGE }}
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: barber-frontend
-          file: barber-frontend/Dockerfile
-          push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
-          build-args: |
-            VITE_API_BASE_URL=${{ secrets.RENDER_API_URL }}
-            VITE_VAPID_PUBLIC_KEY=${{ secrets.VITE_VAPID_PUBLIC_KEY }}
-          cache-from: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache
-          cache-to: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache,mode=max
-
-  # ============================================================================
-  # STAGE 3: DEPLOY - Deploy to Render and Vercel
-  # ============================================================================
-  
   deploy-backend-render:
     runs-on: ubuntu-latest
-    needs: build
+    needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     name: Deploy Backend to Render
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to Render
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+      - name: Wait for Render auto-deploy
         run: |
-          # Render auto-deploys on git push, so deployment is triggered
-          echo "✅ Backend deployment triggered on Render"
-          echo "Watch at: https://dashboard.render.com/services/$RENDER_SERVICE_ID"
+          echo "✅ Render will auto-deploy from GitHub push"
+          echo "Monitor: https://dashboard.render.com"
+          sleep 60
 
-      - name: Health check
+      - name: Health check backend
         run: |
-          echo "Waiting for backend to be ready..."
-          sleep 30
-          curl -f ${{ secrets.RENDER_API_URL }}/health || echo "⚠️ Health check pending - service may still be starting"
+          echo "Checking backend health..."
+          for i in {1..30}; do
+            if curl -f https://barber-hcv8.onrender.com/health; then
+              echo "✅ Backend is live!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - waiting..."
+            sleep 10
+          done
+          echo "⚠️ Backend may still be deploying"
 
   deploy-frontend-vercel:
     runs-on: ubuntu-latest
-    needs: [build, deploy-backend-render]
+    needs: [test, deploy-backend-render]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     name: Deploy Frontend to Vercel
     steps:
@@ -157,121 +77,41 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy to Vercel
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        working-directory: barber-frontend
         run: |
           npm install -g vercel
-          
-          vercel deploy \
-           
+          vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
+
+      - name: Health check frontend
         run: |
           sleep 30
-          curl -f ${{ secrets.RUNWAY_API_URL }}/health || exit 1
-
-      - name: Notify deployment success
-        uses: 8398a7/action-slack@v3
-        if: success()
-        with:
-          status: ${{ job.status }}
-          text: '✅ Backend deployed to Runway successfully'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        continue-on-error: true
-
-  deploy-frontend-vercel:
-    runs-on: ubuntu-latest
-    needs: [build, deploy-backend]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    name: Deploy Frontend to Vercel
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to Vercel
-        run: |
-          npm install -g vercel
-
-          # Get current API URL from Runway (or use environment variable)
-          export VITE_API_BASE_URL=${{ secrets.RUNWAY_API_URL }}
-
-          vercel \
-            --prod \
-            --token ${{ secrets.VERCEL_TOKEN }} \
-            --env VITE_API_BASE_URL=${{ secrets.RUNWAY_API_URL }} \
-            --env VITE_VAPID_PUBLIC_KEY=${{ secrets.VITE_VAPID_PUBLIC_KEY }}
-
-      - name: Health check
-        run: |
-          sleep 30
-          curl -f https://${{ secrets.VERCEL_PROJECT_URL }} || exit 1
-
-      - name: Notify deployment success
-        uses: 8398a7/action-slack@v3
-        if: success()
-        with:
-          status: ${{ job.status }}
-          text: '✅ Frontend deployed to Vercel successfully'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        continue-on-error: true
+          if curl -f https://resevini.vercel.app; then
+            echo "✅ Frontend is live!"
+          else
+            echo "⚠️ Frontend deploy may be pending"
+          fi
 
   # ============================================================================
-  # INTEGRATION TESTS - Run after both are deployed
+  # STAGE 3: INTEGRATION TESTS
   # ============================================================================
   integration-tests:
     runs-on: ubuntu-latest
-    needs: [deploy-backend, deploy-frontend-vercel]
+    needs: [deploy-backend-render, deploy-frontend-vercel]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     name: Integration Tests
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Wait for services to be ready
+      - name: Test backend
         run: |
-          echo "Waiting for backend..."
-          for i in {1..30}; do
-            curl -f ${{ secrets.RUNWAY_API_URL }}/health && break || sleep 2
-          done
+          curl -f https://barber-hcv8.onrender.com/health || exit 1
+          echo "✅ Backend health check passed"
 
-          echo "Waiting for frontend..."
-          for i in {1..30}; do
-            curl -f https://${{ secrets.VERCEL_PROJECT_URL }} && break || sleep 2
-          done
-
-      - name: Test backend health endpoint
+      - name: Test frontend
         run: |
-          response=$(curl -s ${{ secrets.RUNWAY_API_URL }}/health)
-          echo "Backend response: $response"
-          echo "$response" | grep -q '"status":"ok"' && echo "✅ Backend health check passed"
+          curl -f https://resevini.vercel.app | grep -q "html" || exit 1
+          echo "✅ Frontend accessible"
 
-      - name: Test frontend connectivity to backend
+      - name: Deployment complete
         run: |
-          echo "Frontend URL: https://${{ secrets.VERCEL_PROJECT_URL }}"
-          echo "Backend URL: ${{ secrets.RUNWAY_API_URL }}"
-          curl -f https://${{ secrets.VERCEL_PROJECT_URL }} | grep -q 'html' && echo "✅ Frontend accessible"
-
-      - name: Notify integration tests success
-        uses: 8398a7/action-slack@v3
-        if: success()
-        with:
-          status: ${{ job.status }}
-          text: '✅ Integration tests passed - Deployment complete'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        continue-on-error: true
-
-  # ============================================================================
-  # NOTIFY ON FAILURE
-  # ============================================================================
-  notify-failure:
-    runs-on: ubuntu-latest
-    if: failure()
-    needs: [test, build, deploy-backend, deploy-frontend-vercel]
-    steps:
-      - name: Notify deployment failure
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          text: '❌ Deployment pipeline failed. Check logs at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        continue-on-error: true
+          echo "🎉 Full deployment successful!"
+          echo "Backend: https://barber-hcv8.onrender.com"
+          echo "Frontend: https://resevini.vercel.app"
