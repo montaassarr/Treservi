@@ -39,7 +39,10 @@ seedRouter.post('/init', async (req, res) => {
         role: 'super_admin',
         isSuperAdmin: true,
         salonId: salon?.id,
-        fullName: 'Owner Admin (Super Admin)'
+        fullName: 'Owner Admin',
+        phone: '+216 12 345 678',
+        specialty: 'Master Barber',
+        avatarUrl: ''
       });
       console.log('✅ Admin user created as super admin:', user.email);
     } else {
@@ -54,36 +57,16 @@ seedRouter.post('/init', async (req, res) => {
       }
     }
 
-    // Create super admin
-    const superAdminEmail = 'superadmin@barbershop.com';
-    const existingSuperAdmin = await User.findOne({ email: superAdminEmail.toLowerCase() });
-    if (!existingSuperAdmin) {
-      const superHash = await hashPassword('SuperAdmin123!');
-      const superAdmin = await User.create({
-        email: superAdminEmail.toLowerCase(),
-        passwordHash: superHash,
-        role: 'super_admin',
-        isSuperAdmin: true,
-        fullName: 'Super Admin'
-      });
-      console.log('✅ Super admin created:', superAdmin.email);
-    } else {
-      console.log('✅ Super admin already exists:', existingSuperAdmin.email);
-    }
-
     res.status(201).json({
       status: 'success',
       message: 'Database seeded successfully',
       data: {
         salon: salon?.name,
-        users: [
-          { email: 'owner@barbershop.com', role: 'super_admin', note: 'Use this for full admin access' },
-          { email: 'superadmin@barbershop.com', role: 'super_admin', note: 'Alternative super admin' }
-        ],
-        credentials: {
+        admin: {
           email: 'owner@barbershop.com',
           password: 'ChangeMe123!',
-          access: 'Full super admin access to admin dashboard'
+          role: 'super_admin',
+          access: 'Full admin dashboard + appears as staff member'
         }
       }
     });
