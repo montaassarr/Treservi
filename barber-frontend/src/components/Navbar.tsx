@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { Language } from '../types';
 
 import NotificationToggle from './NotificationToggle';
+import Avatar from './Avatar';
 
 interface NavbarProps {
   // Mobile Header Props
@@ -121,9 +122,12 @@ const Navbar: React.FC<NavbarProps> = ({
                  onClick={() => setShowProfileMenu(!showProfileMenu)}
                  className="relative focus:outline-none px-3 py-2 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 border-2 border-white dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow"
                >
-                  <span className="font-semibold text-gray-900 dark:text-white text-sm">
-                    {userName.split(' ')[0]}
-                  </span>
+                  <Avatar
+                    name={userName}
+                    role={userRole}
+                    size="sm"
+                    showRing={false}
+                  />
                </button>
 
                {/* Mobile Profile Dropdown Menu */}
@@ -132,6 +136,11 @@ const Navbar: React.FC<NavbarProps> = ({
                        
                        <div className="p-6 pb-2 border-b border-gray-100 dark:border-gray-700/50">
                           <div className="flex items-center gap-4 mb-4">
+                              <Avatar
+                                name={userName}
+                                role={userRole}
+                                size="lg"
+                              />
                                <div>
                                    <h3 className="font-bold text-lg dark:text-white">{userName}</h3>
                                    <p className="text-sm text-gray-500 capitalize">{userRole === 'super_admin' ? 'Super Admin' : userRole}</p>

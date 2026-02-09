@@ -1,12 +1,11 @@
 /**
- * Notification Service - Handles dynamic badge counting with Supabase
+ * Notification Service - Handles dynamic badge counting
  * Implements Instagram-style notification behavior
  */
 
-import { supabase } from './supabaseClient';
+import { apiClient } from './apiClient';
 
 const UNREAD_BADGE_KEY = 'unread_badge_count';
-// LAST_CHECKED_KEY no longer needed given IS_READ column, but kept for legacy cleanup
 const LAST_CHECKED_KEY = 'last_notification_check';
 
 export interface UnreadNotification {
@@ -22,42 +21,15 @@ export interface UnreadNotification {
 /**
  * Get the count of unread appointments for the current user
  */
-/**
- * Get the count of unread appointments for the current user (using is_read column)
- */
 export const getUnreadCount = async (
   userId: string,
   salonId: string,
   userRole: 'owner' | 'staff'
 ): Promise<number> => {
   try {
-    if (!supabase) return 0;
-
-    // Count appointments where is_read is false
-    const query = supabase
-      .from('appointments')
-      .select('id', { count: 'exact', head: true });
-
-    if (userRole === 'owner') {
-      query.eq('salon_id', salonId);
-    } else {
-      query.eq('staff_id', userId).eq('salon_id', salonId);
-    }
-
-    // Only count unread ones
-    const { count, error } = await query.eq('is_read', false);
-
-    if (error) {
-      console.error('Error fetching unread count:', error);
-      return getStoredBadgeCount();
-    }
-
-    const unreadCount = count || 0;
-
-    // Store in localStorage as backup
-    localStorage.setItem(UNREAD_BADGE_KEY, unreadCount.toString());
-
-    return unreadCount;
+    const count = await apiClient.getUnreadCount(salonId, userRole, userRole === 'staff' ? userId : undefined);
+    localStorage.setItem(UNREAD_BADGE_KEY, count.toString());
+    return count;
   } catch (error) {
     console.error('Failed to get unread count:', error);
     return getStoredBadgeCount();
@@ -77,130 +49,95 @@ export const getStoredBadgeCount = (): number => {
 };
 
 /**
- * Mark all notifications as read (clear badge) via RPC
+ * Mark all notifications as read (clear badge)
  */
 export const markAllAsRead = async (
-  salonId: string,
   userId: string,
+  salonId: string,
   userRole: 'owner' | 'staff'
 ): Promise<void> => {
   try {
-    if (!supabase) return;
+    await apiClient.markAllRead({
+      salonId,
+      role: userRole,
+      staffId: userRole === 'staff' ? userId : undefined
+    });
 
-    let error;
-
-    if (userRole === 'owner') {
-      const result = await supabase.rpc('mark_notifications_read', { 
-        p_salon_id: salonId 
-      });
-      error = result.error;
-    } else {
-      const result = await supabase.rpc('mark_staff_notifications_read', { 
-        p_staff_id: userId 
-      });
-      error = result.error;
-    }
-
-    if (error) throw error;
-
-    // Update local storage just in case
+    // Clear local badge count
     localStorage.setItem(UNREAD_BADGE_KEY, '0');
+    localStorage.setItem(LAST_CHECKED_KEY, new Date().toISOString());
   } catch (error) {
     console.error('Failed to mark as read:', error);
   }
 };
 
 /**
- * Increment badge count (called when new appointment arrives)
+ * Mark a single notification as read
  */
-export const incrementBadgeCount = async (currentCount: number): Promise<number> => {
-  const newCount = currentCount + 1;
-  localStorage.setItem(UNREAD_BADGE_KEY, newCount.toString());
-  return newCount;
-};
-
-/**
- * Setup realtime subscription for new appointments
- */
-export const subscribeToNewAppointments = (
-  salonId: string,
-  userId: string,
-  userRole: 'owner' | 'staff',
-  onNewAppointment: (appointment: any) => void
-) => {
-  if (!supabase) return null;
-
-  const channel = supabase
-    .channel('new-appointments-badge')
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'appointments',
-        filter: userRole === 'owner' 
-          ? `salon_id=eq.${salonId}`
-          : `staff_id=eq.${userId}`,
-      },
-      (payload) => {
-        console.log('[Badge] New appointment:', payload.new);
-        onNewAppointment(payload.new);
-      }
-    )
-    .subscribe();
-
-  return channel;
-};
-
-/**
- * Play notification sound
- */
-// Global audio context for iOS compatibility
-let audioContext: AudioContext | null = null;
-
-/**
- * Initialize audio context on first user interaction (iOS requirement)
- */
-export const initAudioContext = () => {
-  if (!audioContext) {
-    try {
-      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    } catch (e) {
-      console.error('AudioContext not supported');
-    }
-  }
-  
-  if (audioContext && audioContext.state === 'suspended') {
-    audioContext.resume();
-  }
-};
-
-/**
- * Play notification sound
- */
-export const playNotificationSound = () => {
+export const markAsRead = async (
+  notificationId: string,
+  userId: string
+): Promise<void> => {
   try {
-    if (!audioContext) {
-      initAudioContext();
+    await apiClient.markRead(notificationId);
+
+    // Update local storage
+    const currentCount = getStoredBadgeCount();
+    if (currentCount > 0) {
+      localStorage.setItem(UNREAD_BADGE_KEY, (currentCount - 1).toString());
     }
-
-    if (!audioContext) return;
-
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-    oscillator.type = 'sine';
-    
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.2);
   } catch (error) {
-    console.log('Could not play notification sound:', error);
+    console.error('Failed to mark notification as read:', error);
+  }
+};
+
+/**
+ * Subscribe to real-time notification updates
+ */
+export const subscribeToNotifications = (
+  userId: string,
+  salonId: string,
+  userRole: 'owner' | 'staff',
+  onNotification: (notification: UnreadNotification) => void
+): (() => void) => {
+  // TODO: Implement real-time subscriptions via WebSockets or Server-Sent Events
+  console.warn('subscribeToNotifications: Real-time notifications not yet implemented');
+  
+  // Return unsubscribe function
+  return () => {
+    console.log('Unsubscribed from notifications');
+  };
+};
+
+/**
+ * Get all unread notifications
+ */
+export const getUnreadNotifications = async (
+  userId: string,
+  salonId: string,
+  userRole: 'owner' | 'staff'
+): Promise<UnreadNotification[]> => {
+  try {
+    console.warn('getUnreadNotifications: Endpoint not implemented on backend');
+    return [];
+  } catch (error) {
+    console.error('Failed to get unread notifications:', error);
+    return [];
+  }
+};
+
+/**
+ * Clear all notifications
+ */
+export const clearAllNotifications = async (
+  userId: string,
+  salonId: string
+): Promise<void> => {
+  try {
+    console.warn('clearAllNotifications: Endpoint not implemented on backend');
+    localStorage.removeItem(UNREAD_BADGE_KEY);
+    localStorage.removeItem(LAST_CHECKED_KEY);
+  } catch (error) {
+    console.error('Failed to clear notifications:', error);
   }
 };

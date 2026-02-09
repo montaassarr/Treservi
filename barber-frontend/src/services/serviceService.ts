@@ -1,23 +1,24 @@
-import { supabase } from './supabaseClient';
+import { apiClient } from './apiClient';
 import { Service, CreateServiceInput } from '../types';
+
+const normalizeService = (service: any): Service => {
+  if (!service) {
+    return service as Service;
+  }
+  return {
+    ...service,
+    id: service.id ?? service._id,
+    salon_id: service.salon_id ?? service.salonId
+  } as Service;
+};
 
 /**
  * Fetch all services for a salon
  */
 export async function fetchServices(salonId: string) {
-  if (!supabase) {
-    return { data: null, error: new Error('Supabase client not initialized') };
-  }
-
   try {
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .eq('salon_id', salonId)
-      .eq('is_active', true)
-      .order('name', { ascending: true });
-
-    return { data: data as Service[] | null, error };
+    const services = await apiClient.fetchServices(salonId);
+    return { data: services.map(normalizeService) as Service[] | null, error: null };
   } catch (err: any) {
     return { data: null, error: err };
   }
@@ -27,18 +28,9 @@ export async function fetchServices(salonId: string) {
  * Fetch a single service by ID
  */
 export async function fetchServiceById(id: string) {
-  if (!supabase) {
-    return { data: null, error: new Error('Supabase client not initialized') };
-  }
-
   try {
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    return { data: data as Service | null, error };
+    const service = await apiClient.fetchServiceById(id);
+    return { data: normalizeService(service) as Service | null, error: null };
   } catch (err: any) {
     return { data: null, error: err };
   }
@@ -48,25 +40,9 @@ export async function fetchServiceById(id: string) {
  * Create a new service
  */
 export async function createService(input: CreateServiceInput) {
-  if (!supabase) {
-    return { data: null, error: new Error('Supabase client not initialized') };
-  }
-
   try {
-    const { data, error } = await supabase
-      .from('services')
-      .insert({
-        salon_id: input.salonId,
-        name: input.name,
-        price: input.price,
-        duration: input.duration,
-        description: input.description,
-        is_active: true,
-      })
-      .select()
-      .single();
-
-    return { data: data as Service | null, error };
+    const service = await apiClient.createService(input);
+    return { data: normalizeService(service) as Service | null, error: null };
   } catch (err: any) {
     return { data: null, error: err };
   }
@@ -79,19 +55,9 @@ export async function updateService(
   id: string,
   updates: Partial<Omit<Service, 'id' | 'salon_id' | 'created_at'>>
 ) {
-  if (!supabase) {
-    return { data: null, error: new Error('Supabase client not initialized') };
-  }
-
   try {
-    const { data, error } = await supabase
-      .from('services')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    return { data: data as Service | null, error };
+    const service = await apiClient.updateService(id, updates);
+    return { data: normalizeService(service) as Service | null, error: null };
   } catch (err: any) {
     return { data: null, error: err };
   }
@@ -101,17 +67,9 @@ export async function updateService(
  * Delete a service (soft delete by marking as inactive)
  */
 export async function deleteService(id: string) {
-  if (!supabase) {
-    return { error: new Error('Supabase client not initialized') };
-  }
-
   try {
-    const { error } = await supabase
-      .from('services')
-      .update({ is_active: false })
-      .eq('id', id);
-
-    return { error };
+    await apiClient.deleteService(id);
+    return { error: null };
   } catch (err: any) {
     return { error: err };
   }
@@ -121,17 +79,9 @@ export async function deleteService(id: string) {
  * Hard delete a service (permanent)
  */
 export async function hardDeleteService(id: string) {
-  if (!supabase) {
-    return { error: new Error('Supabase client not initialized') };
-  }
-
   try {
-    const { error } = await supabase
-      .from('services')
-      .delete()
-      .eq('id', id);
-
-    return { error };
+    await apiClient.hardDeleteService(id);
+    return { error: null };
   } catch (err: any) {
     return { error: err };
   }

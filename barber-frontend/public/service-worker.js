@@ -59,10 +59,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip chrome-extension, Supabase API, and other API calls
+  // Skip chrome-extension, API, and function calls
   if (
     url.protocol.startsWith('chrome-extension') ||
-    url.hostname.includes('supabase.co') ||
     url.pathname.startsWith('/api/') ||
     url.pathname.includes('/functions/')
   ) {

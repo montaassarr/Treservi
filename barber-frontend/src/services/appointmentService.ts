@@ -1,27 +1,31 @@
-import { supabase } from './supabaseClient';
 import { AppointmentData, CreateAppointmentInput } from '../types';
+import { apiClient } from './apiClient';
+
+const normalizeAppointment = (appointment: any): AppointmentData => {
+  if (!appointment) {
+    return appointment as AppointmentData;
+  }
+  return {
+    ...appointment,
+    id: appointment.id ?? appointment._id,
+    service_id: appointment.service_id?._id ?? appointment.service_id,
+    staff_id: appointment.staff_id?._id ?? appointment.staff_id,
+    service: appointment.service_id && typeof appointment.service_id === 'object'
+      ? { ...appointment.service_id, id: appointment.service_id._id ?? appointment.service_id.id }
+      : appointment.service,
+    staff: appointment.staff_id && typeof appointment.staff_id === 'object'
+      ? { ...appointment.staff_id, id: appointment.staff_id._id ?? appointment.staff_id.id }
+      : appointment.staff
+  } as AppointmentData;
+};
 
 /**
  * Fetch appointments for a salon (Owner view - all appointments)
  */
 export async function fetchAppointments(salonId: string) {
-  if (!supabase) {
-    return { data: null, error: new Error('Supabase client not initialized') };
-  }
-
   try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .select(`
-        *,
-        service:services(*),
-        staff:staff(id, full_name, email, specialty)
-      `)
-      .eq('salon_id', salonId)
-      .order('appointment_date', { ascending: true })
-      .order('appointment_time', { ascending: true });
-
-    return { data: data as AppointmentData[] | null, error };
+    const appointments = await apiClient.fetchAppointments({ salonId });
+    return { data: appointments.map(normalizeAppointment), error: null };
   } catch (err: any) {
     return { data: null, error: err };
   }
@@ -31,22 +35,9 @@ export async function fetchAppointments(salonId: string) {
  * Fetch appointments for a specific staff member (Staff view - only their appointments)
  */
 export async function fetchStaffAppointments(staffId: string) {
-  if (!supabase) {
-    return { data: null, error: new Error('Supabase client not initialized') };
-  }
-
   try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .select(`
-        *,
-        service:services(*)
-      `)
-      .eq('staff_id', staffId)
-      .order('appointment_date', { ascending: true })
-      .order('appointment_time', { ascending: true });
-
-    return { data: data as AppointmentData[] | null, error };
+    const appointments = await apiClient.fetchAppointments({ staffId });
+    return { data: appointments.map(normalizeAppointment), error: null };
   } catch (err: any) {
     return { data: null, error: err };
   }
@@ -56,24 +47,11 @@ export async function fetchStaffAppointments(staffId: string) {
  * Fetch appointments for today (Staff dashboard)
  */
 export async function fetchTodayAppointments(staffId: string) {
-  if (!supabase) {
-    return { data: null, error: new Error('Supabase client not initialized') };
-  }
-
-  const today = new Date().toISOString().split('T')[0];
-
   try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .select(`
-        *,
-        service:services(*)
-      `)
-      .eq('staff_id', staffId)
-      .eq('appointment_date', today)
-      .order('appointment_time', { ascending: true });
-
-    return { data: data as AppointmentData[] | null, error };
+    const appointments = await apiClient.fetchAppointments({ staffId });
+    const today = new Date().toISOString().split('T')[0];
+    const filtered = appointments.filter((apt) => apt.appointment_date === today);
+    return { data: filtered.map(normalizeAppointment), error: null };
   } catch (err: any) {
     return { data: null, error: err };
   }
@@ -84,25 +62,11 @@ export async function fetchTodayAppointments(staffId: string) {
  * Returns appointments from today onwards
  */
 export async function fetchUpcomingAppointments(staffId: string) {
-  if (!supabase) {
-    return { data: null, error: new Error('Supabase client not initialized') };
-  }
-
-  const today = new Date().toISOString().split('T')[0];
-
   try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .select(`
-        *,
-        service:services(*)
-      `)
-      .eq('staff_id', staffId)
-      .gte('appointment_date', today) // Greater than or equal to today
-      .order('appointment_date', { ascending: true })
-      .order('appointment_time', { ascending: true });
-
-    return { data: data as AppointmentData[] | null, error };
+    const appointments = await apiClient.fetchAppointments({ staffId });
+    const today = new Date().toISOString().split('T')[0];
+    const filtered = appointments.filter((apt) => apt.appointment_date >= today);
+    return { data: filtered.map(normalizeAppointment), error: null };
   } catch (err: any) {
     return { data: null, error: err };
   }
@@ -112,22 +76,9 @@ export async function fetchUpcomingAppointments(staffId: string) {
  * Fetch a single appointment by ID
  */
 export async function fetchAppointmentById(id: string) {
-  if (!supabase) {
-    return { data: null, error: new Error('Supabase client not initialized') };
-  }
-
   try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .select(`
-        *,
-        service:services(*),
-        staff:staff(id, full_name, email, specialty)
-      `)
-      .eq('id', id)
-      .single();
-
-    return { data: data as AppointmentData | null, error };
+    const appointment = await apiClient.fetchAppointmentById(id);
+    return { data: normalizeAppointment(appointment), error: null };
   } catch (err: any) {
     return { data: null, error: err };
   }
@@ -137,34 +88,18 @@ export async function fetchAppointmentById(id: string) {
  * Create a new appointment
  */
 export async function createAppointment(input: CreateAppointmentInput) {
-  if (!supabase) {
-    return { data: null, error: new Error('Supabase client not initialized') };
-  }
-
   try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .insert({
-        salon_id: input.salon_id,
-        staff_id: input.staff_id,
-        service_id: input.service_id,
-        customer_name: input.customer_name,
-        customer_email: input.customer_email,
-        customer_phone: input.customer_phone,
-        appointment_date: input.appointment_date,
-        appointment_time: input.appointment_time,
-        status: input.status || 'Pending',
-        amount: input.amount,
-        notes: input.notes,
-      })
-      .select(`
-        *,
-        service:services(*),
-        staff:staff(id, full_name, email, specialty)
-      `)
-      .single();
+    const appointment = await apiClient.createAppointment(input);
+    return { data: normalizeAppointment(appointment), error: null };
+  } catch (err: any) {
+    return { data: null, error: err };
+  }
+}
 
-    return { data: data as AppointmentData | null, error };
+export async function createPublicAppointment(input: CreateAppointmentInput) {
+  try {
+    const appointment = await apiClient.createPublicAppointment(input);
+    return { data: normalizeAppointment(appointment), error: null };
   } catch (err: any) {
     return { data: null, error: err };
   }
@@ -177,23 +112,9 @@ export async function updateAppointment(
   id: string,
   updates: Partial<Omit<AppointmentData, 'id' | 'created_at' | 'service' | 'staff'>>
 ) {
-  if (!supabase) {
-    return { data: null, error: new Error('Supabase client not initialized') };
-  }
-
   try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .update(updates)
-      .eq('id', id)
-      .select(`
-        *,
-        service:services(*),
-        staff:staff(id, full_name, email, specialty)
-      `)
-      .single();
-
-    return { data: data as AppointmentData | null, error };
+    const appointment = await apiClient.updateAppointment(id, updates);
+    return { data: normalizeAppointment(appointment), error: null };
   } catch (err: any) {
     return { data: null, error: err };
   }
@@ -203,23 +124,8 @@ export async function updateAppointment(
  * Delete an appointment (Owner only)
  */
 export async function deleteAppointment(id: string) {
-  if (!supabase) {
-    return { error: new Error('Supabase client not initialized') };
-  }
-
   try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .delete()
-      .eq('id', id)
-      .select();
-
-    if (error) return { error };
-
-    if (!data || data.length === 0) {
-        return { error: new Error("Could not delete appointment. Check permissions or if record exists.") };
-    }
-
+    await apiClient.deleteAppointment(id);
     return { error: null };
   } catch (err: any) {
     return { error: err };
@@ -228,79 +134,11 @@ export async function deleteAppointment(id: string) {
 
 /**
  * Get appointment statistics for a staff member (Earnings etc.)
- * NOTE: This is a client-side calculation helper or could be an RPC call.
- * For now implementing as a direct query aggregation.
  */
 export async function getStaffAppointmentStats(staffId: string) {
-  if (!supabase) {
-    return { data: null, error: new Error('Supabase client not initialized') };
-  }
-
-  const today = new Date().toISOString().split('T')[0];
-
   try {
-    // Fetch ALL appointments for this staff to calculate totals locally
-    // In a production app with millions of rows, use an RPC function instead.
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('amount, status, appointment_date')
-      .eq('staff_id', staffId);
-
-    if (error) throw error;
-
-    let today_appointments = 0;
-    let today_earnings = 0;
-    let completed_appointments = 0;
-    let total_earnings = 0;
-    
-    // Initialize chart data for last 7 days
-    const last7Days = Array.from({length: 7}, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
-        return {
-            date: d.toISOString().split('T')[0],
-            name: d.toLocaleDateString('en-US', { weekday: 'short' }),
-            value: 0
-        };
-    });
-
-    data?.forEach(apt => {
-      const isCompleted = apt.status === 'Completed';
-      const isConfirmed = apt.status === 'Confirmed';
-      const isPending = apt.status === 'Pending';
-      const isCancelled = apt.status === 'Cancelled';
-      const isToday = apt.appointment_date === today;
-
-      if (isToday && !isCancelled) {
-        today_appointments++;
-        // Include Pending/Confirmed in today's projected earnings
-        today_earnings += Number(apt.amount || 0);
-      }
-
-      if (isCompleted) {
-        completed_appointments++;
-        total_earnings += Number(apt.amount || 0);
-      }
-      
-      // Chart Data Calculation
-      if (!isCancelled) {
-          const dayStat = last7Days.find(d => d.date === apt.appointment_date);
-          if (dayStat) {
-              dayStat.value++;
-          }
-      }
-    });
-
-    return {
-      data: {
-        today_appointments,
-        today_earnings,
-        completed_appointments,
-        total_earnings,
-        chartData: last7Days
-      },
-      error: null
-    };
+    const stats = await apiClient.getStaffAppointmentStats(staffId);
+    return { data: { ...stats, chartData: [] }, error: null };
   } catch (err: any) {
     return { data: null, error: err };
   }
@@ -308,11 +146,6 @@ export async function getStaffAppointmentStats(staffId: string) {
 
 /**
  * Check if user is attempting to double-book the same slot
- * @param salonId - Salon ID
- * @param staffId - Staff member ID
- * @param phone - Customer phone (with special chars removed)
- * @param appointmentDate - Date of appointment (YYYY-MM-DD)
- * @param appointmentTime - Time of appointment (HH:MM)
  */
 export async function checkDuplicateBooking(
   salonId: string,
@@ -321,32 +154,20 @@ export async function checkDuplicateBooking(
   appointmentDate: string,
   appointmentTime: string
 ) {
-  if (!supabase) {
-    return { isDuplicate: false, error: new Error('Supabase client not initialized') };
-  }
-
   try {
+    const appointments = await apiClient.fetchAppointments({ salonId });
     const cleanPhone = phone.replace(/\D/g, '');
-    
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('id, customer_phone, staff_id, appointment_date, appointment_time, status')
-      .eq('salon_id', salonId)
-      .eq('staff_id', staffId)
-      .eq('appointment_date', appointmentDate)
-      .eq('appointment_time', appointmentTime)
-      .in('status', ['Pending', 'Confirmed']); // Only check active bookings
-
-    if (error) {
-      return { isDuplicate: false, error };
-    }
-
-    // Check if this phone number has already booked this exact slot
-    const hasDuplicate = data?.some(apt => 
-      apt.customer_phone.replace(/\D/g, '') === cleanPhone
-    );
-
-    return { isDuplicate: hasDuplicate || false, error: null };
+    const hasDuplicate = appointments.some((apt) => {
+      const aptPhone = (apt.customer_phone ?? '').replace(/\D/g, '');
+      return (
+        apt.staff_id?.toString?.() === staffId &&
+        apt.appointment_date === appointmentDate &&
+        apt.appointment_time === appointmentTime &&
+        aptPhone === cleanPhone &&
+        ['Pending', 'Confirmed'].includes(apt.status)
+      );
+    });
+    return { isDuplicate: hasDuplicate, error: null };
   } catch (err: any) {
     return { isDuplicate: false, error: err };
   }
@@ -354,10 +175,6 @@ export async function checkDuplicateBooking(
 
 /**
  * Check if a specific slot is already booked by anyone
- * @param salonId - Salon ID
- * @param staffId - Staff member ID
- * @param appointmentDate - Date of appointment (YYYY-MM-DD)
- * @param appointmentTime - Time of appointment (HH:MM)
  */
 export async function checkSlotAvailability(
   salonId: string,
@@ -365,28 +182,17 @@ export async function checkSlotAvailability(
   appointmentDate: string,
   appointmentTime: string
 ) {
-  if (!supabase) {
-    return { isAvailable: true, error: new Error('Supabase client not initialized') };
-  }
-
   try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('id, status')
-      .eq('salon_id', salonId)
-      .eq('staff_id', staffId)
-      .eq('appointment_date', appointmentDate)
-      .eq('appointment_time', appointmentTime)
-      .in('status', ['Pending', 'Confirmed']); // Only check active bookings
-
-    if (error) {
-      return { isAvailable: true, error };
-    }
-
-    // If any confirmed/pending booking exists, slot is taken
-    const isAvailable = !data || data.length === 0;
-
-    return { isAvailable, error: null };
+    const appointments = await apiClient.fetchAppointments({ salonId });
+    const isTaken = appointments.some((apt) => {
+      return (
+        apt.staff_id?.toString?.() === staffId &&
+        apt.appointment_date === appointmentDate &&
+        apt.appointment_time === appointmentTime &&
+        ['Pending', 'Confirmed'].includes(apt.status)
+      );
+    });
+    return { isAvailable: !isTaken, error: null };
   } catch (err: any) {
     return { isAvailable: true, error: err };
   }
@@ -394,10 +200,6 @@ export async function checkSlotAvailability(
 
 /**
  * Check for spam bookings by same phone number within time window
- * @param phone - Customer phone
- * @param salonId - Salon ID
- * @param windowMinutes - Time window in minutes (default: 60)
- * @param maxBookings - Max bookings allowed in window (default: 3)
  */
 export async function checkSpamBookings(
   phone: string,
@@ -405,30 +207,21 @@ export async function checkSpamBookings(
   windowMinutes: number = 60,
   maxBookings: number = 3
 ) {
-  if (!supabase) {
-    return { isSpam: false, recentCount: 0, error: new Error('Supabase client not initialized') };
-  }
-
   try {
+    const appointments = await apiClient.fetchAppointments({ salonId });
     const cleanPhone = phone.replace(/\D/g, '');
-    const timeWindow = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
-
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('id, created_at')
-      .eq('salon_id', salonId)
-      .like('customer_phone', `%${cleanPhone}%`)
-      .gte('created_at', timeWindow)
-      .in('status', ['Pending', 'Confirmed']);
-
-    if (error) {
-      return { isSpam: false, recentCount: 0, error };
-    }
-
-    const recentCount = data?.length || 0;
-    const isSpam = recentCount >= maxBookings;
-
-    return { isSpam, recentCount, error: null };
+    const cutoff = Date.now() - windowMinutes * 60 * 1000;
+    const recent = appointments.filter((apt) => {
+      const aptPhone = (apt.customer_phone ?? '').replace(/\D/g, '');
+      const createdAt = apt.created_at ? new Date(apt.created_at).getTime() : 0;
+      return (
+        aptPhone === cleanPhone &&
+        createdAt >= cutoff &&
+        ['Pending', 'Confirmed'].includes(apt.status)
+      );
+    });
+    const recentCount = recent.length;
+    return { isSpam: recentCount >= maxBookings, recentCount, error: null };
   } catch (err: any) {
     return { isSpam: false, recentCount: 0, error: err };
   }

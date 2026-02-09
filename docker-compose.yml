@@ -1,242 +1,92 @@
 version: "3.9"
 
-# Compose stack: Supabase (self-hosted) + frontend
-# Requirements:
-#   - Create a .env.local next to this file with the variables below
-#   - Ports exposed: 3000 (frontend), 54321 (Supabase gateway), 5432 (Postgres)
+# Compose stack: Node.js + MongoDB + React Frontend
+# All containers use reservi-network
+# Ports: 3000 (frontend), 4000 (backend API), 27017 (MongoDB)
 
 services:
-  frontend:
-    build:
-      context: ./barber-frontend
-      args:
-        VITE_SUPABASE_URL: http://localhost:54321
-        VITE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
-    environment:
-      VITE_SUPABASE_URL: http://localhost:54321
-      VITE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
-    ports:
-      - "3000:80"
-    depends_on:
-      - kong
-    networks:
-      - supanet
-
-  db:
-    image: supabase/postgres:15.1.0.97
-    container_name: supabase-db
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: reservi-mongodb
     restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: reservi
+    volumes:
+      - mongodb-data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - reservi-network
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
-    environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      JWT_SECRET: ${JWT_SECRET}
-      ANON_KEY: ${SUPABASE_ANON_KEY}
-      SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - supanet
 
-  rest:
-    image: postgrest/postgrest:v12.0.3
-    container_name: supabase-rest
+  # Node.js Backend API
+  backend:
+    build:
+      context: ./barber-backend-node
+      dockerfile: Dockerfile
+    container_name: reservi-backend
     restart: unless-stopped
     depends_on:
-      - db
-    environment:
-      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
-      PGRST_DB_SCHEMA: public
-      PGRST_DB_ANON_ROLE: anon
-      PGRST_JWT_SECRET: ${JWT_SECRET}
-      PGRST_DB_MAX_ROWS: 1000
-      PGRST_DB_PLAN_ENABLED: "false"
-    networks:
-      - supanet
-
-  auth:
-    image: supabase/gotrue:v2.151.0
-    container_name: supabase-auth
-    restart: unless-stopped
-    depends_on:
-      - db
-    environment:
-      GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/postgres?sslmode=disable
-      API_EXTERNAL_URL: http://localhost:54321
-      GOTRUE_SITE_URL: http://localhost:3000
-      GOTRUE_JWT_SECRET: ${JWT_SECRET}
-      GOTRUE_JWT_AUD: authenticated
-      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
-      GOTRUE_JWT_EXP: 3600
-      GOTRUE_ADMIN_EMAIL: admin@example.com
-      GOTRUE_ADMIN_PASSWORD: adminpass123
-      GOTRUE_DB_NAMESPACE: auth
-      GOTRUE_DISABLE_SIGNUP: "false"
-      GOTRUE_MAILER_AUTOCONFIRM: "true"
-      GOTRUE_API_HOST: 0.0.0.0
-      GOTRUE_API_PORT: 9999
-      PORT: 9999
-    networks:
-      - supanet
-
-  realtime:
-    image: supabase/realtime:v2.29.3
-    container_name: supabase-realtime
-    restart: unless-stopped
-    depends_on:
-      - db
-    environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: postgres
-      DB_USER: postgres
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      PORT: 4000
-      JWT_SECRET: ${JWT_SECRET}
-      SECURE_CHANNELS: "false"
-      RLIMIT_NOFILE: 1024
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
-      FLY_APP_NAME: realtime
-    networks:
-      - supanet
-
-  storage:
-    image: supabase/storage-api:latest
-    container_name: supabase-storage
-    restart: unless-stopped
-    depends_on:
-      - db
-    environment:
-      ANON_KEY: ${SUPABASE_ANON_KEY}
-      SERVICE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      POSTGREST_URL: http://rest:3000
-      PGRST_JWT_SECRET: ${JWT_SECRET}
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
-      FILE_SIZE_LIMIT: 52428800
-      GLOBAL_S3_BUCKET: storage
-      REGION: local
-      ENABLE_IMAGE_TRANSFORMATION: "true"
-      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
-    volumes:
-      - storage-data:/var/lib/storage
-    networks:
-      - supanet
-
-  functions:
-    image: supabase/edge-runtime:v1.59.0
-    container_name: supabase-functions
-    restart: unless-stopped
-    depends_on:
-      - db
-    environment:
-      SUPABASE_URL: http://kong:8000
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      JWT_SECRET: ${JWT_SECRET}
-      VERIFY_JWT: "false"
-    command:
-      - start
-      - --main-service
-      - /var/lib/functions/create-staff
-      - --port
-      - "9000"
-    volumes:
-      - ./barber-backend/supabase/functions:/var/lib/functions:ro
-    networks:
-      - supanet
-
-  imgproxy:
-    image: darthsim/imgproxy:v3.22.0
-    container_name: supabase-imgproxy
-    restart: unless-stopped
-    environment:
-      IMGPROXY_KEY: ""
-      IMGPROXY_SALT: ""
-      IMGPROXY_USE_S3: "false"
-      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /var/lib/storage
-    volumes:
-      - storage-data:/var/lib/storage
-    networks:
-      - supanet
-
-  studio:
-    image: supabase/studio:latest
-    container_name: supabase-studio
-    restart: unless-stopped
-    depends_on:
-      - db
-    environment:
-      SUPABASE_URL: http://localhost:54321
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
-    ports:
-      - "54323:3000"
-    networks:
-      - supanet
-
-  kong:
-    image: kong:3.6
-    container_name: supabase-kong
-    restart: unless-stopped
-    depends_on:
-      - rest
-      - auth
-      - realtime
-      - storage
-      - functions
-    environment:
-      KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
-      KONG_DNS_ORDER: LAST,SRV,A
-      KONG_DNS_RESOLVER: 127.0.0.11
-    volumes:
-      - ./barber-backend/docker/kong.yml:/var/lib/kong/kong.yml:ro
-    ports:
-      - "54321:8000"
-    networks:
-      - supanet
-
-  migrator:
-    image: postgres:15.1-alpine
-    container_name: supabase-migrator
-    restart: on-failure
-    depends_on:
-      db:
+      mongodb:
         condition: service_healthy
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: postgres
-      POSTGRES_HOST: db
-    volumes:
-      - ./barber-backend/supabase/migrations:/migrations
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        echo "Waiting for postgres..."
-        until pg_isready -h db -U postgres; do
-          sleep 2
-        done
-        echo "Running migrations..."
-        for file in /migrations/*.sql; do
-          echo "Applying $$file..."
-          psql postgres://postgres:$${POSTGRES_PASSWORD}@db:5432/postgres -f "$$file"
-        done
-        echo "Migrations completed."
+      NODE_ENV: development
+      PORT: 4000
+      MONGODB_URI: mongodb://REDACTED:REDACTED@mongodb:27017/reservi?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:REDACTED}
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: http://localhost:3000
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-owner@barbershop.com}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-ChangeMe123!}
+      SEED_SALON_NAME: ${SEED_SALON_NAME:-Demo Salon}
+      SEED_SALON_SLUG: ${SEED_SALON_SLUG:-demo-salon}
+    ports:
+      - "4000:4000"
     networks:
-      - supanet
+      - reservi-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./barber-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:4000
+        VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY:-}
+    container_name: reservi-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      VITE_API_BASE_URL: http://localhost:4000
+      VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY:-}
+    ports:
+      - "3000:80"
+    networks:
+      - reservi-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  db-data:
-  storage-data:
+  mongodb-data:
+    driver: local
 
 networks:
-  supanet:
+  reservi-network:
     driver: bridge

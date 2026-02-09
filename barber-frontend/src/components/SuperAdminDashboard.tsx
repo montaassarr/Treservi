@@ -8,9 +8,10 @@ import {
   Cell
 } from 'recharts';
 import { MoreHorizontal, ArrowUpRight, Plus, Pencil, Trash2, X, Store, User, DollarSign, Mail, AlertCircle, LogOut } from 'lucide-react';
-import { supabase } from '../services/supabaseClient';
 import ResponsiveGrid from './ResponsiveGrid';
 import { formatPrice } from '../utils/format';
+import { apiClient } from '../services/apiClient';
+import Avatar from './Avatar';
 
 interface SalonStats {
   id: string;
@@ -88,38 +89,19 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogout }) =
 
   const fetchData = async () => {
     try {
-      const { data: salonsData, error: salonsError } = await supabase
-        .from('salons')
-        .select('*');
-
-      if (salonsError) throw salonsError;
-
-      const richSalons = await Promise.all(salonsData.map(async (salon) => {
-        const { count: staffCount } = await supabase.from('staff').select('id', { count: 'exact', head: true }).eq('salon_id', salon.id);
-        const { count: apptCount } = await supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('salon_id', salon.id);
-        const { data: owner } = await supabase.from('staff').select('email, full_name').eq('salon_id', salon.id).eq('role', 'owner').single();
-
-        return {
-          ...salon,
-          staff_count: staffCount || 0,
-          appointment_count: apptCount || 0,
-          owner_email: owner?.email || 'N/A',
-          total_revenue: salon.total_revenue || 0,
-        };
-      }));
-
-      setSalons(richSalons);
-
-      const totalRevenue = richSalons.reduce((acc, s) => acc + (s.total_revenue || 0), 0);
-      const activeCnt = richSalons.filter(s => s.status === 'active').length;
+      const stats = await apiClient.fetchAdminOverview();
+      const salonsData = await apiClient.fetchAdminSalons();
+      const totalAppointments = salonsData.reduce((acc, s) => acc + (s.appointment_count || 0), 0);
+      const totalStaff = salonsData.reduce((acc, s) => acc + (s.staff_count || 0), 0);
 
       setGlobalStats({
-        total_salons: richSalons.length,
-        active_salons: activeCnt,
-        total_revenue: totalRevenue,
-        total_appointments: richSalons.reduce((acc, s) => acc + s.appointment_count, 0),
-        total_staff: richSalons.reduce((acc, s) => acc + s.staff_count, 0),
+        total_salons: stats.totalSalons ?? salonsData.length,
+        active_salons: stats.activeSalons ?? salonsData.filter((s) => s.status === 'active').length,
+        total_revenue: stats.totalRevenue ?? 0,
+        total_appointments: totalAppointments,
+        total_staff: totalStaff
       });
+      setSalons(salonsData);
 
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -137,21 +119,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogout }) =
 
     try {
       setIsSaving(true);
-
-      // Use RPC function directly (bypasses edge function issues)
-      const { data, error } = await supabase.rpc('delete_salon_by_super_admin', {
-        p_salon_id: salonId
-      });
-
-      if (error) {
-        console.error("RPC error:", error);
-        throw error;
-      }
-
-      if (data && !data.success) {
-        throw new Error(data.message || 'Delete operation failed');
-      }
-
+      await apiClient.deleteAdminSalon(salonId);
       setSuccess('Salon deleted successfully');
       await fetchData();
     } catch (err) {
@@ -182,19 +150,11 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogout }) =
 
       for (const salon of testSalons) {
         try {
-          const { data, error } = await supabase.rpc('delete_salon_by_super_admin', {
-            p_salon_id: salon.id
-          });
-
-          if (error || (data && !data.success)) {
-            console.error(`Failed to delete ${salon.slug}:`, error || data.message);
-            failed++;
-          } else {
-            deleted++;
-          }
+          await apiClient.deleteAdminSalon(salon.id);
+          deleted += 1;
         } catch (err) {
           console.error(`Error deleting ${salon.slug}:`, err);
-          failed++;
+          failed += 1;
         }
       }
 
@@ -225,56 +185,28 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogout }) =
 
     try {
       setIsSaving(true);
-
       if (editingId) {
-        // UPDATE: only update salon fields
-        const { error } = await supabase.from('salons').update({
+        await apiClient.updateAdminSalon(editingId, {
           name: formData.name,
           slug: formData.slug,
           status: formData.status
-        }).eq('id', editingId);
-
-        if (error) throw error;
+        });
         setSuccess('Salon updated successfully');
       } else {
-        // CREATE: Use Edge Function for atomic creation
-        const { data, error } = await supabase.functions.invoke('create-salon-complete', {
-          body: {
-            salonName: formData.name,
-            salonSlug: formData.slug,
-            ownerName: formData.owner_name,
-            ownerEmail: formData.owner_email,
-            ownerPassword: formData.owner_password,
-          }
+        await apiClient.createAdminSalon({
+          name: formData.name,
+          slug: formData.slug,
+          ownerEmail: formData.owner_email,
+          ownerPassword: formData.owner_password || 'ChangeMe123!',
+          ownerName: formData.owner_name
         });
-
-        if (error) {
-          // Parse error message
-          let errorMsg = error.message;
-          try {
-            // If error has a context with response, try to parse JSON
-            if (error instanceof Error && 'context' in error) {
-              const response = (error as any).context as Response;
-              if (response && typeof response.json === 'function') {
-                const body = await response.json();
-                if (body && body.error) {
-                  errorMsg = body.error;
-                }
-              }
-            }
-          } catch (e) {
-            console.warn("Failed to parse error response:", e);
-          }
-          throw new Error(errorMsg || 'Failed to create salon');
-        }
-
         setSuccess('Salon created successfully');
       }
 
+      await fetchData();
       setIsModalOpen(false);
-      fetchData();
     } catch (err) {
-      console.error("Error saving salon:", err);
+      console.error('Error saving salon:', err);
       setError((err as any)?.message || 'Failed to save salon');
     } finally {
       setIsSaving(false);
@@ -321,28 +253,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogout }) =
 
     try {
       setIsSaving(true);
-      const { data: ownerStaff, error: staffError } = await supabase
-        .from('staff')
-        .select('id')
-        .eq('salon_id', selectedSalonForReset.id)
-        .eq('role', 'owner')
-        .single();
-
-      if (staffError || !ownerStaff) {
-        setError('Owner account not found');
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke('reset-staff-password', {
-        body: {
-          staffId: ownerStaff.id,
-          newPassword: newPassword
-        }
-      });
-
-      if (error) throw error;
-
-      setSuccess(`Password reset! Share credentials:\nEmail: ${selectedSalonForReset.owner_email}\nPassword: ${newPassword}`);
+      const result = await apiClient.resetAdminOwnerPassword(selectedSalonForReset.id, newPassword);
+      setSuccess(`Password reset! Share credentials:\nEmail: ${result.ownerEmail}\nPassword: ${newPassword}`);
       setIsResetPasswordModalOpen(false);
       setNewPassword('');
     } catch (err) {
@@ -466,7 +378,12 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogout }) =
                         {salon.name}
                       </td>
                       <td className="py-4 text-gray-500">/{salon.slug}</td>
-                      <td className="py-4 text-gray-500">{salon.owner_email}</td>
+                      <td className="py-4 text-gray-500">
+                        <div className="flex items-center gap-2">
+                          <Avatar name={salon.owner_email} role="owner" size="xs" showRing={false} />
+                          <span>{salon.owner_email}</span>
+                        </div>
+                      </td>
                       <td className="py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${salon.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                           }`}>

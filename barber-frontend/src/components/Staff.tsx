@@ -28,7 +28,7 @@ import {
   fetchClientsByStaff,
 } from '../services/staffService';
 import { formatPrice } from '../utils/format';
-import { getStaffAvatar, getCustomerAvatar } from '../utils/avatarGenerator';
+import Avatar from './Avatar';
 
 interface StaffProps {
   salonId?: string;
@@ -273,12 +273,12 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
                 >
                   {/* Avatar */}
                   <div className="relative w-14 h-14 rounded-[20px] bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100 shadow-[6px_10px_18px_rgba(0,0,0,0.12)] flex items-center justify-center overflow-hidden flex-shrink-0">
-                    <img 
-                      src={member.avatar_url || getStaffAvatar(member.full_name)} 
-                      alt={member.full_name} 
-                      className="w-full h-full object-cover" 
+                    <img
+                      alt={member.full_name}
+                      className="w-full h-full object-cover"
+                      src={member.avatar_url || '/avatar-staff.svg'}
                     />
-                    <div className="absolute inset-0 rounded-[20px] shadow-inner shadow-white/50" />
+                    <div className="absolute inset-0 rounded-[20px] shadow-inner shadow-white/50"></div>
                   </div>
 
                   {/* Info */}
@@ -337,9 +337,13 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
             {/* Staff Card */}
             <div className={`${clayCard} p-6`}>
               <div className="text-center mb-4">
-                <div className="w-20 h-20 rounded-full mx-auto bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg flex items-center justify-center text-white text-2xl font-bold">
-                  {selectedStaff.full_name.charAt(0)}
-                </div>
+                <Avatar
+                  name={selectedStaff.full_name}
+                  role="staff"
+                  avatarUrl={selectedStaff.avatar_url}
+                  size="2xl"
+                  className="mx-auto"
+                />
                 <h3 className="text-lg font-bold mt-3">{selectedStaff.full_name}</h3>
                 <p className="text-sm text-gray-500">{selectedStaff.specialty}</p>
               </div>
@@ -411,10 +415,12 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
                 ) : (
                   staffClients.map((client) => (
                     <div key={client.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                      <img
-                        src={client.avatar_url}
-                        alt={client.name}
-                        className="w-8 h-8 rounded-full"
+                      <Avatar
+                        name={client.name}
+                        role="customer"
+                        avatarUrl={client.avatar_url}
+                        size="sm"
+                        showRing={false}
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold truncate">{client.name}</p>

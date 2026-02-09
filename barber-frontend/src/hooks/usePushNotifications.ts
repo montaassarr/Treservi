@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '../services/supabaseClient';
+import { apiClient } from '../services/apiClient';
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
@@ -62,21 +62,12 @@ export const usePushNotifications = () => {
       const { endpoint, keys } = subscription.toJSON();
       if (!keys?.p256dh || !keys?.auth) return false;
 
-      const { error } = await supabase
-        .from('push_subscriptions')
-        .upsert({
-          user_id: userId,
-          endpoint,
-          p256dh: keys.p256dh,
-          auth: keys.auth,
-          user_agent: navigator.userAgent,
-          last_used_at: new Date().toISOString()
-        }, { onConflict: 'endpoint' });
-
-      if (error) {
-        console.error('Failed to save push subscription to DB:', error);
-        return false;
-      }
+      await apiClient.savePushSubscription({
+        endpoint,
+        p256dh: keys.p256dh,
+        auth: keys.auth,
+        userAgent: navigator.userAgent
+      });
 
       return true;
     } catch (error: any) {

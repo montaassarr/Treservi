@@ -6,6 +6,7 @@ export interface Barber {
   firstName: string;
   rating: number;
   earnings: string;
+  avatarUrl?: string;
 }
 
 export interface Appointment {
@@ -138,6 +139,7 @@ export interface BookingStaff {
   firstName: string;
   bgColor: string;
   category: 'Barber' | 'Colorist' | 'Stylist';
+  avatarUrl?: string;
 }
 
 export interface BookingService {

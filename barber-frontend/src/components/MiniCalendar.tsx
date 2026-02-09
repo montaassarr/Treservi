@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, Clock, User, DollarSign } from 'lucide-react';
-import { supabase } from '../services/supabaseClient';
 import { useLanguage } from '../context/LanguageContext';
+import { fetchAppointments } from '../services/appointmentService';
 
 interface Appointment {
   id: string;
@@ -45,35 +45,23 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ salonId, userRole = 'owner'
   };
 
   const loadAppointmentsForDate = async (date: Date) => {
-    if (!supabase || !salonId) return;
-    
     setLoading(true);
     try {
       const dateKey = date.toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' });
-      
-      const query = supabase
-        .from('appointments')
-        .select(`
-          id,
-          customer_name,
-          appointment_time,
-          service_id,
-          staff_id,
-          status,
-          amount,
-          staff:staff_id(full_name),
-          service:service_id(name)
-        `)
-        .eq('appointment_date', dateKey)
-        .order('appointment_time', { ascending: true });
-
-      const { data, error } = userRole === 'owner'
-        ? await query.eq('salon_id', salonId)
-        : await query.eq('staff_id', userId);
-
-      if (!error && data) {
-        setAppointments(data as any);
+      const { data, error } = await fetchAppointments(salonId);
+      if (error) {
+        throw error;
       }
+
+      const filtered = (data || []).filter((item: any) => {
+        if (item.appointment_date !== dateKey) return false;
+        if (userRole === 'staff' && userId) {
+          return String(item.staff_id) === String(userId);
+        }
+        return true;
+      });
+
+      setAppointments(filtered as any);
     } catch (err) {
       console.error('Error loading appointments:', err);
     } finally {
@@ -89,26 +77,11 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ salonId, userRole = 'owner'
 
   // Real-time updates
   useEffect(() => {
-    if (!supabase || !salonId || !isExpanded) return;
-
-    const channel = supabase
-      .channel('calendar-realtime-' + selectedDate.toDateString())
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'appointments',
-        filter: userRole === 'owner'
-          ? `salon_id=eq.${salonId}`
-          : `staff_id=eq.${userId}`,
-      }, () => {
-        loadAppointmentsForDate(selectedDate);
-      })
-      .subscribe();
-
+    // TODO: Implement real-time via WebSockets
     return () => {
-      supabase.removeChannel(channel);
+      // cleanup
     };
-  }, [salonId, userRole, userId, isExpanded, selectedDate]);
+  }, [selectedDate, isExpanded, salonId, userRole, userId]);
 
   const formatTime = (time: string) => {
     if (!time) return '';

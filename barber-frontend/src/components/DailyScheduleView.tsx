@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X, Calendar, Clock } from 'lucide-react';
-import { supabase } from '../services/supabaseClient';
+import { fetchAppointments } from '../services/appointmentService';
 
 
 interface Appointment {
@@ -31,25 +31,21 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
   const [loading, setLoading] = useState(false);
 
   const loadAppointments = async (date: Date) => {
-    if (!supabase || !salonId) return;
     setLoading(true);
     try {
       const dateKey = date.toLocaleDateString('en-CA');
-      const query = supabase
-        .from('appointments')
-        .select(`
-          id, customer_name, appointment_time, status, amount,
-          staff:staff_id(full_name, avatar_url),
-          service:service_id(name, duration)
-        `)
-        .eq('appointment_date', dateKey)
-        .order('appointment_time', { ascending: true });
+      const { data, error } = await fetchAppointments(salonId);
+      if (error) throw error;
 
-      const { data } = userRole === 'owner'
-        ? await query.eq('salon_id', salonId)
-        : await query.eq('staff_id', userId);
+      const filtered = (data || []).filter((item: any) => {
+        if (item.appointment_date !== dateKey) return false;
+        if (userRole === 'staff' && userId) {
+          return String(item.staff_id) === String(userId);
+        }
+        return true;
+      });
 
-      if (data) setAppointments(data as any);
+      setAppointments(filtered as any);
     } catch (err) {
       console.error('Error loading appointments:', err);
     } finally {

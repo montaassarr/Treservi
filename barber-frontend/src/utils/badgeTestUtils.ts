@@ -121,22 +121,18 @@ export const testRequestPermission = async () => {
   }
 };
 
-// Test 8: Check Supabase Connection (requires import)
-export const testSupabaseConnection = async (supabase: any, salonId: string) => {
-  console.log('=== Testing Supabase Connection ===');
+// Test 8: Check API Connection
+export const testApiConnection = async (apiBaseUrl: string) => {
+  console.log('=== Testing API Connection ===');
   try {
-    const { data, error, count } = await supabase
-      .from('appointments')
-      .select('id, status, created_at', { count: 'exact' })
-      .eq('salon_id', salonId)
-      .in('status', ['Pending', 'Confirmed']);
-    
-    if (error) {
-      console.error('❌ Supabase error:', error);
-    } else {
-      console.log('✅ Connected to Supabase');
-      console.log(`Found ${count} unread appointments:`, data);
+    const response = await fetch(`${apiBaseUrl}/health`);
+    if (!response.ok) {
+      console.error('❌ API error:', response.status);
+      return;
     }
+    const data = await response.json();
+    console.log('✅ Connected to API');
+    console.log('Response:', data);
   } catch (error) {
     console.error('❌ Connection failed:', error);
   }
@@ -208,9 +204,8 @@ testRequestPermission();
 // Reset everything
 testResetBadge();
 
-// Check Supabase connection (requires supabase client)
-// import { supabase } from './services/supabaseClient';
-// testSupabaseConnection(supabase, 'your-salon-id');
+// Check API connection
+// testApiConnection('http://localhost:4000');
 */
 
 // Export for use in components
@@ -222,7 +217,7 @@ export const BadgeTestUtils = {
   testIncrementBadge,
   testNotificationSound,
   testRequestPermission,
-  testSupabaseConnection,
+  testApiConnection,
   testResetBadge,
   runAllTests,
 };
