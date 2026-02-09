@@ -12,7 +12,7 @@ const getEnv = (key: string, fallback?: string) => {
 
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
-  port: Number(process.env.PORT ?? 4000),
+  port: Number(process.env.PORT) || 10000,
   mongoUri: getEnv('MONGODB_URI', 'mongodb://localhost:27017/reservi'),
   jwtSecret: getEnv('JWT_SECRET', 'change-me'),
   jwtExpiresIn: '7d',
