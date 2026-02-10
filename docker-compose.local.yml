@@ -30,7 +30,7 @@ services:
       - PORT=10000
       - MONGODB_URI=mongodb://REDACTED:REDACTED@mongodb:27017/barber?authSource=admin
       - JWT_SECRET=REDACTED
-      - CORS_ORIGIN=http://localhost:3000,http://localhost:5173
+      - CORS_ORIGIN=http://localhost:3000
       - SEED_ADMIN_EMAIL=owner@barbershop.com
       - SEED_ADMIN_PASSWORD=ChangeMe123!
     restart: unless-stopped

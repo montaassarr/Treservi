@@ -127,9 +127,13 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
           customerName: apt.customer_name,
           customerFirstName: apt.customer_name.split(' ')[0],
           service: service?.name ?? 'Service',
+          staffName: staff?.full_name || undefined,
+          staffId: apt.staff_id || undefined,
           time: apt.appointment_time,
           status: apt.status as Appointment['status'],
-          amount: formatPrice(apt.amount || 0)
+          amount: formatPrice(apt.amount || 0),
+          date: apt.appointment_date,
+          phone: apt.customer_phone
         };
       });
 
@@ -574,14 +578,14 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
             </div>
 
             {/* Mobile Card View - Visible on Mobile Only */}
-            <div className="sm:hidden space-y-4">
+            <div className="sm:hidden space-y-3">
               {filteredAppointments.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <p className="text-sm">{t('appointments.noAppointments') || 'No appointments'}</p>
                 </div>
               ) : (
                 filteredAppointments.slice(0, 3).map((apt) => (
-                  <div key={apt.id} className="bg-gray-50 dark:bg-white/5 rounded-[20px] p-4 border border-gray-100 dark:border-white/10 hover:border-treservi-accent transition-colors">
+                  <div key={apt.id} className="bg-gray-50 dark:bg-white/5 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
                     {/* Header: Time, Name, Status */}
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div className="flex-1">
@@ -591,13 +595,13 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                         </div>
                         <div className="flex items-center gap-2">
                           <Avatar name={apt.customerName} role="customer" size="sm" showRing={false} />
-                          <span className="font-semibold text-gray-900 dark:text-white text-sm">{apt.customerFirstName}</span>
+                          <span className="text-sm font-semibold text-gray-900 dark:text-white">{apt.customerFirstName}</span>
                         </div>
                       </div>
                       <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap
                         ${apt.status === 'Confirmed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : ''}
                         ${apt.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
-                        ${apt.status === 'Completed' ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' : ''}
+                        ${apt.status === 'Completed' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : ''}
                       `}>
                         {apt.status}
                       </span>
@@ -606,28 +610,44 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                     {/* Details - Vertical Stack */}
                     <div className="space-y-2 text-sm border-t border-gray-200 dark:border-gray-700 pt-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-500 dark:text-gray-400 text-xs">{t('appointments.service') || 'Service'}</span>
-                        <span className="font-medium text-gray-900 dark:text-white">{apt.service}</span>
+                        <span className="text-gray-500 text-xs">{t('appointments.service') || 'Service'}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{apt.service}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-500 dark:text-gray-400 text-xs">{t('common.amount') || 'Amount'}</span>
-                        <span className="font-bold text-treservi-accent">{apt.amount}</span>
-                      </div>
+                      {apt.staffName && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500 text-xs">Staff</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{apt.staffName}</span>
+                        </div>
+                      )}
+                      {apt.phone && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500 text-xs">Phone</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{apt.phone}</span>
+                        </div>
+                      )}
+                      {apt.date && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500 text-xs">Date</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{apt.date}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Actions - Bottom */}
                     <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                       <button
                         onClick={() => handleEdit(apt)}
-                        className="flex-1 flex items-center justify-center gap-2 py-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors text-sm font-medium"
+                        className="flex-1 flex items-center justify-center gap-2 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors text-sm font-medium"
                       >
-                        <Pencil size={14} /> Edit
+                        <Pencil size={16} />
+                        Edit
                       </button>
                       <button
                         onClick={() => handleDelete(apt.id)}
-                        className="flex-1 flex items-center justify-center gap-2 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm font-medium"
+                        className="flex-1 flex items-center justify-center gap-2 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm font-medium"
                       >
-                        <Trash2 size={14} /> Delete
+                        <Trash2 size={16} />
+                        Delete
                       </button>
                     </div>
                   </div>
