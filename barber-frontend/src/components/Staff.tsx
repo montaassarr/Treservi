@@ -260,7 +260,9 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
               </div>
             </div>
           ) : (
-            <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <>
+              {/* Desktop Grid View */}
+              <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {staff.map((member) => (
                 <button
                   key={member.id}
@@ -358,13 +360,12 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
                 </button>
               ))}
             </div>
+            </>
           )}
-        </div>
 
-        {/* Stats Panel */}
-        {selectedStaff && staffStats && (
-          <div className="space-y-4">
-            {/* Staff Card */}
+        {/* Staff Card */}
+        {selectedStaff && (
+          <>
             <div className={`${clayCard} p-6`}>
               <div className="text-center mb-4">
                 <Avatar
@@ -461,9 +462,10 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
                 )}
               </div>
             </div>
-          </div>
+          </>
         )}
       </div>
+    </div>
 
       {/* Modal */}
       {modalOpen && (
