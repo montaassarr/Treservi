@@ -14,9 +14,13 @@ export interface Appointment {
   customerName: string;
   customerFirstName: string;
   service: string;
+  staffName?: string;
+  staffId?: string;
   time: string;
   status: 'Pending' | 'Confirmed' | 'Completed';
   amount: string;
+  date?: string;
+  phone?: string;
 }
 
 export interface Comment {
