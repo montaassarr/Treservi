@@ -42,13 +42,30 @@ interface StaffDashboardProps {
   staffName: string;
 }
 
+interface StaffDashboardCachedPayload {
+  todayAppointments: AppointmentData[];
+  upcomingAppointments: AppointmentData[];
+  stats: {
+    today_appointments: number;
+    today_earnings: number;
+    completed_appointments: number;
+    total_earnings: number;
+    chartData: { name: string; value: number }[];
+  };
+  services: Service[];
+  appointments: Appointment[];
+  expiresAt: number;
+}
+
+const staffDashboardCache = new Map<string, StaffDashboardCachedPayload>();
+
 // Mock Data removed in favor of real data
 
 const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staffName }) => {
   const { t, formatCurrency } = useLanguage();
   
   // State management
-  const [isAuthVerified, setIsAuthVerified] = useState(false);
+  const [isAuthVerified] = useState(true);
   const [todayAppointments, setTodayAppointments] = useState<AppointmentData[]>([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState<AppointmentData[]>([]);
   const [stats, setStats] = useState({
@@ -77,25 +94,20 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
     amount: ''
   });
 
-  // Security: Verify user is staff member and has access to this data
-  useEffect(() => {
-    const verifyAccess = async () => {
-      try {
-        console.warn('StaffDashboard: auth check not implemented');
-        setIsAuthVerified(true);
-        setLoading(false);
-      } catch (err: any) {
-        console.error('Auth verification error:', err);
-        setAuthError(err.message || 'Authorization failed');
-        setLoading(false);
-      }
-    };
-
-    verifyAccess();
-  }, [staffId]);
-
   const loadData = async () => {
     if (!isAuthVerified) return;
+
+    const cacheKey = `${staffId}:${salonId}`;
+    const cached = staffDashboardCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) {
+      setTodayAppointments(cached.todayAppointments);
+      setUpcomingAppointments(cached.upcomingAppointments);
+      setStats(cached.stats);
+      setServices(cached.services);
+      setAppointments(cached.appointments);
+      setLoading(false);
+      return;
+    }
     
     setLoading(true);
     try {
@@ -129,6 +141,15 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
 
       setStats(statsRes.data || stats);
       setServices(servicesRes.data || []);
+
+      staffDashboardCache.set(cacheKey, {
+        todayAppointments: appointmentsRes.data || [],
+        upcomingAppointments: upcomingRes.data || [],
+        stats: statsRes.data || stats,
+        services: servicesRes.data || [],
+        appointments: mapped,
+        expiresAt: Date.now() + 45_000
+      });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -142,6 +163,11 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
       loadData();
     }
   }, [staffId, salonId, isAuthVerified]);
+
+  const refreshData = () => {
+    staffDashboardCache.delete(`${staffId}:${salonId}`);
+    void loadData();
+  };
 
   const handleAddNew = () => {
     setEditingId(null);
@@ -214,7 +240,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
         if (error) throw new Error(error);
       }
       
-      loadData();
+      refreshData();
       setIsModalOpen(false);
       setSuccess('Appointment request sent for approval');
       setTimeout(() => setSuccess(null), 3000);
@@ -247,7 +273,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-treservi-accent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">Verifying access and loading your dashboard...</p>
+          <p className="text-gray-500 dark:text-gray-400">Loading your dashboard...</p>
         </div>
       </div>
     );
@@ -308,7 +334,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
             </select>
           </div>
           <div className="flex-1 w-full min-h-0">
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height={260} minWidth={1} minHeight={200}>
               <BarChart data={stats.chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }} onMouseMove={(state) => {
                 if (state.isTooltipActive) setActiveIndex(state.activeTooltipIndex ?? null);
                 else setActiveIndex(null);
@@ -447,7 +473,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
                             if (window.confirm('Mark this appointment as Completed?')) {
                                 try {
                                     await updateAppointment(apt.id, { status: 'Completed' });
-                                    loadData();
+                                    refreshData();
                                 } catch (err) {
                                     console.error('Failed to complete', err);
                                 }

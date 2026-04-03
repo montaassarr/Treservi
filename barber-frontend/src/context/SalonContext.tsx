@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient } from '../services/apiClient';
 
@@ -50,17 +50,19 @@ interface SalonProviderProps {
 export const SalonProvider: React.FC<SalonProviderProps> = ({ children }) => {
   const params = useParams<{ salonSlug: string; salonId?: string }>();
   const salonParam = params.salonSlug || params.salonId;
+  const lastLoadedParamRef = useRef<string | null>(null);
   
   const [salon, setSalon] = useState<Salon | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSalon = async () => {
-    // Debug log
-    console.log('[SalonContext] fetchSalon called with param:', salonParam);
-    
+  const fetchSalon = useCallback(async (force = false) => {
     if (!salonParam) {
-      console.log('[SalonContext] No slug/id, aborting.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!force && salon && lastLoadedParamRef.current === salonParam) {
       setIsLoading(false);
       return;
     }
@@ -75,7 +77,6 @@ export const SalonProvider: React.FC<SalonProviderProps> = ({ children }) => {
         data = await apiClient.getSalonBySlug(salonParam);
       } catch (slugError) {
         if (/^[0-9a-fA-F-]{24}$/.test(salonParam)) {
-          console.log('[SalonContext] Slug lookup failed, trying ID lookup for:', salonParam);
           data = await apiClient.getSalonById(salonParam);
         } else {
           throw slugError;
@@ -86,24 +87,24 @@ export const SalonProvider: React.FC<SalonProviderProps> = ({ children }) => {
         setError('Salon not found');
         setSalon(null);
       } else {
-        console.log('[SalonContext] Salon loaded:', data);
+        lastLoadedParamRef.current = salonParam;
         setSalon(data as Salon);
       }
     } catch (err) {
-      console.error('[SalonContext] Error fetching salon:', err);
+      console.error('Salon context fetch error:', err);
       setError('Failed to load salon');
       setSalon(null);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [salon, salonParam]);
 
   useEffect(() => {
     fetchSalon();
-  }, [salonParam]); 
+  }, [fetchSalon]);
 
   const refreshSalon = async () => {
-    await fetchSalon();
+    await fetchSalon(true);
   };
 
   return (

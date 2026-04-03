@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { apiClient, authStorage, AuthUser } from './services/apiClient';
 import { LanguageProvider } from './context/LanguageContext';
@@ -20,6 +20,13 @@ const LoadingScreen: React.FC = () => (
   </div>
 );
 
+const withTimeout = async <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+};
+
 const AppRoutes: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState('');
@@ -30,15 +37,9 @@ const AppRoutes: React.FC = () => {
   const [userSalonSlug, setUserSalonSlug] = useState('');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const initAuthStartedRef = useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
-
-  const withTimeout = async <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> => {
-    return Promise.race([
-      promise,
-      new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
-    ]);
-  };
 
   const applyUserState = useCallback((user: AuthUser) => {
     setUserEmail(user.email || '');
@@ -82,6 +83,14 @@ const AppRoutes: React.FC = () => {
   useEffect(() => {
     let mounted = true;
 
+    if (initAuthStartedRef.current) {
+      return () => {
+        mounted = false;
+      };
+    }
+
+    initAuthStartedRef.current = true;
+
     const initAuth = async () => {
       console.log('[App] Starting initAuth');
       try {
@@ -119,7 +128,7 @@ const AppRoutes: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [applyUserState, resetAuthState, withTimeout]);
+  }, [applyUserState, resetAuthState]);
 
   // Save current route for PWA state restoration
   useEffect(() => {
@@ -145,7 +154,7 @@ const AppRoutes: React.FC = () => {
     } finally {
       setIsLoadingAuth(false);
     }
-  }, [applyUserState, withTimeout]);
+  }, [applyUserState]);
 
   const handleLogout = useCallback(async () => {
     const wasSuperAdmin = isSuperAdmin;

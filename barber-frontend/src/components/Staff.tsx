@@ -264,10 +264,18 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
               {/* Desktop Grid View */}
               <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {staff.map((member) => (
-                <button
+                <div
                   key={member.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelectedStaff(member)}
-                  className={`group flex items-center gap-4 p-4 rounded-[28px] text-left transition-all border-2 ${
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedStaff(member);
+                    }
+                  }}
+                  className={`group flex items-center gap-4 p-4 rounded-[28px] text-left transition-all border-2 cursor-pointer ${
                     selectedStaff?.id === member.id
                       ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500'
                       : 'bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-[#1c1c1c] dark:via-[#1a1a1a] dark:to-[#111] border-white/70 dark:border-gray-800 hover:border-emerald-500'
@@ -329,7 +337,7 @@ const Staff: React.FC<StaffProps> = ({ salonId, isOwner = true }) => {
                       </button>
                     </div>
                   )}
-                </button>
+                </div>
               ))}
             </div>
 
