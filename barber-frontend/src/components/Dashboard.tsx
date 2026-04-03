@@ -36,6 +36,20 @@ const defaultTopBarbers: Barber[] = [];
 const defaultComments: Comment[] = [];
 const defaultAppointments: Appointment[] = [];
 
+interface DashboardCachedPayload {
+  chartData: ChartData[];
+  stats: { bookings: number; revenue: number };
+  topBarbers: Barber[];
+  barberStats: Map<string, { count: number; services: Set<string> }>;
+  appointments: Appointment[];
+  servicesList: Service[];
+  staff: any[];
+  appointmentsData: any[];
+  expiresAt: number;
+}
+
+const dashboardDataCache = new Map<string, DashboardCachedPayload>();
+
 interface DashboardProps {
   salonId?: string;
   userId?: string;
@@ -94,6 +108,21 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
         setTopBarbers(defaultTopBarbers);
         setAppointments(defaultAppointments);
         setServicesList([]);
+        return;
+      }
+
+      const cacheKey = `${salonId}:${dateFilter}`;
+      const cached = dashboardDataCache.get(cacheKey);
+      if (cached && Date.now() < cached.expiresAt) {
+        setChartData(cached.chartData);
+        setStats(cached.stats);
+        setTopBarbers(cached.topBarbers);
+        setBarberStats(cached.barberStats);
+        setAppointments(cached.appointments);
+        setServicesList(cached.servicesList);
+        setStaff(cached.staff);
+        setAppointmentsData(cached.appointmentsData);
+        setFilterStaffId('all');
         return;
       }
 
@@ -228,6 +257,18 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
 
       setAppointments(upcomingAppointments);
       setFilterStaffId('all');
+
+      dashboardDataCache.set(cacheKey, {
+        chartData: chartBuckets.map(({ name, value }) => ({ name, value })),
+        stats: { bookings: appointmentsData.length, revenue: totalRevenue },
+        topBarbers: topBarbersData,
+        barberStats: barberStatsMap,
+        appointments: upcomingAppointments,
+        servicesList: servicesData,
+        staff: staffData,
+        appointmentsData,
+        expiresAt: Date.now() + 45_000
+      });
     } catch (error: any) {
       setDataError(error?.message || 'Failed to load dashboard');
     } finally {
@@ -263,10 +304,18 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
       const appointmentData = Array.isArray(appointmentsData) ? appointmentsData.find((item) => item.id === apt.id) : null;
       return appointmentData?.staff_id === filterStaffId;
     });
-  }, [appointments, filterStaffId]);
+  }, [appointments, filterStaffId, appointmentsData]);
 
   const hasData = filteredAppointments.length > 0 || servicesList.length > 0 || topBarbers.length > 0 || comments.length > 0;
   const showLoading = isLoadingData && !hasData;
+
+  const invalidateDashboardCache = () => {
+    for (const key of dashboardDataCache.keys()) {
+      if (key.startsWith(`${salonId}:`)) {
+        dashboardDataCache.delete(key);
+      }
+    }
+  };
 
   // Loading state
   if (showLoading) {
@@ -320,6 +369,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
         }
         // Optimistic update for UI responsiveness
         setAppointments(prev => prev.filter(a => a.id !== id));
+        invalidateDashboardCache();
       } catch (err: any) {
         alert("An unexpected error occurred: " + err.message);
       }
@@ -359,6 +409,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
       };
       setAppointments(prev => [newApt, ...prev]);
     }
+    invalidateDashboardCache();
     setIsModalOpen(false);
   };
 
@@ -454,7 +505,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
               </select>
             </div>
             <div className="w-full h-[200px] sm:h-[240px] md:h-[320px] min-h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={200}>
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }} onMouseMove={(state) => {
                   if (state.isTooltipActive) setActiveIndex(state.activeTooltipIndex ?? null);
                   else setActiveIndex(null);

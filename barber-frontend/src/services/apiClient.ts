@@ -1,4 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+const ME_CACHE_TTL_MS = 30_000;
+const SALON_CACHE_TTL_MS = 60_000;
 
 export interface AuthUser {
   id: string;
@@ -17,10 +19,46 @@ export interface AuthResponse {
 
 const TOKEN_KEY = 'reservi_auth_token';
 
+let meCache: { token: string; user: AuthUser; expiresAt: number } | null = null;
+let meInFlight: Promise<AuthUser> | null = null;
+
+const salonBySlugCache = new Map<string, { salon: any; expiresAt: number }>();
+const salonByIdCache = new Map<string, { salon: any; expiresAt: number }>();
+const salonBySlugInFlight = new Map<string, Promise<any>>();
+const salonByIdInFlight = new Map<string, Promise<any>>();
+
+const clearMeCache = () => {
+  meCache = null;
+  meInFlight = null;
+};
+
+const getCachedSalon = (cache: Map<string, { salon: any; expiresAt: number }>, key: string) => {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.salon;
+};
+
+const setCachedSalon = (cache: Map<string, { salon: any; expiresAt: number }>, key: string, salon: any) => {
+  cache.set(key, {
+    salon,
+    expiresAt: Date.now() + SALON_CACHE_TTL_MS
+  });
+};
+
 export const authStorage = {
   getToken: () => localStorage.getItem(TOKEN_KEY),
-  setToken: (token: string) => localStorage.setItem(TOKEN_KEY, token),
-  clearToken: () => localStorage.removeItem(TOKEN_KEY)
+  setToken: (token: string) => {
+    localStorage.setItem(TOKEN_KEY, token);
+    clearMeCache();
+  },
+  clearToken: () => {
+    localStorage.removeItem(TOKEN_KEY);
+    clearMeCache();
+  }
 };
 
 const requestJson = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
@@ -34,10 +72,18 @@ const requestJson = async <T>(path: string, options: RequestInit = {}): Promise<
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers
+    });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error(`Cannot reach API at ${API_BASE_URL}. Ensure backend is running.`);
+    }
+    throw error;
+  }
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -64,15 +110,106 @@ export const apiClient = {
     });
   },
   getMe: async () => {
-    const data = await requestJson<{ user: AuthUser }>('/api/auth/me');
-    return data.user;
+    const token = authStorage.getToken() ?? '';
+    if (meCache && meCache.token === token && Date.now() < meCache.expiresAt) {
+      return meCache.user;
+    }
+
+    if (meInFlight) {
+      return meInFlight;
+    }
+
+    meInFlight = requestJson<{ user: AuthUser }>('/api/auth/me')
+      .then((data) => {
+        meCache = {
+          token,
+          user: data.user,
+          expiresAt: Date.now() + ME_CACHE_TTL_MS
+        };
+        return data.user;
+      })
+      .finally(() => {
+        meInFlight = null;
+      });
+
+    return meInFlight;
   },
   getSalonBySlug: async (slug: string) => {
-    const data = await requestJson<{ salon: any }>(`/api/salons/slug/${slug}`);
-    return data.salon;
+    const cached = getCachedSalon(salonBySlugCache, slug);
+    if (cached) {
+      return cached;
+    }
+
+    const inFlight = salonBySlugInFlight.get(slug);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const request = requestJson<{ salon: any }>(`/api/salons/slug/${slug}`)
+      .then((data) => {
+        setCachedSalon(salonBySlugCache, slug, data.salon);
+        if (data.salon?.id) {
+          setCachedSalon(salonByIdCache, data.salon.id, data.salon);
+        }
+        return data.salon;
+      })
+      .finally(() => {
+        salonBySlugInFlight.delete(slug);
+      });
+
+    salonBySlugInFlight.set(slug, request);
+    return request;
   },
   getSalonById: async (id: string) => {
-    const data = await requestJson<{ salon: any }>(`/api/salons/${id}`);
+    const cached = getCachedSalon(salonByIdCache, id);
+    if (cached) {
+      return cached;
+    }
+
+    const inFlight = salonByIdInFlight.get(id);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const request = requestJson<{ salon: any }>(`/api/salons/${id}`)
+      .then((data) => {
+        setCachedSalon(salonByIdCache, id, data.salon);
+        if (data.salon?.slug) {
+          setCachedSalon(salonBySlugCache, data.salon.slug, data.salon);
+        }
+        return data.salon;
+      })
+      .finally(() => {
+        salonByIdInFlight.delete(id);
+      });
+
+    salonByIdInFlight.set(id, request);
+    return request;
+  },
+  updateSalonById: async (id: string, updates: {
+    name?: string;
+    address?: string;
+    city?: string;
+    country?: string;
+    contact_phone?: string;
+    contact_email?: string;
+    logo_url?: string;
+    opening_time?: string;
+    closing_time?: string;
+    open_days?: string[];
+    latitude?: number | null;
+    longitude?: number | null;
+  }) => {
+    const data = await requestJson<{ salon: any }>(`/api/salons/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates)
+    });
+
+    salonByIdCache.delete(id);
+    if (data.salon?.slug) {
+      salonBySlugCache.delete(data.salon.slug);
+    }
+
     return data.salon;
   },
   savePushSubscription: async (payload: {

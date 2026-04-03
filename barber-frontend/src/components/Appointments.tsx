@@ -73,54 +73,6 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
       if (staffRes.error) throw staffRes.error;
 
       const loadedAppointments = appointmentsRes.data || [];
-      
-      // Auto-complete past appointments
-      const now = new Date();
-      const today = now.toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' });
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
-      
-      const appointmentsToComplete: string[] = [];
-      
-      loadedAppointments.forEach((apt: AppointmentData) => {
-        // Skip if already completed or cancelled
-        if (apt.status === 'Completed' || apt.status === 'Cancelled') return;
-        
-        const aptDate = apt.appointment_date;
-        const aptTime = apt.appointment_time;
-        
-        // Check if appointment is in the past
-        if (aptDate < today) {
-          // Past date - should be completed
-          appointmentsToComplete.push(apt.id);
-        } else if (aptDate === today && aptTime) {
-          // Same day - check time
-          const [hours, minutes] = aptTime.split(':').map(Number);
-          // Add service duration (default 30 mins) to appointment time
-          const serviceDuration = apt.service?.duration || 30;
-          const endMinutes = hours * 60 + minutes + serviceDuration;
-          const currentTotalMinutes = currentHour * 60 + currentMinute;
-          
-          if (endMinutes < currentTotalMinutes) {
-            // Appointment time + duration has passed
-            appointmentsToComplete.push(apt.id);
-          }
-        }
-      });
-      
-      // Update appointments to Completed in the database
-      if (appointmentsToComplete.length > 0) {
-        await Promise.all(
-          appointmentsToComplete.map((id) => updateAppointment(id, { status: 'Completed' }))
-        );
-
-        // Update local state
-        loadedAppointments.forEach((apt: AppointmentData) => {
-          if (appointmentsToComplete.includes(apt.id)) {
-            apt.status = 'Completed';
-          }
-        });
-      }
 
       setAppointments(loadedAppointments);
       setServices(servicesRes.data || []);

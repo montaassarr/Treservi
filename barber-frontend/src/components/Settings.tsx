@@ -116,8 +116,36 @@ const Settings: React.FC<SettingsProps> = ({ salonId }) => {
     setSuccess(false);
 
     try {
-      console.warn('Settings: update endpoint not implemented');
-      throw new Error('Save not available yet');
+      const updatedSalon = await apiClient.updateSalonById(salonId, {
+        name: settings.name,
+        address: settings.address,
+        city: settings.city,
+        country: settings.country,
+        contact_phone: settings.contact_phone,
+        contact_email: settings.contact_email,
+        logo_url: settings.logo_url,
+        opening_time: settings.opening_time,
+        closing_time: settings.closing_time,
+        open_days: settings.open_days,
+        latitude: settings.latitude,
+        longitude: settings.longitude
+      });
+
+      setSettings((prev) => ({
+        ...prev,
+        name: updatedSalon.name || '',
+        address: updatedSalon.address || '',
+        city: updatedSalon.city || '',
+        country: updatedSalon.country || 'Tunisia',
+        contact_phone: updatedSalon.contact_phone || '',
+        contact_email: updatedSalon.contact_email || '',
+        logo_url: updatedSalon.logo_url || '',
+        opening_time: updatedSalon.opening_time || '09:00',
+        closing_time: updatedSalon.closing_time || '18:00',
+        open_days: updatedSalon.open_days || prev.open_days,
+        latitude: updatedSalon.latitude ?? null,
+        longitude: updatedSalon.longitude ?? null
+      }));
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
