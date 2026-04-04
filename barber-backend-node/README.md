@@ -47,9 +47,12 @@ npm run dev
 - `PATCH /api/services/:id`
 - `DELETE /api/services/:id`
 - `POST /api/push-subscriptions`
+- `POST /api/push-subscriptions/test`
 
 ## Notes
 
 - Auth uses JWT (`Authorization: Bearer <token>`).
 - Update `CORS_ORIGIN` to match the frontend URL.
 - The backend expects a valid MongoDB Atlas connection string in `MONGODB_URI`.
+- For push delivery, set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT`.
+- New appointments now trigger push sends to salon owners and assigned staff when subscriptions exist.

@@ -12,17 +12,15 @@ const NotificationToggle: React.FC<NotificationToggleProps> = ({
   userId,
   size = 20
 }) => {
-  const { subscribeToPush, permission, isSubscribed } = usePushNotifications();
-
-  const isSupported = 'serviceWorker' in navigator && 'PushManager' in window;
+  const { subscribeToPush, permission, isSubscribed, isSupported, statusMessage } = usePushNotifications();
   const isBlocked = permission === 'denied';
 
   const label = useMemo(() => {
-    if (!isSupported) return 'Notifications not supported on this device';
+    if (!isSupported) return statusMessage;
     if (isBlocked) return 'Notifications blocked in browser settings';
     if (isSubscribed) return 'Notifications enabled';
-    return 'Enable notifications';
-  }, [isBlocked, isSubscribed, isSupported]);
+    return statusMessage || 'Enable notifications';
+  }, [isBlocked, isSubscribed, isSupported, statusMessage]);
 
   const handleClick = async () => {
     if (!isSupported || isBlocked) return;

@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { Appointment } from '../models/Appointment.js';
+import { User } from '../models/User.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import { sendPushToUsers } from '../services/pushNotifications.js';
+import { logger } from '../utils/logger.js';
 
 export const appointmentsRouter = Router();
 
@@ -38,6 +41,23 @@ appointmentsRouter.post('/public', async (req: Request, res: Response) => {
     status: body.status ?? 'Pending',
     amount: body.amount ?? 0,
     notes: body.notes
+  });
+
+  const owners = await User.find({ salonId: appointment.salon_id, role: 'owner' })
+    .select('_id')
+    .lean();
+  const recipientUserIds = [
+    ...owners.map((owner) => String(owner._id)),
+    String(appointment.staff_id)
+  ];
+
+  sendPushToUsers(recipientUserIds, {
+    title: 'New Appointment',
+    body: `${appointment.customer_name} booked for ${appointment.appointment_date} at ${appointment.appointment_time}`,
+    url: '/dashboard',
+    appointmentId: String(appointment._id)
+  }).catch((error) => {
+    logger.error('Push notification dispatch failed after public appointment creation', error, 'APPOINTMENTS');
   });
 
   return res.status(201).json({ appointment });
@@ -98,6 +118,23 @@ appointmentsRouter.post('/', requireAuth, async (req: AuthRequest, res: Response
     status: body.status ?? 'Pending',
     amount: body.amount ?? 0,
     notes: body.notes
+  });
+
+  const owners = await User.find({ salonId: appointment.salon_id, role: 'owner' })
+    .select('_id')
+    .lean();
+  const recipientUserIds = [
+    ...owners.map((owner) => String(owner._id)),
+    String(appointment.staff_id)
+  ];
+
+  sendPushToUsers(recipientUserIds, {
+    title: 'New Appointment',
+    body: `${appointment.customer_name} booked for ${appointment.appointment_date} at ${appointment.appointment_time}`,
+    url: '/dashboard',
+    appointmentId: String(appointment._id)
+  }).catch((error) => {
+    logger.error('Push notification dispatch failed after authenticated appointment creation', error, 'APPOINTMENTS');
   });
 
   return res.status(201).json({ appointment });
