@@ -256,3 +256,7 @@ body {
 .safe-bottom {
   padding-bottom: max(var(--sab), 12px);
 }
+
+.pb-safe {
+  padding-bottom: var(--sab);
+}

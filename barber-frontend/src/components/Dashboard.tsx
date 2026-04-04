@@ -94,9 +94,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
     serviceId: '',
     staffId: '',
     appointmentDate: '',
-    time: '',
-    status: 'Pending',
-    amount: ''
+    time: ''
   });
   const [showScheduleView, setShowScheduleView] = useState(false);
 
@@ -816,8 +814,8 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
         cancelLabel="Cancel"
         submitLabel={editingId ? 'Save Changes' : 'Book Appointment'}
       >
-        <form id="dashboard-appointment-form" onSubmit={handleSubmit} className="mobile-form space-y-4">
-              <div className="space-y-2">
+        <form id="dashboard-appointment-form" onSubmit={handleSubmit} className="mobile-form space-y-3">
+              <div className="space-y-1.5">
                 <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Customer Name</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -827,13 +825,13 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                     value={formData.customerName}
                     onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
                     placeholder="John Doe"
-                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 sm:py-3 pl-12 pr-4 outline-none transition-all min-h-[48px] text-base sm:text-sm"
+                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-2.5 sm:py-3 pl-12 pr-4 outline-none transition-all min-h-[44px] text-base sm:text-sm"
                   />
                 </div>
               </div>
 
-              <div className="mobile-grid-2">
-                <div className="space-y-2">
+              <div className="mobile-grid-2 gap-2">
+                <div className="space-y-1.5">
                   <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Service</label>
                   <div className="relative">
                     <Scissors className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 z-10" />
@@ -841,7 +839,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                       required
                       value={formData.service}
                       onChange={handleServiceChange}
-                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all appearance-none cursor-pointer min-h-[48px] text-base sm:text-sm"
+                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-2.5 pl-10 pr-4 outline-none transition-all appearance-none cursor-pointer min-h-[44px] text-base sm:text-sm"
                     >
                       <option value="" disabled>Select Service</option>
                       {servicesList.map((s) => (
@@ -850,14 +848,14 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                     </select>
                   </div>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Staff</label>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 z-10" />
                     <select
                       value={formData.staffId}
                       onChange={(e) => setFormData({ ...formData, staffId: e.target.value })}
-                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all appearance-none cursor-pointer min-h-[48px] text-base sm:text-sm"
+                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-2.5 pl-10 pr-4 outline-none transition-all appearance-none cursor-pointer min-h-[44px] text-base sm:text-sm"
                     >
                       <option value="">Select Staff</option>
                       {staff.map((member) => (
@@ -870,8 +868,8 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                 </div>
               </div>
 
-              <div className="mobile-grid-2">
-                <div className="space-y-2">
+              <div className="mobile-grid-2 gap-2">
+                <div className="space-y-1.5">
                   <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Date</label>
                   <div className="relative">
                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -880,28 +878,11 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                       required
                       value={formData.appointmentDate}
                       onChange={(e) => setFormData({ ...formData, appointmentDate: e.target.value })}
-                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all min-h-[48px] text-base sm:text-sm"
+                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-2.5 pl-10 pr-4 outline-none transition-all min-h-[44px] text-base sm:text-sm"
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Amount</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">DT</span>
-                    <input
-                      type="text"
-                      required
-                      value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                      placeholder="0 DT"
-                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all min-h-[48px] text-base sm:text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="mobile-grid-2">
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Time</label>
                   <div className="relative">
                     <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -911,21 +892,9 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                       value={formData.time}
                       onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                       placeholder="10:00 AM"
-                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 pl-10 pr-4 outline-none transition-all min-h-[48px] text-base sm:text-sm"
+                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-2.5 pl-10 pr-4 outline-none transition-all min-h-[44px] text-base sm:text-sm"
                     />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-treservi-accent focus:bg-white dark:focus:bg-black rounded-full py-3 px-4 outline-none transition-all appearance-none min-h-[48px] text-base sm:text-sm cursor-pointer"
-                  >
-                    <option value="Pending">Pending</option>
-                    <option value="Confirmed">Confirmed</option>
-                    <option value="Completed">Completed</option>
-                  </select>
                 </div>
               </div>
 
