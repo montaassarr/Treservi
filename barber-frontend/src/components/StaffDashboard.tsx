@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ResponsiveContainer,
   BarChart,
@@ -63,6 +64,7 @@ const staffDashboardCache = new Map<string, StaffDashboardCachedPayload>();
 
 const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staffName }) => {
   const { t, formatCurrency } = useLanguage();
+  const navigate = useNavigate();
   
   // State management
   const [isAuthVerified] = useState(true);
@@ -257,7 +259,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
           <h2 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h2>
           <p className="text-red-600 dark:text-red-400 mb-4">{authError}</p>
           <button
-            onClick={() => window.location.href = '/login'}
+            onClick={() => navigate('/', { replace: true })}
             className="px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
           >
             Go to Login

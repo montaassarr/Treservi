@@ -23,6 +23,7 @@ import { fetchStaff } from '../services/staffService';
 import { formatPrice } from '../utils/format';
 import DailyScheduleView from './DailyScheduleView';
 import Avatar from './Avatar';
+import AppointmentModal from './AppointmentModal';
 
 interface AppointmentsProps {
   salonId: string;
@@ -539,40 +540,19 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityC
       </div>
 
       {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-white dark:bg-treservi-card-dark rounded-[24px] shadow-2xl overflow-hidden max-h-[90vh]"> 
-            <div className="sticky top-0 z-10 bg-white/95 dark:bg-treservi-card-dark/95 backdrop-blur border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 py-4 sm:py-5">
-              <div className="flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    resetForm();
-                  }}
-                  className="text-sm font-semibold text-gray-600 hover:text-gray-900"
-                >
-                  Cancel
-                </button>
-                <div className="min-w-0 text-center">
-                  <h3 className="text-lg sm:text-2xl font-bold leading-tight truncate">
-                    {editingId ? 'Edit Appointment' : 'New Appointment'}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-500 truncate hidden sm:block">
-                    {editingId ? 'Update appointment details' : 'Schedule a new booking'}
-                  </p>
-                </div>
-                <button
-                  type="submit"
-                  form="appointment-form"
-                  className="text-sm font-semibold text-emerald-600 hover:text-emerald-700"
-                >
-                  {editingId ? 'Save' : 'Add'}
-                </button>
-              </div>
-            </div>
-
-            <form id="appointment-form" onSubmit={handleSubmit} className="mobile-form overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-4 space-y-4 max-h-[calc(90vh-132px)]">
+      <AppointmentModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          resetForm();
+        }}
+        title={editingId ? 'Edit Appointment' : 'New Appointment'}
+        subtitle={editingId ? 'Update appointment details' : 'Schedule a new booking'}
+        formId="appointment-form"
+        cancelLabel="Cancel"
+        submitLabel={editingId ? 'Save' : 'Add'}
+      >
+        <form id="appointment-form" onSubmit={handleSubmit} className="mobile-form space-y-4">
               <div className="mobile-grid-2 min-w-0">
                 {/* Customer Name */}
                 <div className="space-y-2">
@@ -723,28 +703,8 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityC
                 </div>
               </details>
 
-              <div className="sticky bottom-0 bg-white/95 dark:bg-treservi-card-dark/95 backdrop-blur border-t border-gray-100 dark:border-gray-800 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    resetForm();
-                  }}
-                  className="px-5 py-3 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-3 rounded-full text-white font-bold bg-gradient-to-br from-[#3ad061] to-[#1e9c46] shadow-lg hover:scale-[1.02] active:scale-95 transition-transform"
-                >
-                  {editingId ? 'Update Appointment' : 'Create Appointment'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </AppointmentModal>
 
       {/* Calendar View Modal */}
       {showCalendar && (

@@ -5,7 +5,6 @@ import { useSalon } from '../context/SalonContext';
 
 interface SalonLoginPageProps {
   onLogin: (email: string) => void;
-  isLoadingAuth: boolean;
 }
 
 const SalonLoginPage: React.FC<SalonLoginPageProps> = ({ onLogin }) => {

@@ -25,6 +25,13 @@ export const env = {
   jwtSecret: getEnv('JWT_SECRET', 'change-me'),
   jwtExpiresIn: '7d',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
+  allowPublicRegistration: process.env.ALLOW_PUBLIC_REGISTRATION === 'true',
+  enableSeedRoutes:
+    process.env.ENABLE_SEED_ROUTES === 'true' ||
+    (process.env.NODE_ENV ?? 'development') !== 'production',
+  authMaxAttempts: Number(process.env.AUTH_MAX_ATTEMPTS) || 5,
+  authLockoutMinutes: Number(process.env.AUTH_LOCKOUT_MINUTES) || 15,
+  superAdminApiBasePath: process.env.SUPERADMIN_API_BASE_PATH ?? '/api/sa-ops-8mK2r4',
   seedAdminEmail: process.env.SEED_ADMIN_EMAIL ?? 'owner@barbershop.com',
   seedAdminPassword: process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!',
   seedSalonName: process.env.SEED_SALON_NAME ?? 'Demo Salon',
@@ -32,3 +39,7 @@ export const env = {
   seedSuperAdminEmail: process.env.SEED_SUPER_ADMIN_EMAIL ?? 'superadmin@barbershop.com',
   seedSuperAdminPassword: process.env.SEED_SUPER_ADMIN_PASSWORD ?? 'ChangeMe123!'
 };
+
+if (env.nodeEnv === 'production' && env.jwtSecret === 'change-me') {
+  throw new Error('In production, JWT_SECRET must be set to a strong value.');
+}

@@ -1,26 +1,27 @@
-import React, { useEffect } from 'react';
-import { Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { Navigate, useParams, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useSalon } from '../context/SalonContext';
+import { SUPERADMIN_LOGIN_PATH, SUPERADMIN_ROUTE_BASE } from '../config/securityRoutes';
 
 interface ProtectedRouteProps {
   children: React.ReactElement;
-  isAuthenticated: boolean;
-  isLoadingAuth: boolean;
-  userSalonSlug: string;
   requireAuth?: boolean;
   requireSuperAdmin?: boolean;
-  isSuperAdmin?: boolean;
 }
+
+const LoadingScreen: React.FC = () => (
+  <div className="w-full min-h-screen flex items-center justify-center bg-white dark:bg-black">
+    <div className="w-12 h-12 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin"></div>
+  </div>
+);
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  isAuthenticated,
-  isLoadingAuth,
-  userSalonSlug,
   requireAuth = true,
   requireSuperAdmin = false,
-  isSuperAdmin = false,
 }) => {
+  const auth = useAuth();
   const { salonSlug } = useParams<{ salonSlug: string }>();
   const { salon, isLoading: isSalonLoading, error } = useSalon();
   const location = useLocation();
@@ -36,21 +37,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/404" replace />;
   }
 
-  // Show loading while checking auth or salon
-  if (isLoadingAuth || (normalizedSalonSlug && isSalonLoading)) {
-    return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-white dark:bg-black">
-        <div className="w-12 h-12 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin"></div>
-      </div>
-    );
+  // Show loading only while fetching salon data (if needed)
+  if (normalizedSalonSlug && isSalonLoading) {
+    return <LoadingScreen />;
   }
 
   // If super admin route is required and user is not super admin
-  if (requireSuperAdmin && !isSuperAdmin) {
-     if (userSalonSlug) {
-         return <Navigate to={`/${userSalonSlug}/dashboard`} replace />;
-     }
-     return <Navigate to="/" replace />;
+  if (requireSuperAdmin && (!auth.user || auth.user.role !== 'super_admin')) {
+    if (auth.user?.salonSlug) {
+      return <Navigate to={`/${auth.user.salonSlug}/dashboard`} replace />;
+    }
+    return <Navigate to="/" replace />;
   }
 
   // If salon-specific route and salon not found, show 404
@@ -59,24 +56,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // If auth is required and user is not authenticated
-  if (requireAuth && !isAuthenticated) {
+  if (requireAuth && auth.status === 'guest') {
     if (normalizedSalonSlug) {
       return <Navigate to={`/${normalizedSalonSlug}/login`} replace />;
-    } else if (location.pathname.startsWith('/admin')) {
-      return <Navigate to="/admin/login" replace />;
+    } else if (location.pathname.startsWith(SUPERADMIN_ROUTE_BASE)) {
+      return <Navigate to={SUPERADMIN_LOGIN_PATH} replace />;
     } else {
       return <Navigate to="/" replace />;
     }
   }
 
-  // If authenticated, check if user is accessing their own salon
-  if (requireAuth && isAuthenticated && userSalonSlug && normalizedSalonSlug) {
-    // Super admins can bypass salon check
+  // If authenticated, check if user is accessing their own salon (non-super-admin only)
+  if (requireAuth && auth.status === 'authenticated' && auth.user && normalizedSalonSlug) {
+    const isSuperAdmin = auth.user.role === 'super_admin';
     if (!isSuperAdmin) {
       // User is trying to access a different salon's dashboard
-      if (normalizedSalonSlug !== userSalonSlug) {
+      if (normalizedSalonSlug !== auth.user.salonSlug) {
         // Redirect to their own salon
-        return <Navigate to={`/${userSalonSlug}/dashboard`} replace />;
+        return <Navigate to={`/${auth.user.salonSlug}/dashboard`} replace />;
       }
     }
   }
