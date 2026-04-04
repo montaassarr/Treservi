@@ -31,20 +31,19 @@ A comprehensive salon management platform with multi-tenant support, online book
 - **Tailwind CSS** for styling
 
 ### Backend
--python Fast API 
--MongoDb 
+- Node.js API
+- MongoDB Atlas
 
 ### DevOps
-- **Docker** + **Docker Compose** for local development
 - **GitHub Actions** for CI/CD
 - **Vercel** for frontend hosting
-- **Supabase Cloud** for backend hosting
+- **MongoDB Atlas** for backend data storage
 
 ## 📦 Installation & Setup
 
 ### Prerequisites
 - Node.js 18+
-- Docker & Docker Compose
+- A MongoDB Atlas cluster
 - Python 3.12+ (for testing)
 - Git
 
