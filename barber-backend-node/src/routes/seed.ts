@@ -7,8 +7,18 @@ import { hashPassword } from '../utils/password.js';
 
 export const seedRouter = Router();
 
+const ensureSeedEnabled = (res: any) => {
+  if (!env.enableSeedRoutes) {
+    res.status(404).json({ error: 'Not found' });
+    return false;
+  }
+  return true;
+};
+
 // 🌱 Seed database with initial data
 seedRouter.post('/init', async (req, res) => {
+  if (!ensureSeedEnabled(res)) return;
+
   try {
     console.log('🌱 Starting database seed...');
 
@@ -63,8 +73,6 @@ seedRouter.post('/init', async (req, res) => {
       data: {
         salon: salon?.name,
         admin: {
-          email: 'owner@barbershop.com',
-          password: 'ChangeMe123!',
           role: 'super_admin',
           access: 'Full admin dashboard + appears as staff member'
         }
@@ -82,6 +90,8 @@ seedRouter.post('/init', async (req, res) => {
 
 // ✅ Check seed status
 seedRouter.get('/status', async (req, res) => {
+  if (!ensureSeedEnabled(res)) return;
+
   try {
     const adminExists = await User.findOne({ email: env.seedAdminEmail.toLowerCase() });
     const salonExists = await Salon.findOne({ slug: env.seedSalonSlug });

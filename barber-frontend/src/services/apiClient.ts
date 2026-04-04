@@ -1,3 +1,4 @@
+import { SUPERADMIN_API_BASE } from '../config/securityRoutes';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 const ME_CACHE_TTL_MS = 30_000;
 const SALON_CACHE_TTL_MS = 60_000;
@@ -344,34 +345,34 @@ export const apiClient = {
     return data.appointment;
   },
   fetchAdminOverview: async () => {
-    const data = await requestJson<{ stats: any }>('/api/admin/overview');
+    const data = await requestJson<{ stats: any }>(`${SUPERADMIN_API_BASE}/overview`);
     return data.stats;
   },
   fetchAdminSalons: async () => {
-    const data = await requestJson<{ salons: any[] }>('/api/admin/salons');
+    const data = await requestJson<{ salons: any[] }>(`${SUPERADMIN_API_BASE}/salons`);
     return data.salons;
   },
   createAdminSalon: async (payload: { name: string; slug: string; ownerEmail: string; ownerPassword: string; ownerName: string }) => {
-    const data = await requestJson<{ salon: any }>('/api/admin/salons', {
+    const data = await requestJson<{ salon: any }>(`${SUPERADMIN_API_BASE}/salons`, {
       method: 'POST',
       body: JSON.stringify(payload)
     });
     return data.salon;
   },
   updateAdminSalon: async (id: string, updates: { name?: string; slug?: string; status?: 'active' | 'suspended' | 'cancelled' }) => {
-    const data = await requestJson<{ salon: any }>(`/api/admin/salons/${id}`, {
+    const data = await requestJson<{ salon: any }>(`${SUPERADMIN_API_BASE}/salons/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates)
     });
     return data.salon;
   },
   deleteAdminSalon: async (id: string) => {
-    return requestJson<{ deleted: boolean }>(`/api/admin/salons/${id}`, {
+    return requestJson<{ deleted: boolean }>(`${SUPERADMIN_API_BASE}/salons/${id}`, {
       method: 'DELETE'
     });
   },
   resetAdminOwnerPassword: async (salonId: string, newPassword: string) => {
-    const data = await requestJson<{ updated: boolean; ownerEmail: string }>(`/api/admin/salons/${salonId}/reset-owner-password`, {
+    const data = await requestJson<{ updated: boolean; ownerEmail: string }>(`${SUPERADMIN_API_BASE}/salons/${salonId}/reset-owner-password`, {
       method: 'POST',
       body: JSON.stringify({ newPassword })
     });

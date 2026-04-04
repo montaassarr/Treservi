@@ -152,19 +152,98 @@ body {
   min-width: 0;
 }
 
+/* Fluid Responsive Grid System */
 .mobile-grid-2 {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1rem;
+  gap: 0.875rem; /* 14px - optimal for small screens */
+}
+
+@media (min-width: 480px) {
+  .mobile-grid-2 {
+    gap: 1rem; /* 16px */
+  }
 }
 
 @media (min-width: 640px) {
   .mobile-grid-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.125rem; /* 18px - breathing room on tablet */
   }
 
   .mobile-form label {
     margin-left: 0.5rem;
+  }
+}
+
+/* Responsive Button & Touch Target System */
+.btn-primary {
+  min-height: 44px; /* iOS minimum */
+  padding: 0.75rem 1rem; /* 12-16px */
+  font-size: 0.9375rem; /* 15px - readable on small screens */
+}
+
+@media (min-width: 480px) {
+  .btn-primary {
+    min-height: 44px;
+    padding: 0.875rem 1.25rem; /* 14-20px */
+    font-size: 1rem; /* 16px */
+  }
+}
+
+@media (min-width: 640px) {
+  .btn-primary {
+    min-height: auto;
+    padding: 0.625rem 1.5rem; /* 10-24px - no forced height */
+    font-size: 0.875rem; /* 14px - desktop small */
+  }
+}
+
+/* Form Input Responsive Sizing */
+.input-responsive {
+  min-height: 48px; /* Touch target on mobile */
+  padding: 0.75rem 1rem;
+  font-size: 1rem; /* Prevents zoom on iOS */
+}
+
+@media (min-width: 480px) {
+  .input-responsive {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9375rem;
+  }
+}
+
+@media (min-width: 640px) {
+  .input-responsive {
+    min-height: auto;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Icon Responsive Sizing */
+.icon-responsive-sm {
+  width: 1.25rem; /* 20px - mobile */
+  height: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .icon-responsive-sm {
+    width: 1rem; /* 16px - desktop */
+    height: 1rem;
+  }
+}
+
+.icon-responsive-md {
+  width: 1.5rem; /* 24px - mobile */
+  height: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .icon-responsive-md {
+    width: 1.25rem; /* 20px - desktop */
+    height: 1.25rem;
   }
 }
 

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { apiClient, authStorage, AuthUser } from './services/apiClient';
 import { LanguageProvider } from './context/LanguageContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { SalonProvider } from './context/SalonContext';
 import { parseDeepLink, saveAppState, restoreAppState, saveSalonPreference } from './utils/stateManager';
 import SalonLoginPage from './pages/SalonLoginPage';
@@ -13,58 +13,28 @@ import SuperAdminDashboard from './components/SuperAdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import BookingPage from './pages/BookingPage';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import { SUPERADMIN_DASHBOARD_PATH, SUPERADMIN_LOGIN_PATH, SUPERADMIN_ROUTE_BASE } from './config/securityRoutes';
 
-const LoadingScreen: React.FC = () => (
-  <div className="w-full min-h-screen flex items-center justify-center bg-white dark:bg-black">
-    <div className="w-12 h-12 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin"></div>
-  </div>
-);
-
-const withTimeout = async <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> => {
-  return Promise.race([
-    promise,
-    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
-  ]);
-};
 
 const AppRoutes: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
-  const [userId, setUserId] = useState('');
-  const [userRole, setUserRole] = useState<'owner' | 'staff' | 'super_admin'>('owner');
-  const [staffName, setStaffName] = useState('');
-  const [salonId, setSalonId] = useState('');
-  const [userSalonSlug, setUserSalonSlug] = useState('');
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const initAuthStartedRef = useRef(false);
+  const auth = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const applyUserState = useCallback((user: AuthUser) => {
-    setUserEmail(user.email || '');
-    setUserId(user.id || '');
-    setUserRole(user.role || 'owner');
-    setStaffName(user.fullName || '');
-    setSalonId(user.salonId || '');
-    setUserSalonSlug(user.salonSlug || '');
-    setIsSuperAdmin(Boolean(user.isSuperAdmin || user.role === 'super_admin'));
-  }, []);
 
-  const resetAuthState = useCallback(() => {
-    setIsAuthenticated(false);
-    setUserEmail('');
-    setUserId('');
-    setUserRole('owner');
-    setStaffName('');
-    setSalonId('');
-    setUserSalonSlug('');
-    setIsSuperAdmin(false);
-  }, []);
+  // Extract user properties from auth context
+  const isAuthenticated = auth.status === 'authenticated';
+  const userEmail = auth.user?.email || '';
+  const userId = auth.user?.id || '';
+  const userRole = auth.user?.role || 'owner';
+  const staffName = auth.user?.fullName || '';
+  const salonId = auth.user?.salonId || '';
+  const userSalonSlug = auth.user?.salonSlug || '';
+  const isSuperAdmin = Boolean(auth.user?.isSuperAdmin || auth.user?.role === 'super_admin');
 
   // Track route changes to save state for PWA restoration
   useEffect(() => {
-    if (location.pathname === '/' || location.pathname.includes('/login') || location.pathname.startsWith('/admin')) {
+    if (location.pathname === '/' || location.pathname.includes('/login') || location.pathname.startsWith(SUPERADMIN_ROUTE_BASE)) {
       return; // Skip saving state for these paths
     }
 
@@ -80,104 +50,13 @@ const AppRoutes: React.FC = () => {
     }
   }, [location.pathname]);
 
-  useEffect(() => {
-    let mounted = true;
-
-    if (initAuthStartedRef.current) {
-      return () => {
-        mounted = false;
-      };
-    }
-
-    initAuthStartedRef.current = true;
-
-    const initAuth = async () => {
-      console.log('[App] Starting initAuth');
-      try {
-        const token = authStorage.getToken();
-        if (!token) {
-          if (mounted) resetAuthState();
-          return;
-        }
-
-        const me = await withTimeout(apiClient.getMe(), 4000, null as any);
-        if (me && mounted) {
-          setIsAuthenticated(true);
-          applyUserState(me);
-        } else if (mounted) {
-          authStorage.clearToken();
-          resetAuthState();
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        if (mounted) {
-          authStorage.clearToken();
-          resetAuthState();
-        }
-      } finally {
-        if (mounted) {
-          console.log('[App] initAuth finished, setting isLoadingAuth false');
-          setIsLoadingAuth(false);
-        }
-      }
-    };
-
-    // Start init
-    initAuth();
-
-    return () => {
-      mounted = false;
-    };
-  }, [applyUserState, resetAuthState]);
-
-  // Save current route for PWA state restoration
-  useEffect(() => {
-    const path = location.pathname;
-    // Extract salon slug from path like /hamdi/dashboard (not /hamdi-salon/dashboard)
-    const match = path.match(/^\/([^\/]+)\/(dashboard|book|appointments|staff|services|settings)$/);
-    if (match) {
-      const [, salonSlug, route] = match;
-      saveAppState(`/${route}`, salonSlug);
-    }
-  }, [location.pathname]);
-
-  const handleLogin = useCallback(async (_email: string) => {
-    setIsLoadingAuth(true);
-    try {
-      const me = await withTimeout(apiClient.getMe(), 4000, null as any);
-      if (me) {
-        setIsAuthenticated(true);
-        applyUserState(me);
-      }
-    } catch (error) {
-      console.error('Login sync failed:', error);
-    } finally {
-      setIsLoadingAuth(false);
-    }
-  }, [applyUserState]);
-
-  const handleLogout = useCallback(async () => {
-    const wasSuperAdmin = isSuperAdmin;
-    const previousSlug = userSalonSlug;
-    authStorage.clearToken();
-    resetAuthState();
-
-    if (wasSuperAdmin) {
-      navigate('/admin/login', { replace: true });
-    } else if (previousSlug) {
-      navigate(`/${previousSlug}/login`, { replace: true });
-    } else {
-      navigate('/', { replace: true });
-    }
-  }, [navigate, isSuperAdmin, userSalonSlug, resetAuthState]);
-
-  // Auto-redirect logic for root path with salon detection (Deep Linking)
+  // Auto-redirect logic for authenticated and guest users
   useEffect(() => {
     const path = location.pathname;
     const params = new URLSearchParams(location.search);
     const isPWALaunch = params.get('source') === 'pwa' || window.matchMedia('(display-mode: standalone)').matches;
 
-    // Root path - check for salon param or restore previous state (PWA only)
+    // Root path handling
     if (path === '/') {
       const deepLink = parseDeepLink(params);
 
@@ -185,13 +64,11 @@ const AppRoutes: React.FC = () => {
       if (deepLink.salonSlug) {
         saveSalonPreference(deepLink.salonSlug);
         saveAppState(deepLink.route, deepLink.salonSlug, deepLink.params);
-        // Redirect to booking page without params
         navigate(`/${deepLink.salonSlug}${deepLink.route}`, { replace: true });
         return;
       }
 
       // ONLY restore previous app state for PWA launches (home screen icon)
-      // Regular web visits should always show the generic landing page
       if (isPWALaunch) {
         const savedState = restoreAppState();
         if (savedState && savedState.salonSlug) {
@@ -201,43 +78,57 @@ const AppRoutes: React.FC = () => {
         }
       }
 
-      // If user is authenticated and PWA, go to dashboard
-      if (isPWALaunch && isAuthenticated && !isLoadingAuth && userSalonSlug) {
+      // If authenticated, go to dashboard
+      if (isAuthenticated && userSalonSlug) {
         navigate(`/${userSalonSlug}/dashboard`, { replace: true });
         return;
       }
 
-      // If user is authenticated (but not PWA), show dashboard
-      if (isAuthenticated && !isLoadingAuth && userSalonSlug) {
-        navigate(`/${userSalonSlug}/dashboard`, { replace: true });
+      // If super admin, go to admin dashboard
+      if (isAuthenticated && isSuperAdmin) {
+        navigate(SUPERADMIN_DASHBOARD_PATH, { replace: true });
         return;
       }
-      
-      // Otherwise, stay on landing page (generic, no redirect)
+
+      // Otherwise stay on landing page
+      return;
     }
 
-    // Authenticated users redirect
-    if (isAuthenticated && !isLoadingAuth) {
-      // If super admin and on generic pages or salon pages
+    // Authenticated users only
+    if (isAuthenticated) {
+      // Super admin redirects
       if (isSuperAdmin) {
-        // Force redirect to admin dashboard if on root, login, or any tenant dashboard
         if (path === '/' || path.endsWith('/login') || path.includes('/dashboard')) {
-          // Only redirect if NOT already on the admin dashboard
-          if (path !== '/admin/dashboard') {
-            navigate('/admin/dashboard', { replace: true });
-            return;
+          if (path !== SUPERADMIN_DASHBOARD_PATH) {
+            navigate(SUPERADMIN_DASHBOARD_PATH, { replace: true });
           }
         }
+        return;
       }
 
-      if (userSalonSlug && !isSuperAdmin) {
+      // Regular user redirects
+      if (userSalonSlug) {
         if (path === '/' || path.endsWith('/login')) {
           navigate(`/${userSalonSlug}/dashboard`, { replace: true });
-          return;
         }
       }
     }
-  }, [isAuthenticated, isLoadingAuth, userSalonSlug, isSuperAdmin, location.pathname, location.search, navigate]);
+  }, [isAuthenticated, userSalonSlug, isSuperAdmin, location.pathname, location.search, navigate]);
+
+  const handleLogout = async () => {
+    const wasSuperAdmin = isSuperAdmin;
+    const previousSlug = userSalonSlug;
+    
+    await auth.logout();
+
+    if (wasSuperAdmin) {
+      navigate(SUPERADMIN_LOGIN_PATH, { replace: true });
+    } else if (previousSlug) {
+      navigate(`/${previousSlug}/login`, { replace: true });
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
 
   return (
     <Routes>
@@ -245,23 +136,19 @@ const AppRoutes: React.FC = () => {
       <Route path="/" element={<LandingPage />} />
 
       {/* Super Admin Routes */}
-      <Route path="/admin/login" element={
+      <Route path={SUPERADMIN_LOGIN_PATH} element={
         isAuthenticated && isSuperAdmin ? (
-          <Navigate to="/admin/dashboard" replace />
+          <Navigate to={SUPERADMIN_DASHBOARD_PATH} replace />
         ) : (
-          <AdminLoginPage onLogin={handleLogin} isLoadingAuth={isLoadingAuth} />
+          <AdminLoginPage onLogin={auth.login} />
         )
       } />
 
-      <Route path="/admin/dashboard" element={
+      <Route path={SUPERADMIN_DASHBOARD_PATH} element={
         <SalonProvider>
           <ProtectedRoute
-            isAuthenticated={isAuthenticated}
-            isLoadingAuth={isLoadingAuth}
-            userSalonSlug={userSalonSlug}
             requireAuth={true}
             requireSuperAdmin={true}
-            isSuperAdmin={isSuperAdmin}
           >
             <SuperAdminDashboard onLogout={handleLogout} />
           </ProtectedRoute>
@@ -274,7 +161,7 @@ const AppRoutes: React.FC = () => {
           {isAuthenticated && userSalonSlug ? (
             <Navigate to={`/${userSalonSlug}/dashboard`} replace />
           ) : (
-            <SalonLoginPage onLogin={handleLogin} isLoadingAuth={isLoadingAuth} />
+            <SalonLoginPage onLogin={auth.login} />
           )}
         </SalonProvider>
       } />
@@ -283,11 +170,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/:salonSlug/dashboard" element={
         <SalonProvider>
           <ProtectedRoute
-            isAuthenticated={isAuthenticated}
-            isLoadingAuth={isLoadingAuth}
-            userSalonSlug={userSalonSlug}
             requireAuth={true}
-            isSuperAdmin={isSuperAdmin}
           >
             <DashboardPage
               salonId={salonId}
@@ -318,15 +201,17 @@ const AppRoutes: React.FC = () => {
 
 const App: React.FC = () => (
   <LanguageProvider>
-    <BrowserRouter
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true,
-      }}
-    >
-      <AppRoutes />
-      <PWAInstallPrompt />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        <AppRoutes />
+        <PWAInstallPrompt />
+      </BrowserRouter>
+    </AuthProvider>
   </LanguageProvider>
 );
 

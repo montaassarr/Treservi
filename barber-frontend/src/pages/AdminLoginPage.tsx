@@ -3,10 +3,9 @@ import Login from '../components/Login';
 
 interface AdminLoginPageProps {
   onLogin: (email: string) => void;
-  isLoadingAuth: boolean;
 }
 
-const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLogin, isLoadingAuth }) => {
+const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen bg-treservi-bg-light dark:bg-treservi-bg-dark">
       <Login 

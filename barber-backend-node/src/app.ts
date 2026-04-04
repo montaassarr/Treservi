@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
 import { env } from './config/env.js';
 import { logger } from './utils/logger.js';
@@ -17,12 +19,32 @@ import { seedRouter } from './routes/seed.js';
 export const createApp = () => {
   const app = express();
 
+  app.set('trust proxy', 1);
+
   app.use(
     cors({
       origin: env.corsOrigin,
       credentials: true
     })
   );
+  app.use(helmet());
+
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many authentication requests. Please try again later.' }
+  });
+
+  const adminLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 120,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many admin requests. Please try again later.' }
+  });
+
   app.use(express.json());
   app.use(requestLogger);
 
@@ -66,15 +88,20 @@ export const createApp = () => {
     res.status(200).json({ alive: true });
   });
 
-  app.use('/api/auth', authRouter);
+  app.use('/api/auth', authLimiter, authRouter);
   app.use('/api/salons', salonsRouter);
   app.use('/api/services', servicesRouter);
   app.use('/api/push-subscriptions', pushSubscriptionsRouter);
   app.use('/api/staff', staffRouter);
   app.use('/api/appointments', appointmentsRouter);
   app.use('/api/notifications', notificationsRouter);
-  app.use('/api/admin', adminRouter);
-  app.use('/api/seed', seedRouter);
+  app.use(env.superAdminApiBasePath, adminLimiter, adminRouter);
+
+  if (env.enableSeedRoutes) {
+    app.use('/api/seed', seedRouter);
+  } else {
+    logger.info('Seed routes are disabled in this environment', undefined, 'SECURITY');
+  }
 
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (err instanceof Error) {

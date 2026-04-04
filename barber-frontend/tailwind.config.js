@@ -6,6 +6,14 @@ export default {
   ],
   darkMode: 'class',
   theme: {
+    screens: {
+      'xs': '480px',  // Extra small devices
+      'sm': '640px',  // Small devices (iPad Mini)
+      'md': '768px',  // Medium devices (iPad)
+      'lg': '1024px', // Large devices (iPad Pro, Desktop)
+      'xl': '1280px', // Extra large
+      '2xl': '1536px' // 2x Extra large
+    },
     extend: {
       fontFamily: {
         sans: ['Sora', 'sans-serif'],
