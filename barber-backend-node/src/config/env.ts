@@ -37,7 +37,10 @@ export const env = {
   seedSalonName: process.env.SEED_SALON_NAME ?? 'Demo Salon',
   seedSalonSlug: process.env.SEED_SALON_SLUG ?? 'demo-salon',
   seedSuperAdminEmail: process.env.SEED_SUPER_ADMIN_EMAIL ?? 'superadmin@barbershop.com',
-  seedSuperAdminPassword: process.env.SEED_SUPER_ADMIN_PASSWORD ?? 'ChangeMe123!'
+  seedSuperAdminPassword: process.env.SEED_SUPER_ADMIN_PASSWORD ?? 'ChangeMe123!',
+  vapidPublicKey: process.env.VAPID_PUBLIC_KEY ?? process.env.VITE_VAPID_PUBLIC_KEY ?? '',
+  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY ?? '',
+  vapidSubject: process.env.VAPID_SUBJECT ?? 'mailto:admin@treservi.app'
 };
 
 if (env.nodeEnv === 'production' && env.jwtSecret === 'change-me') {

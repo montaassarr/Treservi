@@ -1,0 +1,173 @@
+import webpush from 'web-push';
+import { env } from '../config/env.js';
+import { PushSubscription as PushSubscriptionModel } from '../models/PushSubscription.js';
+import { logger } from '../utils/logger.js';
+
+interface PushPayload {
+  title: string;
+  body: string;
+  tag?: string;
+  url?: string;
+  icon?: string;
+  badge?: string;
+  appointmentId?: string;
+}
+
+interface SendPushResult {
+  attempted: number;
+  delivered: number;
+  removed: number;
+  failed: number;
+  disabled?: boolean;
+}
+
+let pushConfigured = false;
+
+const isPushEnabled = () => {
+  return Boolean(env.vapidPublicKey && env.vapidPrivateKey && env.vapidSubject);
+};
+
+const ensureWebPushConfigured = () => {
+  if (!isPushEnabled()) {
+    return false;
+  }
+
+  if (!pushConfigured) {
+    webpush.setVapidDetails(env.vapidSubject, env.vapidPublicKey, env.vapidPrivateKey);
+    pushConfigured = true;
+  }
+
+  return true;
+};
+
+const buildNotificationPayload = (payload: PushPayload) => {
+  return JSON.stringify({
+    title: payload.title,
+    body: payload.body,
+    icon: payload.icon ?? '/icon-192.png',
+    badge: payload.badge ?? '/icon-192.png',
+    tag: payload.tag ?? 'appointment-notification',
+    data: {
+      url: payload.url ?? '/dashboard',
+      appointmentId: payload.appointmentId
+    }
+  });
+};
+
+const sendToSubscription = async (subscription: {
+  _id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}, payload: string) => {
+  try {
+    await webpush.sendNotification(
+      {
+        endpoint: subscription.endpoint,
+        keys: {
+          p256dh: subscription.p256dh,
+          auth: subscription.auth
+        }
+      },
+      payload
+    );
+
+    return { delivered: 1, removed: 0, failed: 0 };
+  } catch (error: any) {
+    const statusCode = Number(error?.statusCode ?? 0);
+
+    if (statusCode === 404 || statusCode === 410) {
+      await PushSubscriptionModel.deleteOne({ _id: subscription._id });
+      logger.warn('Removed expired push subscription', {
+        endpoint: subscription.endpoint,
+        statusCode
+      }, 'PUSH_NOTIFICATIONS');
+      return { delivered: 0, removed: 1, failed: 0 };
+    }
+
+    logger.error('Failed to send push notification', error, 'PUSH_NOTIFICATIONS');
+    return { delivered: 0, removed: 0, failed: 1 };
+  }
+};
+
+export const sendPushToUser = async (userId: string, payload: PushPayload): Promise<SendPushResult> => {
+  if (!ensureWebPushConfigured()) {
+    logger.warn('Push sending skipped: missing VAPID configuration', undefined, 'PUSH_NOTIFICATIONS');
+    return {
+      attempted: 0,
+      delivered: 0,
+      removed: 0,
+      failed: 0,
+      disabled: true
+    };
+  }
+
+  const subscriptions = await PushSubscriptionModel.find({ user_id: userId }).lean();
+  if (subscriptions.length === 0) {
+    return {
+      attempted: 0,
+      delivered: 0,
+      removed: 0,
+      failed: 0
+    };
+  }
+
+  const payloadJson = buildNotificationPayload(payload);
+  const results = await Promise.all(
+    subscriptions.map((subscription) =>
+      sendToSubscription(
+        {
+          _id: String(subscription._id),
+          endpoint: subscription.endpoint,
+          p256dh: subscription.p256dh,
+          auth: subscription.auth
+        },
+        payloadJson
+      )
+    )
+  );
+
+  const summary = results.reduce(
+    (accumulator, result) => {
+      accumulator.delivered += result.delivered;
+      accumulator.removed += result.removed;
+      accumulator.failed += result.failed;
+      return accumulator;
+    },
+    { delivered: 0, removed: 0, failed: 0 }
+  );
+
+  return {
+    attempted: subscriptions.length,
+    delivered: summary.delivered,
+    removed: summary.removed,
+    failed: summary.failed
+  };
+};
+
+export const sendPushToUsers = async (userIds: string[], payload: PushPayload): Promise<SendPushResult> => {
+  const uniqueUserIds = [...new Set(userIds.filter(Boolean))];
+
+  const totals: SendPushResult = {
+    attempted: 0,
+    delivered: 0,
+    removed: 0,
+    failed: 0
+  };
+
+  for (const userId of uniqueUserIds) {
+    const result = await sendPushToUser(userId, payload);
+
+    totals.attempted += result.attempted;
+    totals.delivered += result.delivered;
+    totals.removed += result.removed;
+    totals.failed += result.failed;
+
+    if (result.disabled) {
+      totals.disabled = true;
+      return totals;
+    }
+  }
+
+  return totals;
+};
