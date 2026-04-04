@@ -248,7 +248,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityC
   });
 
   const clayCard =
-    'bg-white dark:bg-treservi-card-dark rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100/60 dark:border-gray-800/60 backdrop-blur-sm';
+    'bg-white dark:bg-treservi-card-dark rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100/60 dark:border-gray-800/60';
 
   if (loading) {
     return (

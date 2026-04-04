@@ -152,7 +152,7 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ salonId, userRole = 'owner'
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/35 p-4 animate-in fade-in duration-200">
       <div className="bg-white dark:bg-treservi-card-dark rounded-t-[32px] sm:rounded-[32px] shadow-2xl w-full sm:max-w-5xl max-h-[95vh] overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in duration-300 flex flex-col">
         
         {/* Header */}
