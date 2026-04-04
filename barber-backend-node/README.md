@@ -1,6 +1,6 @@
-# Barber Backend (Node + MongoDB)
+# Barber Backend (Node + MongoDB Atlas)
 
-This service replaces Supabase with a Node.js + MongoDB API.
+This service replaces Supabase with a Node.js API backed by MongoDB Atlas.
 
 ## Quick Start
 
@@ -10,19 +10,25 @@ This service replaces Supabase with a Node.js + MongoDB API.
 cp .env.example .env
 ```
 
-2. Install dependencies:
+2. Edit `.env` and set your MongoDB Atlas URI:
+
+```env
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/barber
+```
+
+3. Install dependencies:
 
 ```bash
 npm install
 ```
 
-3. Seed data (creates a demo salon + owner):
+4. Seed data (creates a demo salon + owner):
 
 ```bash
 npm run seed
 ```
 
-4. Run the API:
+5. Run the API:
 
 ```bash
 npm run dev
@@ -46,3 +52,4 @@ npm run dev
 
 - Auth uses JWT (`Authorization: Bearer <token>`).
 - Update `CORS_ORIGIN` to match the frontend URL.
+- The backend expects a valid MongoDB Atlas connection string in `MONGODB_URI`.

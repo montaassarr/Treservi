@@ -10,10 +10,18 @@ const getEnv = (key: string, fallback?: string) => {
   return value;
 };
 
+const getRequiredEnv = (key: string) => {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`Missing environment variable: ${key}. Set it to your MongoDB Atlas connection string.`);
+  }
+  return value;
+};
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: Number(process.env.PORT) || 4000,
-  mongoUri: getEnv('MONGODB_URI', 'mongodb://localhost:27017/reservi'),
+  mongoUri: getRequiredEnv('MONGODB_URI'),
   jwtSecret: getEnv('JWT_SECRET', 'change-me'),
   jwtExpiresIn: '7d',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',

@@ -46,6 +46,26 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
     return new Map(staff.map((member) => [member.id, member]));
   }, [staff]);
 
+  const resolveStaffId = (staffRef: unknown): string => {
+    if (!staffRef) return '';
+    if (typeof staffRef === 'string') return staffRef;
+    if (typeof staffRef === 'object') {
+      const value = staffRef as { id?: string; _id?: string };
+      return value.id || value._id || '';
+    }
+    return '';
+  };
+
+  const getStaffDisplayName = (staffMember: any): string => {
+    return (
+      staffMember?.full_name ||
+      staffMember?.fullName ||
+      staffMember?.name ||
+      staffMember?.email ||
+      ''
+    );
+  };
+
   const [formData, setFormData] = useState<Partial<CreateAppointmentInput>>({
     customer_name: '',
     customer_email: '',
@@ -212,7 +232,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
 
   const filteredAppointments = appointments.filter(apt => {
     const statusMatch = filterStatus === 'all' || apt.status === filterStatus;
-    const staffMatch = filterStaff === 'all' || apt.staff_id === filterStaff;
+    const staffMatch = filterStaff === 'all' || resolveStaffId(apt.staff_id) === filterStaff;
     return statusMatch && staffMatch;
   });
 
@@ -330,7 +350,9 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                 </tr>
               ) : (
                 filteredAppointments.map(apt => {
-                  const staffMember = apt.staff || (apt.staff_id ? staffById.get(apt.staff_id) : undefined);
+                  const staffId = resolveStaffId(apt.staff_id);
+                  const staffMember = apt.staff || (staffId ? staffById.get(staffId) : undefined) || (typeof apt.staff_id === 'object' ? apt.staff_id : undefined);
+                  const staffName = getStaffDisplayName(staffMember);
 
                   return (
                   <tr
@@ -354,14 +376,14 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                       <div className="flex items-center gap-2">
                         <div className="relative flex-shrink-0">
                           <Avatar
-                            name={staffMember?.full_name || 'Staff'}
+                            name={staffName || 'Staff'}
                             role="staff"
-                            avatarUrl={staffMember?.avatar_url}
+                            avatarUrl={staffMember?.avatar_url || staffMember?.avatarUrl}
                             size="xs"
                             showRing
                           />
                         </div>
-                        <span>{staffMember?.full_name || 'Unassigned'}</span>
+                        <span>{staffName || 'Unassigned'}</span>
                       </div>
                     </td>
                     <td className="py-4 text-gray-500 whitespace-nowrap">
@@ -427,7 +449,9 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
             </div>
           ) : (
             filteredAppointments.map(apt => {
-              const staffMember = apt.staff || (apt.staff_id ? staffById.get(apt.staff_id) : undefined);
+              const staffId = resolveStaffId(apt.staff_id);
+              const staffMember = apt.staff || (staffId ? staffById.get(staffId) : undefined) || (typeof apt.staff_id === 'object' ? apt.staff_id : undefined);
+              const staffName = getStaffDisplayName(staffMember);
 
               return (
               <div key={apt.id} className="bg-gray-50 dark:bg-white/5 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
@@ -466,7 +490,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 text-xs">Staff</span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{staffMember?.full_name || 'Unassigned'}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{staffName || 'Unassigned'}</span>
                   </div>
                   {apt.customer_phone && (
                     <div className="flex items-center justify-between">
