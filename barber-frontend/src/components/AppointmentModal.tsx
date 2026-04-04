@@ -36,16 +36,16 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
   if (!isOpen) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden">
-      <div className="bg-white dark:bg-treservi-card-dark w-full h-screen sm:w-[min(42rem,92vw)] sm:h-auto sm:max-h-[90vh] sm:rounded-[32px] shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white dark:bg-treservi-card-dark w-full h-[94dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl rounded-3xl shadow-2xl flex flex-col overflow-hidden">
         {/* Fixed Header */}
-        <div className="flex-shrink-0 bg-white dark:bg-treservi-card-dark border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 py-4 sm:py-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3 min-w-0">
+        <div className="flex-shrink-0 bg-white dark:bg-treservi-card-dark border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 pt-5 sm:pt-5 pb-4 sm:pb-5">
+          <div className="relative min-h-[44px]">
+            <div className="flex items-center justify-center gap-3 pr-12">
               <div className="w-11 h-11 rounded-[14px] bg-gradient-to-br from-emerald-400 to-green-600 shadow-lg flex items-center justify-center text-white flex-shrink-0">
                 <Calendar className="w-5 h-5" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 text-center">
                 <h3 className="text-xl sm:text-2xl font-black leading-tight truncate">{title}</h3>
                 {subtitle ? <p className="text-xs sm:text-sm text-gray-500 truncate">{subtitle}</p> : null}
               </div>
@@ -53,7 +53,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-black dark:hover:text-white flex items-center justify-center flex-shrink-0 transition-colors"
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-black dark:hover:text-white flex items-center justify-center transition-colors"
             >
               <X size={20} />
             </button>
