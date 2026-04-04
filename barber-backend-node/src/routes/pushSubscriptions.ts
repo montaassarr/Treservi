@@ -1,7 +1,8 @@
 import { Router, Response } from 'express';
 import { PushSubscription } from '../models/PushSubscription.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
-import { sendPushToUser } from '../services/pushNotifications.js';
+import { getPushDiagnostics, sendPushToUser } from '../services/pushNotifications.js';
+import { logger } from '../utils/logger.js';
 
 export const pushSubscriptionsRouter = Router();
 
@@ -44,6 +45,12 @@ pushSubscriptionsRouter.post('/test', requireAuth, async (req: AuthRequest, res:
     url?: string;
   };
 
+  const diagnostics = await getPushDiagnostics(req.user.id);
+  logger.info('Push test requested', {
+    userId: req.user.id,
+    diagnostics
+  }, 'PUSH_NOTIFICATIONS');
+
   const result = await sendPushToUser(req.user.id, {
     title: body.title ?? 'Treservi Test Notification',
     body: body.message ?? 'Push delivery is working on this device.',
@@ -53,6 +60,7 @@ pushSubscriptionsRouter.post('/test', requireAuth, async (req: AuthRequest, res:
 
   return res.json({
     ok: true,
+    diagnostics,
     result
   });
 });

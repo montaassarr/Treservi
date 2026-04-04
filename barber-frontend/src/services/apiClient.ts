@@ -225,6 +225,17 @@ export const apiClient = {
     });
     return data.subscription;
   },
+  testPushNotification: async (payload: {
+    title?: string;
+    message?: string;
+    url?: string;
+  }) => {
+    const data = await requestJson<{ ok: boolean; diagnostics: any; result: any }>('/api/push-subscriptions/test', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return data;
+  },
   fetchServices: async (salonId: string) => {
     const data = await requestJson<{ services: any[] }>(`/api/services?salonId=${salonId}`);
     return data.services;

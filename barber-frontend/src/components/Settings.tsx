@@ -11,13 +11,16 @@ import {
   Mail,
   Globe,
   CheckCircle,
-  X
+  X,
+  Bell,
+  Loader2
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { apiClient } from '../services/apiClient';
 
 interface SettingsProps {
   salonId: string;
+  userId?: string;
 }
 
 interface SalonSettings {
@@ -45,7 +48,7 @@ const DAYS_OF_WEEK = [
   'Sunday'
 ];
 
-const Settings: React.FC<SettingsProps> = ({ salonId }) => {
+const Settings: React.FC<SettingsProps> = ({ salonId, userId }) => {
   const { t, language } = useLanguage();
   const isRTL = language === 'ar' || language === 'tn';
 
@@ -74,6 +77,8 @@ const Settings: React.FC<SettingsProps> = ({ salonId }) => {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [testingPush, setTestingPush] = useState(false);
+  const [pushTestResult, setPushTestResult] = useState<string | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -179,6 +184,30 @@ const Settings: React.FC<SettingsProps> = ({ salonId }) => {
     }
   };
 
+  const handleTestNotification = async () => {
+    setTestingPush(true);
+    setError(null);
+    setPushTestResult(null);
+
+    try {
+      const response = await apiClient.testPushNotification({
+        title: 'Treservi Production Test',
+        message: 'If you see this on your phone, push is working in production.',
+        url: '/dashboard'
+      });
+
+      const delivered = response.result?.delivered ?? 0;
+      const attempted = response.result?.attempted ?? 0;
+      const subscriptionCount = response.diagnostics?.subscriptionCount ?? 0;
+      setPushTestResult(`Sent test push. attempted=${attempted}, delivered=${delivered}, subscriptions=${subscriptionCount}`);
+    } catch (err: any) {
+      console.error('Error testing push notification:', err);
+      setError(err.message || 'Failed to test push notification');
+    } finally {
+      setTestingPush(false);
+    }
+  };
+
   const clayCard = 'bg-white dark:bg-treservi-card-dark rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100/60 dark:border-gray-800/60';
 
   if (loading) {
@@ -226,6 +255,35 @@ const Settings: React.FC<SettingsProps> = ({ salonId }) => {
           <span className="font-medium">{error}</span>
         </div>
       )}
+
+      {pushTestResult && (
+        <div className="flex items-center gap-3 p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+          <Bell className="w-5 h-5" />
+          <span className="font-medium">{pushTestResult}</span>
+        </div>
+      )}
+
+      <div className={`${clayCard} p-6 md:p-8 space-y-4`}>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-xl font-bold">Notification Test</h2>
+            <p className="text-sm text-gray-500">Send one push to this logged-in phone only.</p>
+          </div>
+          <button
+            onClick={handleTestNotification}
+            disabled={testingPush || !userId}
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-full text-white font-bold bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg hover:scale-105 active:scale-95 transition-transform disabled:opacity-50"
+          >
+            {testingPush ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bell className="w-5 h-5" />}
+            {testingPush ? 'Sending...' : 'Send Test Notification'}
+          </button>
+        </div>
+        {!userId && (
+          <p className="text-sm text-amber-600 dark:text-amber-400">
+            User session is missing, so this test button is disabled.
+          </p>
+        )}
+      </div>
 
       <div className="mobile-form grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Salon Information */}
