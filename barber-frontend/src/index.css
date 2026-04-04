@@ -130,8 +130,42 @@ body {
 
 .mobile-scroll {
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-  touch-action: pan-y;
+  overscroll-behavior-y: auto;
+  touch-action: auto;
+}
+
+.mobile-form {
+  min-width: 0;
+}
+
+.mobile-form label {
+  display: block;
+  margin-left: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  line-height: 1.25rem;
+}
+
+.mobile-form input,
+.mobile-form select,
+.mobile-form textarea {
+  min-width: 0;
+}
+
+.mobile-grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mobile-form label {
+    margin-left: 0.5rem;
+  }
 }
 
 /* Fix fixed/sticky headers under status bar */

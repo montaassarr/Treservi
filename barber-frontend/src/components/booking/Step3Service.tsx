@@ -14,10 +14,10 @@ interface Props {
 
 export const Step3Service: React.FC<Props> = ({ services, selectedService, onSelect, notes, onNotesChange, t }) => {
   return (
-    <div className="space-y-6">
+    <div className="mobile-form space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">{t.chooseService}</h2>
       
-      <div className="grid gap-4">
+      <div className="grid gap-4 min-w-0">
         {services.map((service, idx) => {
           const isSelected = selectedService?.id === service.id;
           return (

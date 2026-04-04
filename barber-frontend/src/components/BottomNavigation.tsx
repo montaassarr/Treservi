@@ -6,13 +6,15 @@ interface BottomNavigationProps {
   setActiveTab: (tab: string) => void;
   onAddClick: () => void;
   userRole?: 'owner' | 'staff';
+  hidden?: boolean;
 }
 
 const BottomNavigation: React.FC<BottomNavigationProps> = ({ 
   activeTab, 
   setActiveTab,
   onAddClick,
-  userRole = 'owner'
+  userRole = 'owner',
+  hidden = false,
 }) => {
   const navItems = userRole === 'owner' 
   ? [
@@ -25,6 +27,10 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({
       { icon: Home, label: 'Home', tab: 'dashboard' },
       // Staff view is simplified
     ];
+
+  if (hidden) {
+    return null;
+  }
 
   return (
     <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)] px-4 pointer-events-none">

@@ -519,7 +519,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="mobile-form space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium ml-2 text-gray-500">Customer Name</label>
                 <div className="relative">
@@ -535,7 +535,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="mobile-grid-2">
                 <div className="space-y-2">
                   <label className="text-sm font-medium ml-2 text-gray-500">Service</label>
                   <div className="relative">
@@ -569,7 +569,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, salonId, staff
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="mobile-grid-2">
                 <div className="space-y-2">
                   <label className="text-sm font-medium ml-2 text-gray-500">Time</label>
                   <div className="relative">
