@@ -21,6 +21,13 @@ interface SendPushResult {
   disabled?: boolean;
 }
 
+export interface PushDiagnostics {
+  configured: boolean;
+  subscriptionCount: number;
+  userId?: string;
+  reasons: string[];
+}
+
 let pushConfigured = false;
 
 const isPushEnabled = () => {
@@ -38,6 +45,25 @@ const ensureWebPushConfigured = () => {
   }
 
   return true;
+};
+
+export const getPushDiagnostics = async (userId?: string): Promise<PushDiagnostics> => {
+  const reasons: string[] = [];
+
+  if (!env.vapidPublicKey) reasons.push('Missing VAPID_PUBLIC_KEY');
+  if (!env.vapidPrivateKey) reasons.push('Missing VAPID_PRIVATE_KEY');
+  if (!env.vapidSubject) reasons.push('Missing VAPID_SUBJECT');
+
+  const subscriptionCount = userId
+    ? await PushSubscriptionModel.countDocuments({ user_id: userId })
+    : await PushSubscriptionModel.countDocuments();
+
+  return {
+    configured: reasons.length === 0,
+    subscriptionCount,
+    userId,
+    reasons
+  };
 };
 
 const buildNotificationPayload = (payload: PushPayload) => {
@@ -91,6 +117,13 @@ const sendToSubscription = async (subscription: {
 };
 
 export const sendPushToUser = async (userId: string, payload: PushPayload): Promise<SendPushResult> => {
+  logger.info('Starting push delivery attempt', {
+    userId,
+    title: payload.title,
+    tag: payload.tag,
+    url: payload.url
+  }, 'PUSH_NOTIFICATIONS');
+
   if (!ensureWebPushConfigured()) {
     logger.warn('Push sending skipped: missing VAPID configuration', undefined, 'PUSH_NOTIFICATIONS');
     return {
@@ -103,7 +136,13 @@ export const sendPushToUser = async (userId: string, payload: PushPayload): Prom
   }
 
   const subscriptions = await PushSubscriptionModel.find({ user_id: userId }).lean();
+  logger.info('Loaded push subscriptions', {
+    userId,
+    subscriptionCount: subscriptions.length
+  }, 'PUSH_NOTIFICATIONS');
+
   if (subscriptions.length === 0) {
+    logger.warn('No push subscriptions found for user', { userId }, 'PUSH_NOTIFICATIONS');
     return {
       attempted: 0,
       delivered: 0,
