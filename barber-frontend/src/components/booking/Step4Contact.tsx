@@ -22,7 +22,7 @@ export const Step4Contact: React.FC<Props> = ({ bookingData, onNameChange, onPho
   const locale = lang === 'ar' ? 'ar-TN' : lang === 'fr' ? 'fr-FR' : 'en-US';
 
   return (
-    <div className="space-y-8">
+    <div className="mobile-form space-y-8">
       <div className="bg-gray-900 text-white p-6 rounded-[32px] shadow-xl">
         <h2 className="text-xl font-bold mb-6">{t.bookingSummary}</h2>
         
@@ -37,7 +37,7 @@ export const Step4Contact: React.FC<Props> = ({ bookingData, onNameChange, onPho
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="mobile-grid-2">
             <div className="bg-gray-800 p-3 rounded-2xl">
               <div className="flex items-center gap-2 mb-1 text-gray-400">
                 <Calendar className="w-4 h-4" />

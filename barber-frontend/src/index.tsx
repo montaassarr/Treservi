@@ -17,8 +17,38 @@ root.render(
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js').catch((err) => {
-      console.error('Service Worker registration failed:', err);
-    });
+    navigator.serviceWorker.register('/service-worker.js')
+      .then((registration) => {
+        const triggerUpdate = () => {
+          if (registration.waiting) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        };
+
+        registration.addEventListener('updatefound', () => {
+          const installingWorker = registration.installing;
+          if (!installingWorker) return;
+
+          installingWorker.addEventListener('statechange', () => {
+            if (
+              installingWorker.state === 'installed' &&
+              navigator.serviceWorker.controller
+            ) {
+              triggerUpdate();
+            }
+          });
+        });
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
+
+        registration.update().catch((err) => {
+          console.error('Service Worker update check failed:', err);
+        });
+      })
+      .catch((err) => {
+        console.error('Service Worker registration failed:', err);
+      });
   });
 }

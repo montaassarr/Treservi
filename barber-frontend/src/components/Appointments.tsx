@@ -8,7 +8,6 @@ import {
   DollarSign,
   Pencil,
   Trash2,
-  X,
   Users,
   Filter,
 } from 'lucide-react';
@@ -27,9 +26,10 @@ import Avatar from './Avatar';
 
 interface AppointmentsProps {
   salonId: string;
+  onModalVisibilityChange?: (isOpen: boolean) => void;
 }
 
-const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
+const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityChange }) => {
   const [appointments, setAppointments] = useState<AppointmentData[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -107,6 +107,16 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
   useEffect(() => {
     loadData();
   }, [salonId]);
+
+  useEffect(() => {
+    onModalVisibilityChange?.(isModalOpen);
+  }, [isModalOpen, onModalVisibilityChange]);
+
+  useEffect(() => {
+    return () => {
+      onModalVisibilityChange?.(false);
+    };
+  }, [onModalVisibilityChange]);
 
   const resetForm = () => {
     setFormData({
@@ -530,37 +540,40 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center">
-          <div className={`${clayCard} w-full sm:w-[min(42rem,92vw)] rounded-t-[30px] sm:rounded-[32px] shadow-2xl overflow-hidden max-h-[92dvh] sm:max-h-[90vh]`}> 
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl bg-white dark:bg-treservi-card-dark rounded-[24px] shadow-2xl overflow-hidden max-h-[90vh]"> 
             <div className="sticky top-0 z-10 bg-white/95 dark:bg-treservi-card-dark/95 backdrop-blur border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 py-4 sm:py-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-[14px] bg-gradient-to-br from-emerald-400 to-green-600 shadow-lg flex items-center justify-center text-white flex-shrink-0">
-                    <Calendar className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-xl sm:text-2xl font-black leading-tight truncate">
-                      {editingId ? 'Edit Appointment' : 'New Appointment'}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-gray-500 truncate">
-                      {editingId ? 'Update appointment details' : 'Schedule a new booking'}
-                    </p>
-                  </div>
-                </div>
+              <div className="flex items-center justify-between gap-3">
                 <button
+                  type="button"
                   onClick={() => {
                     setIsModalOpen(false);
                     resetForm();
                   }}
-                  className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-black flex items-center justify-center flex-shrink-0"
+                  className="text-sm font-semibold text-gray-600 hover:text-gray-900"
                 >
-                  <X size={20} />
+                  Cancel
+                </button>
+                <div className="min-w-0 text-center">
+                  <h3 className="text-lg sm:text-2xl font-bold leading-tight truncate">
+                    {editingId ? 'Edit Appointment' : 'New Appointment'}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-500 truncate hidden sm:block">
+                    {editingId ? 'Update appointment details' : 'Schedule a new booking'}
+                  </p>
+                </div>
+                <button
+                  type="submit"
+                  form="appointment-form"
+                  className="text-sm font-semibold text-emerald-600 hover:text-emerald-700"
+                >
+                  {editingId ? 'Save' : 'Add'}
                 </button>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-4 space-y-4 max-h-[calc(92dvh-164px)] sm:max-h-[calc(90vh-170px)]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+            <form id="appointment-form" onSubmit={handleSubmit} className="mobile-form overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-4 space-y-4 max-h-[calc(90vh-132px)]">
+              <div className="mobile-grid-2 min-w-0">
                 {/* Customer Name */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-600">Customer Name</label>
@@ -600,7 +613,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                 />
               </div> */}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+              <div className="mobile-grid-2 min-w-0">
                 {/* Staff */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-600">Assign to Staff</label>
@@ -643,7 +656,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+              <div className="mobile-grid-2 min-w-0">
                 {/* Date */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-600">Date</label>
@@ -710,7 +723,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                 </div>
               </details>
 
-              <div className="sticky bottom-0 bg-white/95 dark:bg-treservi-card-dark/95 backdrop-blur border-t border-gray-100 dark:border-gray-800 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 flex items-center justify-end gap-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+              <div className="sticky bottom-0 bg-white/95 dark:bg-treservi-card-dark/95 backdrop-blur border-t border-gray-100 dark:border-gray-800 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => {

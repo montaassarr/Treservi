@@ -24,9 +24,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { salonSlug } = useParams<{ salonSlug: string }>();
   const { salon, isLoading: isSalonLoading, error } = useSalon();
   const location = useLocation();
+  const normalizedSalonSlug = salonSlug?.trim();
+
+  const hasInvalidSalonSlug = Boolean(
+    normalizedSalonSlug &&
+      (normalizedSalonSlug.startsWith(':') ||
+        !/^[a-zA-Z0-9-]+$/.test(normalizedSalonSlug))
+  );
+
+  if (hasInvalidSalonSlug) {
+    return <Navigate to="/404" replace />;
+  }
 
   // Show loading while checking auth or salon
-  if (isLoadingAuth || (salonSlug && isSalonLoading)) {
+  if (isLoadingAuth || (normalizedSalonSlug && isSalonLoading)) {
     return (
       <div className="w-full min-h-screen flex items-center justify-center bg-white dark:bg-black">
         <div className="w-12 h-12 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin"></div>
@@ -43,14 +54,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // If salon-specific route and salon not found, show 404
-  if (salonSlug && (error || !salon)) {
+  if (normalizedSalonSlug && (error || !salon)) {
     return <Navigate to="/404" replace />;
   }
 
   // If auth is required and user is not authenticated
   if (requireAuth && !isAuthenticated) {
-    if (salonSlug) {
-      return <Navigate to={`/${salonSlug}/login`} replace />;
+    if (normalizedSalonSlug) {
+      return <Navigate to={`/${normalizedSalonSlug}/login`} replace />;
     } else if (location.pathname.startsWith('/admin')) {
       return <Navigate to="/admin/login" replace />;
     } else {
@@ -59,11 +70,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // If authenticated, check if user is accessing their own salon
-  if (requireAuth && isAuthenticated && userSalonSlug && salonSlug) {
+  if (requireAuth && isAuthenticated && userSalonSlug && normalizedSalonSlug) {
     // Super admins can bypass salon check
     if (!isSuperAdmin) {
       // User is trying to access a different salon's dashboard
-      if (salonSlug !== userSalonSlug) {
+      if (normalizedSalonSlug !== userSalonSlug) {
         // Redirect to their own salon
         return <Navigate to={`/${userSalonSlug}/dashboard`} replace />;
       }

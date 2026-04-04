@@ -1,7 +1,7 @@
 // Service Worker for Treservi PWA
 // Handles offline caching, badge updates, and push notifications
 
-const CACHE_NAME = 'treservi-v1';
+const CACHE_NAME = 'treservi-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -40,11 +40,12 @@ self.addEventListener('activate', (event) => {
             console.log('[ServiceWorker] Removing old cache:', cacheName);
             return caches.delete(cacheName);
           }
+          return undefined;
         })
       );
     })
   );
-  return self.clients.claim();
+  self.clients.claim();
 });
 
 // ============================================================================

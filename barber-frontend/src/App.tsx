@@ -4,7 +4,7 @@ import { apiClient, authStorage, AuthUser } from './services/apiClient';
 import { LanguageProvider } from './context/LanguageContext';
 import { SalonProvider } from './context/SalonContext';
 import { parseDeepLink, saveAppState, restoreAppState, saveSalonPreference } from './utils/stateManager';
-import LoginPage from './pages/LoginPage';
+import SalonLoginPage from './pages/SalonLoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import DashboardPage from './pages/DashboardPage';
 import LandingPage from './pages/LandingPage';
@@ -274,7 +274,7 @@ const AppRoutes: React.FC = () => {
           {isAuthenticated && userSalonSlug ? (
             <Navigate to={`/${userSalonSlug}/dashboard`} replace />
           ) : (
-            <LoginPage onLogin={handleLogin} isLoadingAuth={isLoadingAuth} />
+            <SalonLoginPage onLogin={handleLogin} isLoadingAuth={isLoadingAuth} />
           )}
         </SalonProvider>
       } />
@@ -318,7 +318,12 @@ const AppRoutes: React.FC = () => {
 
 const App: React.FC = () => (
   <LanguageProvider>
-    <BrowserRouter>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <AppRoutes />
       <PWAInstallPrompt />
     </BrowserRouter>

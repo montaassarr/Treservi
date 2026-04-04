@@ -7,6 +7,8 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     const httpsCert = env.VITE_HTTPS_CERT;
     const httpsKey = env.VITE_HTTPS_KEY;
+    const hmrHost = env.VITE_HMR_HOST || 'localhost';
+    const hmrClientPort = Number(env.VITE_HMR_CLIENT_PORT || env.VITE_HMR_PORT || 3000);
     const https = httpsCert && httpsKey
       ? {
           cert: fs.readFileSync(httpsCert),
@@ -18,6 +20,11 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
         https,
+        hmr: {
+          host: hmrHost,
+          clientPort: hmrClientPort,
+          protocol: https ? 'wss' : 'ws',
+        },
         headers: {
           'Cache-Control': 'public, max-age=3600',
           'X-Content-Type-Options': 'nosniff',

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
@@ -504,12 +503,18 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                 <option value="1y">Last Year</option>
               </select>
             </div>
-            <div className="w-full h-[200px] sm:h-[240px] md:h-[320px] min-h-[200px]">
-              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={200}>
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }} onMouseMove={(state) => {
-                  if (state.isTooltipActive) setActiveIndex(state.activeTooltipIndex ?? null);
-                  else setActiveIndex(null);
-                }}>
+            <div className="w-full overflow-x-auto overflow-y-hidden pb-1">
+              <div className="min-w-[320px] w-[640px] sm:w-full h-[220px] sm:h-[260px] md:h-[320px]">
+                <BarChart
+                  width={640}
+                  height={280}
+                  data={chartData}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
+                  onMouseMove={(state) => {
+                    if (state.isTooltipActive) setActiveIndex(state.activeTooltipIndex ?? null);
+                    else setActiveIndex(null);
+                  }}
+                >
                   <XAxis
                     dataKey="name"
                     axisLine={false}
@@ -542,7 +547,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                     ))}
                   </Bar>
                 </BarChart>
-              </ResponsiveContainer>
+              </div>
             </div>
           </div>
 
@@ -784,7 +789,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+            <form onSubmit={handleSubmit} className="mobile-form space-y-4 sm:space-y-5">
               <div className="space-y-2">
                 <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Customer Name</label>
                 <div className="relative">
@@ -800,7 +805,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="mobile-grid-2">
                 <div className="space-y-2">
                   <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Service</label>
                   <div className="relative">
@@ -834,7 +839,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="mobile-grid-2">
                 <div className="space-y-2">
                   <label className="text-xs sm:text-sm font-medium ml-2 text-gray-500">Time</label>
                   <div className="relative">

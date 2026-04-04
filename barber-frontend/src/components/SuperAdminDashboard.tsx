@@ -464,7 +464,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogout }) =
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSaveSalon} className="space-y-4">
+            <form onSubmit={handleSaveSalon} className="mobile-form space-y-4">
               <div>
                 <label className="text-sm text-gray-500 ml-2 block mb-1">Salon Name *</label>
                 <input

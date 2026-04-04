@@ -32,6 +32,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
 
   // Update page title with salon name
   useEffect(() => {
@@ -83,7 +84,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const shouldShowStaffDashboard = activeTab === 'dashboard' && userRole === 'staff';
 
   return (
-    <div className={`flex min-h-screen md:h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-treservi-bg-dark' : 'bg-treservi-bg-light'}`}>
+    <div className={`flex min-h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-treservi-bg-dark' : 'bg-treservi-bg-light'}`}>
       {/* Sidebar - Desktop Only */}
       <div className="hidden lg:block h-screen sticky top-0 z-40 bg-white dark:bg-black/20 backdrop-blur-md">
         <Sidebar
@@ -97,7 +98,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       </div>
 
       {/* Main Content Area - Responsive */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Header - visible on all screens (modified Navbar for mobile) */}
         <div className="sticky top-0 z-30 pointer-events-none">
           <Navbar
@@ -119,7 +120,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         {/* Main Content - scrollable with bottom padding for mobile nav */}
-        <div className="mobile-scroll flex-1 overflow-y-auto overflow-x-hidden px-2 sm:px-4 md:px-6 pt-[calc(env(safe-area-inset-top)+5rem)] md:pt-6 pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-6">
+        <div className="mobile-scroll flex-1 min-h-0 overflow-x-hidden px-2 sm:px-4 md:px-6 pt-[calc(env(safe-area-inset-top)+5rem)] md:pt-6 pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-6">
           {bookingUrl && userRole === 'owner' && (
             <div className="mb-6 bg-white dark:bg-treservi-card-dark rounded-[20px] sm:rounded-[28px] p-4 sm:p-5 border border-gray-100 dark:border-gray-800 shadow-soft-glow max-w-full">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
@@ -138,7 +139,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           )}
           {shouldShowOwnerDashboard && <Dashboard salonId={salonId} userId={userId} />}
           {shouldShowStaffDashboard && <StaffDashboard salonId={salonId} staffId={userId} staffName={staffName} />}
-          {activeTab === 'appointments' && userRole === 'owner' && <Appointments salonId={salonId} />}
+          {activeTab === 'appointments' && userRole === 'owner' && (
+            <Appointments
+              salonId={salonId}
+              onModalVisibilityChange={setIsAppointmentModalOpen}
+            />
+          )}
           {activeTab === 'services' && userRole === 'owner' && <Services salonId={salonId} />}
           {activeTab === 'staff' && userRole === 'owner' && <Staff salonId={salonId} />}
           {activeTab === 'settings' && userRole === 'owner' && <Settings salonId={salonId} />}
@@ -155,6 +161,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         userRole={userRole}
+        hidden={isAppointmentModalOpen}
         onAddClick={() => {
           // Navigate to appointments tab on FAB click
           setActiveTab('appointments');
