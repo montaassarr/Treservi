@@ -530,34 +530,37 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className={`${clayCard} w-full max-w-2xl p-6 lg:p-8 relative max-h-[90vh] overflow-y-auto`}>
-            <button
-              onClick={() => {
-                setIsModalOpen(false);
-                resetForm();
-              }}
-              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-black flex items-center justify-center"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="flex items-start gap-3 mb-6">
-              <div className="w-12 h-12 rounded-[16px] bg-gradient-to-br from-emerald-400 to-green-600 shadow-lg flex items-center justify-center text-white">
-                <Calendar className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-black">
-                  {editingId ? 'Edit Appointment' : 'New Appointment'}
-                </h3>
-                <p className="text-sm text-gray-500">
-                  {editingId ? 'Update appointment details' : 'Schedule a new booking'}
-                </p>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center">
+          <div className={`${clayCard} w-full sm:w-[min(42rem,92vw)] rounded-t-[30px] sm:rounded-[32px] shadow-2xl overflow-hidden max-h-[92dvh] sm:max-h-[90vh]`}> 
+            <div className="sticky top-0 z-10 bg-white/95 dark:bg-treservi-card-dark/95 backdrop-blur border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 py-4 sm:py-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-11 h-11 rounded-[14px] bg-gradient-to-br from-emerald-400 to-green-600 shadow-lg flex items-center justify-center text-white flex-shrink-0">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-xl sm:text-2xl font-black leading-tight truncate">
+                      {editingId ? 'Edit Appointment' : 'New Appointment'}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">
+                      {editingId ? 'Update appointment details' : 'Schedule a new booking'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    resetForm();
+                  }}
+                  className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-black flex items-center justify-center flex-shrink-0"
+                >
+                  <X size={20} />
+                </button>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-4 space-y-4 max-h-[calc(92dvh-164px)] sm:max-h-[calc(90vh-170px)]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
                 {/* Customer Name */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-600">Customer Name</label>
@@ -597,7 +600,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                 />
               </div> */}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
                 {/* Staff */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-600">Assign to Staff</label>
@@ -611,7 +614,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                       <option value="">Select Staff</option>
                       {staff.map(member => (
                         <option key={member.id} value={member.id}>
-                          {member.full_name}
+                          {(member.full_name || member.fullName || member.email || 'Staff').slice(0, 60)}
                         </option>
                       ))}
                     </select>
@@ -640,7 +643,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
                 {/* Date */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-600">Date</label>
@@ -672,34 +675,42 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId }) => {
                 </div>
               </div>
 
-              {/* Status */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-600">Status</label>
-                <select
-                  value={formData.status}
-                  onChange={e => setFormData({ ...formData, status: e.target.value as any })}
-                  className="w-full rounded-full bg-gray-50 border border-transparent focus:border-emerald-500 focus:bg-white py-3 px-4 outline-none shadow-inner appearance-none"
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Confirmed">Confirmed</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
+              <details className="group rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/30 px-4 py-3">
+                <summary className="cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-200 list-none flex items-center justify-between">
+                  <span>More options</span>
+                  <span className="text-xs text-gray-500 group-open:hidden">Show</span>
+                  <span className="text-xs text-gray-500 hidden group-open:inline">Hide</span>
+                </summary>
 
-              {/* Notes */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-600">Notes (Optional)</label>
-                <textarea
-                  value={formData.notes}
-                  onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Any special requests or notes..."
-                  rows={3}
-                  className="w-full rounded-[24px] bg-gray-50 border border-transparent focus:border-emerald-500 focus:bg-white p-4 outline-none shadow-inner resize-none"
-                />
-              </div>
+                <div className="pt-3 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-600">Status</label>
+                    <select
+                      value={formData.status}
+                      onChange={e => setFormData({ ...formData, status: e.target.value as any })}
+                      className="w-full rounded-full bg-white dark:bg-gray-800 border border-transparent focus:border-emerald-500 py-3 px-4 outline-none shadow-inner appearance-none"
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Confirmed">Confirmed</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-600">Notes (Optional)</label>
+                    <textarea
+                      value={formData.notes}
+                      onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="Any special requests or notes..."
+                      rows={3}
+                      className="w-full rounded-[20px] bg-white dark:bg-gray-800 border border-transparent focus:border-emerald-500 p-4 outline-none shadow-inner resize-none"
+                    />
+                  </div>
+                </div>
+              </details>
+
+              <div className="sticky bottom-0 bg-white/95 dark:bg-treservi-card-dark/95 backdrop-blur border-t border-gray-100 dark:border-gray-800 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 flex items-center justify-end gap-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
                 <button
                   type="button"
                   onClick={() => {
