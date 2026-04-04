@@ -139,7 +139,7 @@ const Services: React.FC<ServicesProps> = ({ salonId }) => {
   };
 
   const clayCard =
-    'bg-white dark:bg-treservi-card-dark rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100/60 dark:border-gray-800/60 backdrop-blur-sm';
+    'bg-white dark:bg-treservi-card-dark rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100/60 dark:border-gray-800/60';
 
   if (loading) {
     return (
@@ -246,7 +246,7 @@ const Services: React.FC<ServicesProps> = ({ salonId }) => {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
           <div className={`${clayCard} w-full max-w-lg p-6 lg:p-8 relative`}>
             <button
               onClick={() => {
