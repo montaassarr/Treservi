@@ -321,6 +321,44 @@ export const apiClient = {
     });
     return data.appointment;
   },
+  fetchPublicAvailability: async (params: { salonId: string; staffId: string; date: string }) => {
+    const query = new URLSearchParams();
+    query.set('salonId', params.salonId);
+    query.set('staffId', params.staffId);
+    query.set('date', params.date);
+    const data = await requestJson<{ date: string; bookedTimes: string[]; count: number; serverNow: { dateKey: string; nowMinutes: number } }>(
+      `/api/appointments/public-availability?${query.toString()}`
+    );
+    return data;
+  },
+  checkPublicDuplicateBooking: async (payload: {
+    salon_id: string;
+    staff_id: string;
+    customer_phone: string;
+    appointment_date: string;
+    appointment_time: string;
+  }) => {
+    const data = await requestJson<{ isDuplicate: boolean }>('/api/appointments/public-duplicate-check', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return data;
+  },
+  checkPublicSpamBooking: async (payload: {
+    salon_id: string;
+    customer_phone: string;
+    window_minutes?: number;
+    max_bookings?: number;
+  }) => {
+    const data = await requestJson<{ isSpam: boolean; recentCount: number; windowMinutes: number; maxBookings: number }>(
+      '/api/appointments/public-spam-check',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }
+    );
+    return data;
+  },
   updateAppointment: async (id: string, updates: Record<string, any>) => {
     const data = await requestJson<{ appointment: any }>(`/api/appointments/${id}`, {
       method: 'PATCH',

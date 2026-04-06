@@ -105,6 +105,26 @@ export async function createPublicAppointment(input: CreateAppointmentInput) {
   }
 }
 
+export async function fetchPublicBookedTimes(salonId: string, staffId: string, appointmentDate: string) {
+  try {
+    const availability = await apiClient.fetchPublicAvailability({
+      salonId,
+      staffId,
+      date: appointmentDate
+    });
+
+    return {
+      bookedTimes: availability.bookedTimes || [],
+      error: null
+    };
+  } catch (err: any) {
+    return {
+      bookedTimes: [] as string[],
+      error: err
+    };
+  }
+}
+
 /**
  * Update an existing appointment
  */
@@ -155,19 +175,15 @@ export async function checkDuplicateBooking(
   appointmentTime: string
 ) {
   try {
-    const appointments = await apiClient.fetchAppointments({ salonId });
-    const cleanPhone = phone.replace(/\D/g, '');
-    const hasDuplicate = appointments.some((apt) => {
-      const aptPhone = (apt.customer_phone ?? '').replace(/\D/g, '');
-      return (
-        apt.staff_id?.toString?.() === staffId &&
-        apt.appointment_date === appointmentDate &&
-        apt.appointment_time === appointmentTime &&
-        aptPhone === cleanPhone &&
-        ['Pending', 'Confirmed'].includes(apt.status)
-      );
+    const result = await apiClient.checkPublicDuplicateBooking({
+      salon_id: salonId,
+      staff_id: staffId,
+      customer_phone: phone,
+      appointment_date: appointmentDate,
+      appointment_time: appointmentTime
     });
-    return { isDuplicate: hasDuplicate, error: null };
+
+    return { isDuplicate: result.isDuplicate, error: null };
   } catch (err: any) {
     return { isDuplicate: false, error: err };
   }
@@ -183,18 +199,18 @@ export async function checkSlotAvailability(
   appointmentTime: string
 ) {
   try {
-    const appointments = await apiClient.fetchAppointments({ salonId });
-    const isTaken = appointments.some((apt) => {
-      return (
-        apt.staff_id?.toString?.() === staffId &&
-        apt.appointment_date === appointmentDate &&
-        apt.appointment_time === appointmentTime &&
-        ['Pending', 'Confirmed'].includes(apt.status)
-      );
+    const availability = await apiClient.fetchPublicAvailability({
+      salonId,
+      staffId,
+      date: appointmentDate
     });
+
+    const normalizedTargetTime = appointmentTime.slice(0, 5);
+    const isTaken = (availability.bookedTimes || []).includes(normalizedTargetTime);
+
     return { isAvailable: !isTaken, error: null };
   } catch (err: any) {
-    return { isAvailable: true, error: err };
+    return { isAvailable: false, error: err };
   }
 }
 
@@ -208,20 +224,18 @@ export async function checkSpamBookings(
   maxBookings: number = 3
 ) {
   try {
-    const appointments = await apiClient.fetchAppointments({ salonId });
-    const cleanPhone = phone.replace(/\D/g, '');
-    const cutoff = Date.now() - windowMinutes * 60 * 1000;
-    const recent = appointments.filter((apt) => {
-      const aptPhone = (apt.customer_phone ?? '').replace(/\D/g, '');
-      const createdAt = apt.created_at ? new Date(apt.created_at).getTime() : 0;
-      return (
-        aptPhone === cleanPhone &&
-        createdAt >= cutoff &&
-        ['Pending', 'Confirmed'].includes(apt.status)
-      );
+    const result = await apiClient.checkPublicSpamBooking({
+      salon_id: salonId,
+      customer_phone: phone,
+      window_minutes: windowMinutes,
+      max_bookings: maxBookings
     });
-    const recentCount = recent.length;
-    return { isSpam: recentCount >= maxBookings, recentCount, error: null };
+
+    return {
+      isSpam: result.isSpam,
+      recentCount: result.recentCount,
+      error: null
+    };
   } catch (err: any) {
     return { isSpam: false, recentCount: 0, error: err };
   }

@@ -9,6 +9,8 @@ interface Props {
   selectedDate: Date | null;
   selectedTime: string | null;
   bookedTimes: string[];
+  availabilityBlocked?: boolean;
+  availabilityError?: string | null;
   onDateSelect: (date: Date) => void;
   onTimeSelect: (time: string) => void;
   t: Translations;
@@ -17,7 +19,20 @@ interface Props {
   closingTime?: string;
 }
 
-export const Step2DateTime: React.FC<Props> = ({ staff, selectedDate, selectedTime, bookedTimes, onDateSelect, onTimeSelect, t, lang, openingTime = '09:00', closingTime = '18:00' }) => {
+export const Step2DateTime: React.FC<Props> = ({
+  staff,
+  selectedDate,
+  selectedTime,
+  bookedTimes,
+  availabilityBlocked = false,
+  availabilityError,
+  onDateSelect,
+  onTimeSelect,
+  t,
+  lang,
+  openingTime = '09:00',
+  closingTime = '18:00'
+}) => {
   const [dateIndex, setDateIndex] = useState(0); // 0 = today, 1 = tomorrow
   
   // Generate time slots based on salon opening/closing hours
@@ -182,12 +197,17 @@ export const Step2DateTime: React.FC<Props> = ({ staff, selectedDate, selectedTi
       {/* Time Selection */}
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-gray-900">{t.availableSlots}</h2>
+        {availabilityBlocked && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            {availabilityError || 'Unable to verify live availability right now. Please retry.'}
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-3">
           {timeSlots.map((time, idx) => {
             const isSelected = selectedTime === time;
             const isBooked = bookedTimes.includes(time);
             const isPast = isSameDay && toMinutes(time) <= nowMinutes;
-            const isUnavailable = isBooked || isPast;
+            const isUnavailable = availabilityBlocked || isBooked || isPast;
             return (
               // @ts-ignore
               <motion.button
