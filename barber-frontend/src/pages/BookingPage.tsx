@@ -11,7 +11,7 @@ import { ArrowLeft, CheckCircle, MessageCircle, Globe, MapPin, Navigation } from
 import { AnimatePresence, motion } from 'framer-motion';
 import { fetchPublicStaff } from '../services/staffService';
 import { fetchServices } from '../services/serviceService';
-import { createPublicAppointment, checkDuplicateBooking, checkSlotAvailability, checkSpamBookings, fetchAppointments } from '../services/appointmentService';
+import { createPublicAppointment, checkDuplicateBooking, checkSlotAvailability, checkSpamBookings, fetchPublicBookedTimes } from '../services/appointmentService';
 import { useNavigate } from 'react-router-dom';
 
 import { isValidTunisianPhone } from '../utils/validationUtils';
@@ -161,6 +161,8 @@ export default function BookingPage() {
   const [staffData, setStaffData] = useState<Staff[]>([]);
   const [servicesData, setServicesData] = useState<Service[]>([]);
   const [bookedTimes, setBookedTimes] = useState<string[]>([]);
+  const [availabilityBlocked, setAvailabilityBlocked] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
 
   const [booking, setBooking] = useState<BookingState>({
     step: 1,
@@ -245,30 +247,36 @@ export default function BookingPage() {
     const loadBookedTimes = async () => {
       if (!salon?.id || !booking.selectedStaff || !booking.selectedDate) {
         setBookedTimes([]);
+        setAvailabilityBlocked(false);
+        setAvailabilityError(null);
         return;
       }
 
       const dateKey = booking.selectedDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' });
       console.log('Loading booked times for date:', dateKey, 'staff:', booking.selectedStaff.id);
 
-      const { data, error } = await fetchAppointments(salon.id);
+      const { bookedTimes: liveBookedTimes, error } = await fetchPublicBookedTimes(
+        salon.id,
+        booking.selectedStaff.id,
+        dateKey
+      );
+
       if (error) {
         console.error('Error loading booked times:', error);
         setBookedTimes([]);
+        setAvailabilityBlocked(true);
+        setAvailabilityError('Live availability is temporarily unavailable. Please retry in a moment.');
         return;
       }
 
-      const times = (data || [])
-        .filter((item: any) =>
-          item.appointment_date === dateKey &&
-          String(item.staff_id) === String(booking.selectedStaff?.id) &&
-          ['Confirmed', 'Pending', 'confirmed', 'pending'].includes(item.status)
-        )
-        .map((item: any) => (item.appointment_time || '').slice(0, 5))
+      const times = (liveBookedTimes || [])
+        .map((item: string) => (item || '').slice(0, 5))
         .filter((time: string) => Boolean(time));
       
       console.log('Booked times:', times);
       setBookedTimes(times);
+      setAvailabilityBlocked(false);
+      setAvailabilityError(null);
     };
 
     loadBookedTimes();
@@ -289,7 +297,12 @@ export default function BookingPage() {
         }
 
         // Step 2: Check for spam bookings (max 3 bookings per hour)
-        const { isSpam, recentCount } = await checkSpamBookings(booking.customerPhone, salon.id, 60, 3);
+        const { isSpam, recentCount, error: spamError } = await checkSpamBookings(booking.customerPhone, salon.id, 60, 3);
+        if (spamError) {
+          alert('Unable to verify booking limits right now. Please refresh and try again.');
+          return;
+        }
+
         if (isSpam) {
           alert(`Too many bookings in a short time. You have made ${recentCount} bookings in the last hour. Please try again later.`);
           return;
@@ -297,14 +310,37 @@ export default function BookingPage() {
 
         // Step 3: Check if slot is already taken
         const appointmentDate = booking.selectedDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' });
-        const { isAvailable } = await checkSlotAvailability(salon.id, booking.selectedStaff.id, appointmentDate, booking.selectedTime);
+        const { isAvailable, error: availabilityError } = await checkSlotAvailability(
+          salon.id,
+          booking.selectedStaff.id,
+          appointmentDate,
+          booking.selectedTime
+        );
+
+        if (availabilityError) {
+          alert('Unable to verify availability right now. Please refresh and try again.');
+          return;
+        }
+
         if (!isAvailable) {
           alert('Sorry, this slot was just booked by someone else. Please choose another time.');
           return;
         }
 
         // Step 4: Check if this phone already has a booking at this exact time with this staff
-        const { isDuplicate } = await checkDuplicateBooking(salon.id, booking.selectedStaff.id, booking.customerPhone, appointmentDate, booking.selectedTime);
+        const { isDuplicate, error: duplicateError } = await checkDuplicateBooking(
+          salon.id,
+          booking.selectedStaff.id,
+          booking.customerPhone,
+          appointmentDate,
+          booking.selectedTime
+        );
+
+        if (duplicateError) {
+          alert('Unable to verify duplicate booking status right now. Please refresh and try again.');
+          return;
+        }
+
         if (isDuplicate) {
           alert('You have already booked this appointment!');
           return;
@@ -537,6 +573,8 @@ export default function BookingPage() {
                 selectedDate={booking.selectedDate}
                 selectedTime={booking.selectedTime}
                 bookedTimes={bookedTimes}
+                availabilityBlocked={availabilityBlocked}
+                availabilityError={availabilityError}
                 onDateSelect={(d) => setBooking(prev => ({ ...prev, selectedDate: d }))}
                 onTimeSelect={(t) => setBooking(prev => ({ ...prev, selectedTime: t }))}
                 t={t}
