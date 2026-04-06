@@ -64,3 +64,42 @@ pushSubscriptionsRouter.post('/test', requireAuth, async (req: AuthRequest, res:
     result
   });
 });
+
+pushSubscriptionsRouter.post('/reset', requireAuth, async (req: AuthRequest, res: Response) => {
+  if (!req.user?.id) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const scope = (req.body as { scope?: 'self' | 'all' } | undefined)?.scope ?? 'self';
+
+  if (scope === 'all') {
+    if (!(req.user.isSuperAdmin || req.user.role === 'super_admin')) {
+      return res.status(403).json({ error: 'Forbidden: super admin access required for scope=all' });
+    }
+
+    const deleted = await PushSubscription.deleteMany({});
+    logger.warn('Reset all push subscriptions', {
+      requestedBy: req.user.id,
+      deletedCount: deleted.deletedCount ?? 0
+    }, 'PUSH_NOTIFICATIONS');
+
+    return res.json({
+      ok: true,
+      scope: 'all',
+      deletedCount: deleted.deletedCount ?? 0
+    });
+  }
+
+  const deleted = await PushSubscription.deleteMany({ user_id: req.user.id });
+  logger.info('Reset user push subscriptions', {
+    userId: req.user.id,
+    deletedCount: deleted.deletedCount ?? 0
+  }, 'PUSH_NOTIFICATIONS');
+
+  return res.json({
+    ok: true,
+    scope: 'self',
+    userId: req.user.id,
+    deletedCount: deleted.deletedCount ?? 0
+  });
+});
