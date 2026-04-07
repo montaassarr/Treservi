@@ -8,6 +8,7 @@ const AppointmentSchema = new Schema(
     customer_name: { type: String, required: true },
     customer_email: { type: String },
     customer_phone: { type: String },
+    booking_code: { type: String, index: true },
     appointment_date: { type: String, required: true },
     appointment_time: { type: String, required: true },
     status: {
