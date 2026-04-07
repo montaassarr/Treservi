@@ -472,15 +472,12 @@ appointmentsRouter.post('/public-manage/cancel', async (req: Request, res: Respo
     });
   }
 
-  const updatedAppointment = await Appointment.findByIdAndUpdate(
-    appointment._id,
-    { status: 'Cancelled' },
-    { new: true }
-  )
-    .populate('service_id', 'name duration price')
-    .populate('staff_id', 'fullName specialty');
+  await Appointment.findByIdAndDelete(appointment._id);
 
-  return res.json({ appointment: updatedAppointment });
+  return res.json({
+    deleted: true,
+    message: 'Booking cancelled permanently and access code removed'
+  });
 });
 
 appointmentsRouter.post('/public-manage/reschedule', async (req: Request, res: Response) => {
