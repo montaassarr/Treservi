@@ -138,18 +138,21 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
       }
 
       const appointmentsData = appointmentsResponse.data ?? [];
+      const activeAppointmentsData = appointmentsData.filter(
+        (appointment) => appointment.status !== 'Cancelled' && appointment.status !== 'cancelled'
+      );
       const servicesData = servicesResponse.data ?? [];
       const staffData = staffResponse.data ?? [];
 
       setServicesList(servicesData);
       setStaff(staffData);
       setFilterStaffId('all');
-      setAppointmentsData(appointmentsData);
+      setAppointmentsData(activeAppointmentsData);
 
       const serviceById = new Map(servicesData.map((service) => [service.id, service]));
       const staffById = new Map(staffData.map((member) => [member.id, member]));
 
-      const mappedAppointments: Appointment[] = appointmentsData.map((apt) => {
+      const mappedAppointments: Appointment[] = activeAppointmentsData.map((apt) => {
         const service = apt.service ?? serviceById.get(apt.service_id || '');
         const staff = apt.staff ?? staffById.get(apt.staff_id || '');
         return {
@@ -167,8 +170,8 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
         };
       });
 
-      const totalRevenue = appointmentsData.reduce((sum, apt) => sum + (apt.amount || 0), 0);
-      setStats({ bookings: appointmentsData.length, revenue: totalRevenue });
+      const totalRevenue = activeAppointmentsData.reduce((sum, apt) => sum + (apt.amount || 0), 0);
+      setStats({ bookings: activeAppointmentsData.length, revenue: totalRevenue });
 
       const today = new Date();
       const daysRange = dateFilter === '30d' ? 30 : dateFilter === '90d' ? 90 : dateFilter === '1y' ? 365 : 7;
@@ -181,7 +184,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
       });
 
       const bucketMap = new Map(chartBuckets.map((bucket) => [bucket.key, bucket]));
-      appointmentsData.forEach((apt) => {
+      activeAppointmentsData.forEach((apt) => {
         const bucket = bucketMap.get(apt.appointment_date);
         if (bucket) {
           bucket.value += 1;
@@ -192,7 +195,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
       const barberStatsMap = new Map<string, { count: number; services: Set<string> }>();
       const ownerStats = { count: 0, services: new Set<string>() };
       
-      appointmentsData.forEach((apt) => {
+      activeAppointmentsData.forEach((apt) => {
         if (apt.staff_id) {
           const existing = barberStatsMap.get(apt.staff_id) || { count: 0, services: new Set<string>() };
           existing.count += 1;
@@ -250,7 +253,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
 
       const upcomingAppointments = mappedAppointments
         .filter((apt) => {
-          const aptDate = appointmentsData.find((item) => item.id === apt.id)?.appointment_date;
+          const aptDate = activeAppointmentsData.find((item) => item.id === apt.id)?.appointment_date;
           if (!aptDate) return true;
           return aptDate >= today.toISOString().split('T')[0];
         })
@@ -261,13 +264,13 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
 
       dashboardDataCache.set(cacheKey, {
         chartData: chartBuckets.map(({ name, value }) => ({ name, value })),
-        stats: { bookings: appointmentsData.length, revenue: totalRevenue },
+        stats: { bookings: activeAppointmentsData.length, revenue: totalRevenue },
         topBarbers: topBarbersData,
         barberStats: barberStatsMap,
         appointments: upcomingAppointments,
         servicesList: servicesData,
         staff: staffData,
-        appointmentsData,
+        appointmentsData: activeAppointmentsData,
         expiresAt: Date.now() + 45_000
       });
     } catch (error: any) {

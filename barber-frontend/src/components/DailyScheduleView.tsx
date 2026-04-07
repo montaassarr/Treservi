@@ -39,6 +39,7 @@ const DailyScheduleView: React.FC<DailyScheduleViewProps> = ({
 
       const filtered = (data || []).filter((item: any) => {
         if (item.appointment_date !== dateKey) return false;
+        if (item.status === 'Cancelled' || item.status === 'cancelled') return false;
         if (userRole === 'staff' && userId) {
           return String(item.staff_id) === String(userId);
         }
