@@ -77,6 +77,7 @@ export interface AppointmentData {
   salon_id: string;
   staff_id?: string;
   service_id?: string;
+  booking_code?: string;
   customer_name: string;
   customer_email?: string;
   customer_phone?: string;
@@ -195,4 +196,8 @@ export interface Translations {
   bookingMessage: string;
   done: string;
   from: string;
+  haveBookingCode: string;
+  manageExisting: string;
+  manageMyBooking: string;
+  manage: string;
 }

@@ -11,6 +11,10 @@ const TUNIS_TIME_ZONE = 'Africa/Tunis';
 const ACTIVE_SLOT_STATUSES = ['Pending', 'Confirmed', 'pending', 'confirmed'];
 const DEFAULT_SPAM_WINDOW_MINUTES = 60;
 const DEFAULT_SPAM_MAX_BOOKINGS = 3;
+const DEFAULT_CANCELLATION_CUTOFF_MINUTES = 30;
+
+const BOOKING_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const BOOKING_CODE_LENGTH = 6;
 
 const isValidDateKey = (dateKey: string) => /^\d{4}-\d{2}-\d{2}$/.test(dateKey);
 
@@ -35,6 +39,29 @@ const parseTimeToMinutes = (timeValue: string) => {
 };
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
+
+const normalizeBookingCode = (value: string) => value.trim().toUpperCase();
+
+const generateBookingCodeCandidate = () => {
+  let code = '';
+  for (let index = 0; index < BOOKING_CODE_LENGTH; index += 1) {
+    const randomIndex = Math.floor(Math.random() * BOOKING_CODE_ALPHABET.length);
+    code += BOOKING_CODE_ALPHABET[randomIndex];
+  }
+  return code;
+};
+
+const createUniqueBookingCode = async () => {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const candidate = generateBookingCodeCandidate();
+    const existing = await Appointment.exists({ booking_code: candidate });
+    if (!existing) {
+      return candidate;
+    }
+  }
+
+  return `${Date.now().toString(36).slice(-6)}`.toUpperCase();
+};
 
 const getTunisNow = () => {
   const now = new Date();
@@ -100,6 +127,34 @@ const hasDuplicateBooking = async (input: {
     .lean();
 
   return appointments.some((appointment) => normalizePhone(String(appointment.customer_phone ?? '')) === cleanPhone);
+};
+
+const getManageableAppointment = async (input: {
+  salonId: string;
+  bookingCode: string;
+  customerPhone: string;
+}) => {
+  const bookingCode = normalizeBookingCode(input.bookingCode);
+  const cleanPhone = normalizePhone(input.customerPhone);
+
+  if (!bookingCode || !cleanPhone) {
+    return null;
+  }
+
+  const appointmentCandidates = await Appointment.find({
+    salon_id: input.salonId,
+    booking_code: bookingCode
+  })
+    .sort({ created_at: -1 })
+    .populate('service_id', 'name duration price')
+    .populate('staff_id', 'fullName specialty')
+    .lean();
+
+  return (
+    appointmentCandidates.find(
+      (appointment) => normalizePhone(String(appointment.customer_phone ?? '')) === cleanPhone
+    ) ?? null
+  );
 };
 
 const getRecentBookingCountForPhone = async (input: {
@@ -306,6 +361,8 @@ appointmentsRouter.post('/public', async (req: Request, res: Response) => {
     });
   }
 
+  const bookingCode = await createUniqueBookingCode();
+
   const appointment = await Appointment.create({
     salon_id: body.salon_id,
     staff_id: body.staff_id,
@@ -313,6 +370,7 @@ appointmentsRouter.post('/public', async (req: Request, res: Response) => {
     customer_name: body.customer_name,
     customer_email: body.customer_email,
     customer_phone: body.customer_phone,
+    booking_code: bookingCode,
     appointment_date: appointmentDate,
     appointment_time: appointmentTime,
     status: body.status ?? 'Pending',
@@ -338,6 +396,181 @@ appointmentsRouter.post('/public', async (req: Request, res: Response) => {
   });
 
   return res.status(201).json({ appointment });
+});
+
+appointmentsRouter.post('/public-manage/lookup', async (req: Request, res: Response) => {
+  const body = req.body as {
+    salon_id?: string;
+    booking_code?: string;
+    customer_phone?: string;
+  };
+
+  if (!body.salon_id || !body.booking_code || !body.customer_phone) {
+    return res.status(400).json({ error: 'salon_id, booking_code and customer_phone are required' });
+  }
+
+  const appointment = await getManageableAppointment({
+    salonId: String(body.salon_id),
+    bookingCode: String(body.booking_code),
+    customerPhone: String(body.customer_phone)
+  });
+
+  if (!appointment) {
+    return res.status(404).json({ error: 'Booking not found. Please verify code and phone number.' });
+  }
+
+  return res.json({ appointment });
+});
+
+appointmentsRouter.post('/public-manage/cancel', async (req: Request, res: Response) => {
+  const body = req.body as {
+    salon_id?: string;
+    booking_code?: string;
+    customer_phone?: string;
+  };
+
+  if (!body.salon_id || !body.booking_code || !body.customer_phone) {
+    return res.status(400).json({ error: 'salon_id, booking_code and customer_phone are required' });
+  }
+
+  const appointment = await getManageableAppointment({
+    salonId: String(body.salon_id),
+    bookingCode: String(body.booking_code),
+    customerPhone: String(body.customer_phone)
+  });
+
+  if (!appointment) {
+    return res.status(404).json({ error: 'Booking not found. Please verify code and phone number.' });
+  }
+
+  if (appointment.status === 'Cancelled') {
+    return res.status(409).json({ error: 'This booking is already cancelled' });
+  }
+
+  if (appointment.status === 'Completed') {
+    return res.status(409).json({ error: 'Completed bookings cannot be cancelled' });
+  }
+
+  const slotMinutes = parseTimeToMinutes(String(appointment.appointment_time));
+  if (slotMinutes === null) {
+    return res.status(409).json({ error: 'This booking cannot be managed due to invalid time format' });
+  }
+
+  const tunisNow = getTunisNow();
+  const appointmentDate = String(appointment.appointment_date);
+
+  if (appointmentDate < tunisNow.dateKey) {
+    return res.status(409).json({ error: 'Past bookings cannot be cancelled' });
+  }
+
+  if (
+    appointmentDate === tunisNow.dateKey &&
+    slotMinutes - tunisNow.nowMinutes < DEFAULT_CANCELLATION_CUTOFF_MINUTES
+  ) {
+    return res.status(409).json({
+      error: `Cancellation is allowed only at least ${DEFAULT_CANCELLATION_CUTOFF_MINUTES} minutes before the appointment`
+    });
+  }
+
+  const updatedAppointment = await Appointment.findByIdAndUpdate(
+    appointment._id,
+    { status: 'Cancelled' },
+    { new: true }
+  )
+    .populate('service_id', 'name duration price')
+    .populate('staff_id', 'fullName specialty');
+
+  return res.json({ appointment: updatedAppointment });
+});
+
+appointmentsRouter.post('/public-manage/reschedule', async (req: Request, res: Response) => {
+  const body = req.body as {
+    salon_id?: string;
+    booking_code?: string;
+    customer_phone?: string;
+    appointment_date?: string;
+    appointment_time?: string;
+  };
+
+  const required = ['salon_id', 'booking_code', 'customer_phone', 'appointment_date', 'appointment_time'];
+  for (const key of required) {
+    if (!body[key as keyof typeof body]) {
+      return res.status(400).json({ error: `${key} is required` });
+    }
+  }
+
+  const nextDate = String(body.appointment_date);
+  const nextTime = String(body.appointment_time);
+
+  if (!isValidDateKey(nextDate)) {
+    return res.status(400).json({ error: 'appointment_date must be in YYYY-MM-DD format' });
+  }
+
+  if (parseTimeToMinutes(nextTime) === null) {
+    return res.status(400).json({ error: 'appointment_time must be in HH:mm format' });
+  }
+
+  if (isPastSlotInTunis(nextDate, nextTime)) {
+    return res.status(409).json({ error: 'Selected slot is in the past for Tunisia time' });
+  }
+
+  const appointment = await getManageableAppointment({
+    salonId: String(body.salon_id),
+    bookingCode: String(body.booking_code),
+    customerPhone: String(body.customer_phone)
+  });
+
+  if (!appointment) {
+    return res.status(404).json({ error: 'Booking not found. Please verify code and phone number.' });
+  }
+
+  if (appointment.status === 'Cancelled') {
+    return res.status(409).json({ error: 'Cancelled bookings cannot be rescheduled' });
+  }
+
+  if (appointment.status === 'Completed') {
+    return res.status(409).json({ error: 'Completed bookings cannot be rescheduled' });
+  }
+
+  const staffId = String(appointment.staff_id?._id ?? appointment.staff_id ?? '');
+
+  if (!staffId) {
+    return res.status(409).json({ error: 'This booking cannot be managed because staff is missing' });
+  }
+
+  const isSameSlot = String(appointment.appointment_date) === nextDate && String(appointment.appointment_time) === nextTime;
+  if (isSameSlot) {
+    return res.status(200).json({ appointment });
+  }
+
+  const existing = await Appointment.findOne({
+    _id: { $ne: appointment._id },
+    salon_id: body.salon_id,
+    staff_id: staffId,
+    appointment_date: nextDate,
+    appointment_time: nextTime,
+    status: { $in: ACTIVE_SLOT_STATUSES }
+  })
+    .select('_id')
+    .lean();
+
+  if (existing) {
+    return res.status(409).json({ error: 'This slot is already booked' });
+  }
+
+  const updatedAppointment = await Appointment.findByIdAndUpdate(
+    appointment._id,
+    {
+      appointment_date: nextDate,
+      appointment_time: nextTime,
+      status: 'Pending'
+    },
+    { new: true }
+  )
+    .populate('service_id', 'name duration price')
+    .populate('staff_id', 'fullName specialty');
+
+  return res.json({ appointment: updatedAppointment });
 });
 
 appointmentsRouter.get('/', requireAuth, async (req: AuthRequest, res: Response) => {

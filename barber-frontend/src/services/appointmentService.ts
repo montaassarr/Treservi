@@ -240,3 +240,53 @@ export async function checkSpamBookings(
     return { isSpam: false, recentCount: 0, error: err };
   }
 }
+
+export async function lookupPublicManagedBooking(salonId: string, bookingCode: string, customerPhone: string) {
+  try {
+    const appointment = await apiClient.lookupPublicManagedBooking({
+      salon_id: salonId,
+      booking_code: bookingCode,
+      customer_phone: customerPhone
+    });
+
+    return { data: normalizeAppointment(appointment), error: null };
+  } catch (err: any) {
+    return { data: null, error: err };
+  }
+}
+
+export async function cancelPublicManagedBooking(salonId: string, bookingCode: string, customerPhone: string) {
+  try {
+    const appointment = await apiClient.cancelPublicManagedBooking({
+      salon_id: salonId,
+      booking_code: bookingCode,
+      customer_phone: customerPhone
+    });
+
+    return { data: normalizeAppointment(appointment), error: null };
+  } catch (err: any) {
+    return { data: null, error: err };
+  }
+}
+
+export async function reschedulePublicManagedBooking(
+  salonId: string,
+  bookingCode: string,
+  customerPhone: string,
+  appointmentDate: string,
+  appointmentTime: string
+) {
+  try {
+    const appointment = await apiClient.reschedulePublicManagedBooking({
+      salon_id: salonId,
+      booking_code: bookingCode,
+      customer_phone: customerPhone,
+      appointment_date: appointmentDate,
+      appointment_time: appointmentTime
+    });
+
+    return { data: normalizeAppointment(appointment), error: null };
+  } catch (err: any) {
+    return { data: null, error: err };
+  }
+}

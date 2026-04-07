@@ -7,7 +7,7 @@ import { Step2DateTime } from '../components/booking/Step2DateTime';
 import { Step3Service } from '../components/booking/Step3Service';
 import { Step4Contact } from '../components/booking/Step4Contact';
 import { BookingState, Language, Translations, BookingStaff as Staff, BookingService as Service } from '../types';
-import { ArrowLeft, CheckCircle, MessageCircle, Globe, MapPin, Navigation } from 'lucide-react';
+import { ArrowLeft, CheckCircle, MessageCircle, Globe, MapPin, Navigation, Edit3 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { fetchPublicStaff } from '../services/staffService';
 import { fetchServices } from '../services/serviceService';
@@ -43,7 +43,11 @@ const getTranslations = (salonName: string = 'Salon'): Record<Language, Translat
     bookingReceived: "Booking Received!",
     bookingMessage: "We will send a WhatsApp message to",
     done: "Done",
-    from: "From"
+    from: "From",
+    haveBookingCode: "Have a booking code?",
+    manageExisting: "Manage or reschedule your existing appointment",
+    manageMyBooking: "Manage My Booking",
+    manage: "Manage"
   },
   fr: {
     greeting: `Bienvenue au ${salonName}`,
@@ -70,7 +74,11 @@ const getTranslations = (salonName: string = 'Salon'): Record<Language, Translat
     bookingReceived: "Réservation reçue !",
     bookingMessage: "Nous enverrons un message WhatsApp au",
     done: "Terminé",
-    from: "Dès"
+    from: "Dès",
+    haveBookingCode: "Vous avez un code de réservation ?",
+    manageExisting: "Gérer ou reprogrammer votre rendez-vous existant",
+    manageMyBooking: "Gérer ma réservation",
+    manage: "Gérer"
   },
   ar: {
     greeting: `مرحباً بكم في ${salonName}`,
@@ -97,7 +105,11 @@ const getTranslations = (salonName: string = 'Salon'): Record<Language, Translat
     bookingReceived: "تم استلام الحجز!",
     bookingMessage: "سنرسل رسالة واتساب إلى",
     done: "إنهاء",
-    from: "من"
+    from: "من",
+    haveBookingCode: "هل لديك رمز الحجز؟",
+    manageExisting: "إدارة أو إعادة جدولة موعدك الحالي",
+    manageMyBooking: "إدارة حجزي",
+    manage: "إدارة"
   },
   tn: {
     greeting: `Marhba bik fi ${salonName}`,
@@ -124,7 +136,11 @@ const getTranslations = (salonName: string = 'Salon'): Record<Language, Translat
     bookingReceived: "Wsol l'booking!",
     bookingMessage: "Bech nab3thoulek message WhatsApp 3la",
     done: "C'est bon",
-    from: "Men"
+    from: "Men",
+    haveBookingCode: "Leztek code booking?",
+    manageExisting: "Idara ou tajdil tawaaki3 mtaa3ek",
+    manageMyBooking: "Idara booking mtaa3i",
+    manage: "Idara"
   }
 });
 
@@ -155,6 +171,7 @@ export default function BookingPage() {
   };
 
   const [bookingCompleted, setBookingCompleted] = useState(false);
+  const [bookingCode, setBookingCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [staffLoaded, setStaffLoaded] = useState(false);
   const [servicesLoaded, setServicesLoaded] = useState(false);
@@ -347,7 +364,7 @@ export default function BookingPage() {
         }
 
         // All validations passed - create appointment
-        await createPublicAppointment({
+        const { data: createdAppointment, error: createError } = await createPublicAppointment({
           salon_id: salon.id,
           staff_id: booking.selectedStaff.id,
           service_id: booking.selectedService.id,
@@ -359,6 +376,13 @@ export default function BookingPage() {
           notes: booking.notes,
           status: 'Pending'
         });
+
+        if (createError || !createdAppointment) {
+          alert(createError?.message || 'Booking failed. Please try again.');
+          return;
+        }
+
+        setBookingCode(createdAppointment.booking_code || null);
 
         setBookingCompleted(true);
       } catch (err) {
@@ -457,6 +481,23 @@ export default function BookingPage() {
           <p className="text-gray-500 mb-4 leading-relaxed">
             {t.bookingMessage} <b>{booking.customerPhone}</b>.
           </p>
+
+          {bookingCode && (
+            <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-left">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Booking Code</p>
+              <p className="mt-1 text-2xl font-extrabold tracking-widest text-emerald-900">{bookingCode}</p>
+              <p className="mt-2 text-xs text-emerald-700">Save this code to cancel or reschedule later.</p>
+            </div>
+          )}
+
+          {salon?.slug && (
+            <button
+              onClick={() => navigate(`/${salon.slug}/manage`)}
+              className="w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-emerald-700 transition-colors mb-4"
+            >
+              Manage this booking
+            </button>
+          )}
           
           {/* Salon Address Section */}
           {hasAddress && (
@@ -500,6 +541,7 @@ export default function BookingPage() {
                     customerPhone: '',
                     notes: '',
                 });
+                  setBookingCode(null);
             }}
             className="w-full bg-gray-900 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-gray-800 transition-colors"
           >
@@ -534,6 +576,15 @@ export default function BookingPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            {booking.step === 1 && salon?.slug && (
+              <button
+                onClick={() => navigate(`/${salon.slug}/manage`)}
+                className="flex items-center gap-1 px-3 py-2 rounded-full bg-gray-100 hover:bg-gray-200 transition text-sm font-semibold text-gray-900"
+              >
+                <Edit3 className="w-4 h-4" />
+                <span className="hidden xs:inline text-xs">{t.manage}</span>
+              </button>
+            )}
              <button 
                onClick={toggleLang}
                className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-bold shadow-lg shadow-gray-200 active:scale-95 transition-all"
@@ -557,14 +608,40 @@ export default function BookingPage() {
             transition={{ duration: 0.3 }}
           >
             {booking.step === 1 && (
-              <Step1Specialist 
-                staffList={staffData}
-                selectedStaffId={booking.selectedStaff?.id}
-                onSelect={(staff) => {
-                  setBooking(prev => ({ ...prev, selectedStaff: staff }));
-                }}
-                t={t}
-              />
+              <div className="space-y-6">
+                {/* Manage Existing Booking Card */}
+                {salon?.slug && (
+                  <div className="bg-white rounded-[32px] p-6 shadow-soft-glow border-2 border-gray-100">
+                    <div className="flex items-start gap-3 mb-3">
+                      <Edit3 className="w-5 h-5 text-gray-700 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{t.haveBookingCode}</p>
+                        <p className="text-xs text-gray-600 mt-1">{t.manageExisting}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/${salon.slug}/manage`)}
+                      className="w-full py-3 px-4 rounded-2xl bg-gray-900 text-white font-semibold text-sm hover:bg-gray-800 active:scale-95 transition-all"
+                    >
+                      {t.manageMyBooking}
+                    </button>
+                  </div>
+                )}
+
+                {/* Book New Appointment Section */}
+                <div>
+                  <p className="text-sm font-semibold text-gray-600 mb-4">{t.specialist}</p>
+                </div>
+
+                <Step1Specialist 
+                  staffList={staffData}
+                  selectedStaffId={booking.selectedStaff?.id}
+                  onSelect={(staff) => {
+                    setBooking(prev => ({ ...prev, selectedStaff: staff }));
+                  }}
+                  t={t}
+                />
+              </div>
             )}
 
             {booking.step === 2 && booking.selectedStaff && (

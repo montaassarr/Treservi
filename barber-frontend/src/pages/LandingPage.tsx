@@ -1,72 +1,75 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Scissors, Calendar, Users, Sparkles } from 'lucide-react';
+import { Calendar, Edit3 } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const [salonSlug, setSalonSlug] = useState('');
+
+  const handleNavigateToSalon = (route: string) => {
+    if (!salonSlug.trim()) {
+      alert('Please enter your salon name');
+      return;
+    }
+    navigate(`/${salonSlug.trim().toLowerCase()}${route}`);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-treservi-accent/5 via-white to-green-50 dark:from-gray-900 dark:via-black dark:to-gray-900">
-      {/* Hero Section */}
-      <div className="container mx-auto px-4 py-16 md:py-24">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="mb-8 inline-flex items-center justify-center w-20 h-20 bg-treservi-accent/10 rounded-3xl">
-            <Scissors className="w-10 h-10 text-treservi-accent" />
+    <div className="min-h-screen bg-[#FAFAFA] flex flex-col items-center justify-center px-6 py-8">
+      <div className="w-full max-w-md space-y-8">
+        {/* Logo Section */}
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="w-16 h-16 rounded-3xl bg-white shadow-soft-glow flex items-center justify-center">
+              <Calendar className="w-8 h-8 text-gray-900" />
+            </div>
           </div>
-          
-          <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6">
-            Welcome to <span className="text-treservi-accent">Reservi</span>
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-12 max-w-2xl mx-auto">
-            Modern salon management platform. Streamline appointments, manage staff, and grow your business.
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900">Reservi</h1>
+            <p className="text-sm text-gray-600 mt-2">Book or manage your salon appointment</p>
+          </div>
+        </div>
+
+        {/* Salon Input Card */}
+        <div className="bg-white rounded-[32px] p-6 shadow-soft-glow space-y-4">
+          <label className="text-sm font-semibold text-gray-700">Salon Name</label>
+          <input
+            type="text"
+            value={salonSlug}
+            onChange={(e) => setSalonSlug(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleNavigateToSalon('/book')}
+            placeholder="e.g. my-barber-shop"
+            className="w-full px-4 py-3 rounded-2xl border border-gray-200 outline-none focus:border-gray-900 focus:ring-0 transition-colors text-gray-900 placeholder:text-gray-400"
+          />
+          <p className="text-xs text-gray-500">Enter your salon's name to continue</p>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          <button
+            onClick={() => handleNavigateToSalon('/book')}
+            className="w-full bg-gray-900 text-white font-bold py-4 rounded-[24px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-gray-800"
+          >
+            <Calendar className="w-5 h-5" />
+            Book Appointment
+          </button>
+
+          <button
+            onClick={() => handleNavigateToSalon('/manage')}
+            className="w-full bg-white text-gray-900 font-bold py-4 rounded-[24px] border-2 border-gray-900 shadow-soft-glow active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-gray-50"
+          >
+            <Edit3 className="w-5 h-5" />
+            Manage Booking
+          </button>
+        </div>
+
+        {/* Info Section */}
+        <div className="text-center">
+          <p className="text-xs text-gray-500 font-mono">
+            reservi.app/<span className="text-gray-900 font-semibold">salon-name</span>/book
           </p>
-
-          {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
-              <Calendar className="w-12 h-12 text-treservi-accent mx-auto mb-4" />
-              <h3 className="font-bold text-lg mb-2 dark:text-white">Smart Booking</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                Effortless appointment scheduling
-              </p>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
-              <Users className="w-12 h-12 text-treservi-accent mx-auto mb-4" />
-              <h3 className="font-bold text-lg mb-2 dark:text-white">Staff Management</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                Organize your team efficiently
-              </p>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
-              <Sparkles className="w-12 h-12 text-treservi-accent mx-auto mb-4" />
-              <h3 className="font-bold text-lg mb-2 dark:text-white">Modern Interface</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                Beautiful, intuitive design
-              </p>
-            </div>
-          </div>
-
-          {/* Demo Button */}
-          <div className="space-y-4">
-            <p className="text-gray-600 dark:text-gray-400">
-              To access your salon dashboard, use your salon's unique URL
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-500 font-mono">
-              Example: reservi.app/<span className="text-treservi-accent font-bold">your-salon-name</span>/dashboard
-            </p>
-          </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-200 dark:border-gray-800 py-8 mt-16">
-        <div className="container mx-auto px-4 text-center text-gray-600 dark:text-gray-400">
-          <p>&copy; 2026 Reservi. Modern Salon Management.</p>
-        </div>
-      </footer>
     </div>
   );
 };

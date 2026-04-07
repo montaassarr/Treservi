@@ -12,6 +12,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import BookingPage from './pages/BookingPage';
+import ManageBookingPage from './pages/ManageBookingPage';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { SUPERADMIN_DASHBOARD_PATH, SUPERADMIN_LOGIN_PATH, SUPERADMIN_ROUTE_BASE } from './config/securityRoutes';
 
@@ -188,6 +189,14 @@ const AppRoutes: React.FC = () => {
         <SalonProvider>
           <div className="w-full h-screen bg-[#FAFAFA] overflow-y-auto no-scrollbar">
             <BookingPage />
+          </div>
+        </SalonProvider>
+      } />
+
+      <Route path="/:salonSlug/manage" element={
+        <SalonProvider>
+          <div className="w-full h-screen bg-[#FAFAFA] overflow-y-auto no-scrollbar">
+            <ManageBookingPage />
           </div>
         </SalonProvider>
       } />

@@ -359,6 +359,41 @@ export const apiClient = {
     );
     return data;
   },
+  lookupPublicManagedBooking: async (payload: {
+    salon_id: string;
+    booking_code: string;
+    customer_phone: string;
+  }) => {
+    const data = await requestJson<{ appointment: any }>('/api/appointments/public-manage/lookup', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return data.appointment;
+  },
+  cancelPublicManagedBooking: async (payload: {
+    salon_id: string;
+    booking_code: string;
+    customer_phone: string;
+  }) => {
+    const data = await requestJson<{ appointment: any }>('/api/appointments/public-manage/cancel', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return data.appointment;
+  },
+  reschedulePublicManagedBooking: async (payload: {
+    salon_id: string;
+    booking_code: string;
+    customer_phone: string;
+    appointment_date: string;
+    appointment_time: string;
+  }) => {
+    const data = await requestJson<{ appointment: any }>('/api/appointments/public-manage/reschedule', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return data.appointment;
+  },
   updateAppointment: async (id: string, updates: Record<string, any>) => {
     const data = await requestJson<{ appointment: any }>(`/api/appointments/${id}`, {
       method: 'PATCH',
