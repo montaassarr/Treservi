@@ -93,7 +93,11 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityC
       if (servicesRes.error) throw servicesRes.error;
       if (staffRes.error) throw staffRes.error;
 
-      const loadedAppointments = appointmentsRes.data || [];
+      const loadedAppointments = (appointmentsRes.data || []).sort((first, second) => {
+        const firstCreated = new Date(first.created_at || first.updated_at || `${first.appointment_date}T${first.appointment_time || '00:00'}`).getTime();
+        const secondCreated = new Date(second.created_at || second.updated_at || `${second.appointment_date}T${second.appointment_time || '00:00'}`).getTime();
+        return secondCreated - firstCreated;
+      });
 
       setAppointments(loadedAppointments);
       setServices(servicesRes.data || []);
@@ -241,11 +245,18 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityC
     }
   };
 
-  const filteredAppointments = appointments.filter(apt => {
-    const statusMatch = filterStatus === 'all' || apt.status === filterStatus;
-    const staffMatch = filterStaff === 'all' || resolveStaffId(apt.staff_id) === filterStaff;
-    return statusMatch && staffMatch;
-  });
+  const filteredAppointments = appointments
+    .filter((apt) => apt.status !== 'Cancelled' && apt.status !== 'cancelled')
+    .filter(apt => {
+      const statusMatch = filterStatus === 'all' || apt.status === filterStatus;
+      const staffMatch = filterStaff === 'all' || resolveStaffId(apt.staff_id) === filterStaff;
+      return statusMatch && staffMatch;
+    })
+    .sort((first, second) => {
+      const firstCreated = new Date(first.created_at || first.updated_at || `${first.appointment_date}T${first.appointment_time || '00:00'}`).getTime();
+      const secondCreated = new Date(second.created_at || second.updated_at || `${second.appointment_date}T${second.appointment_time || '00:00'}`).getTime();
+      return secondCreated - firstCreated;
+    });
 
   const clayCard =
     'bg-white dark:bg-treservi-card-dark rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100/60 dark:border-gray-800/60';
@@ -331,7 +342,6 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityC
             <option value="Pending">Pending</option>
             <option value="Confirmed">Confirmed</option>
             <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
           </select>
         </div>
       </div>

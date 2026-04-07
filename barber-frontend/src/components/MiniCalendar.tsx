@@ -55,6 +55,7 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ salonId, userRole = 'owner'
 
       const filtered = (data || []).filter((item: any) => {
         if (item.appointment_date !== dateKey) return false;
+        if (item.status === 'Cancelled' || item.status === 'cancelled') return false;
         if (userRole === 'staff' && userId) {
           return String(item.staff_id) === String(userId);
         }
