@@ -257,15 +257,15 @@ export async function lookupPublicManagedBooking(salonId: string, bookingCode: s
 
 export async function cancelPublicManagedBooking(salonId: string, bookingCode: string, customerPhone: string) {
   try {
-    const appointment = await apiClient.cancelPublicManagedBooking({
+    const result = await apiClient.cancelPublicManagedBooking({
       salon_id: salonId,
       booking_code: bookingCode,
       customer_phone: customerPhone
     });
 
-    return { data: normalizeAppointment(appointment), error: null };
+    return { deleted: result.deleted, message: result.message, error: null };
   } catch (err: any) {
-    return { data: null, error: err };
+    return { deleted: false, message: undefined, error: err };
   }
 }
 

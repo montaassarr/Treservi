@@ -35,7 +35,7 @@ const generateTimeSlots = (openingTime: string, closingTime: string) => {
 };
 
 export default function ManageBookingPage() {
-  const { salon } = useSalon();
+  const { salon, salonSlug } = useSalon();
   const navigate = useNavigate();
   const { language } = useLanguage();
   const isRTL = language === 'ar' || language === 'tn';
@@ -62,6 +62,7 @@ export default function ManageBookingPage() {
     () => generateTimeSlots(salon?.opening_time || '09:00', salon?.closing_time || '18:00'),
     [salon?.opening_time, salon?.closing_time]
   );
+  const targetSalonSlug = salon?.slug || salonSlug;
 
   const canLookup = Boolean(salon?.id && bookingCode.trim() && customerPhone.trim());
 
@@ -109,16 +110,22 @@ export default function ManageBookingPage() {
     setError(null);
     setSuccessMessage(null);
 
-    const { data, error: cancelError } = await cancelPublicManagedBooking(salon.id, bookingCode.trim(), customerPhone.trim());
+    const { deleted, message, error: cancelError } = await cancelPublicManagedBooking(
+      salon.id,
+      bookingCode.trim(),
+      customerPhone.trim()
+    );
 
-    if (cancelError || !data) {
-      setError(cancelError?.message || 'Unable to cancel booking.');
+    if (cancelError || !deleted) {
+      setError(cancelError?.message || message || 'Unable to cancel booking.');
       setLoading(false);
       return;
     }
 
-    setAppointment(data);
-    setSuccessMessage('Booking cancelled successfully.');
+    setAppointment(null);
+    setBookingCode('');
+    setCustomerPhone('');
+    setSuccessMessage(message || 'Booking permanently deleted. Access code removed.');
     setLoading(false);
   };
 
@@ -156,14 +163,8 @@ export default function ManageBookingPage() {
   };
 
   const handleBack = () => {
-    if (appointment) {
-      setAppointment(null);
-      setBookingCode('');
-      setCustomerPhone('');
-      setError(null);
-      setSuccessMessage(null);
-    } else {
-      navigate('/');
+    if (targetSalonSlug) {
+      navigate(`/${targetSalonSlug}/book`);
     }
   };
 
@@ -211,6 +212,13 @@ export default function ManageBookingPage() {
                 />
               </div>
             </div>
+
+            {successMessage && (
+              <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 flex items-center gap-2">
+                <Check className="w-5 h-5" />
+                {successMessage}
+              </div>
+            )}
 
             {error && (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

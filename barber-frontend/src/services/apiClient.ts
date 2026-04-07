@@ -375,11 +375,11 @@ export const apiClient = {
     booking_code: string;
     customer_phone: string;
   }) => {
-    const data = await requestJson<{ appointment: any }>('/api/appointments/public-manage/cancel', {
+    const data = await requestJson<{ deleted: boolean; message?: string }>('/api/appointments/public-manage/cancel', {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    return data.appointment;
+    return data;
   },
   reschedulePublicManagedBooking: async (payload: {
     salon_id: string;
