@@ -309,7 +309,7 @@ export default function BookingPage() {
       try {
         // Step 1: Validate phone is Tunisian
         if (!isValidTunisianPhone(booking.customerPhone)) {
-          alert('Please enter a valid Tunisian phone number (8 digits from Telecom, Ooredoo, or Orange)');
+          alert('Please enter a valid Tunisian phone number (8 digits starting with 2, 5, or 9)');
           return;
         }
 

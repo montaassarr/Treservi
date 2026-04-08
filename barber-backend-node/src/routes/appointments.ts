@@ -9,6 +9,7 @@ export const appointmentsRouter = Router();
 
 const TUNIS_TIME_ZONE = 'Africa/Tunis';
 const ACTIVE_SLOT_STATUSES = ['Pending', 'Confirmed', 'pending', 'confirmed'];
+const CANCELED_SLOT_STATUSES = ['Cancelled', 'Canceled', 'cancelled', 'canceled'];
 const DEFAULT_SPAM_WINDOW_MINUTES = 60;
 const DEFAULT_SPAM_MAX_BOOKINGS = 3;
 const DEFAULT_CANCELLATION_CUTOFF_MINUTES = 30;
@@ -104,6 +105,51 @@ const isPastSlotInTunis = (appointmentDate: string, appointmentTime: string) => 
   return slotMinutes <= tunisNow.nowMinutes;
 };
 
+const purgeCanceledAppointments = async (query: Record<string, unknown> = {}) => {
+  await Appointment.deleteMany({
+    ...query,
+    status: { $in: CANCELED_SLOT_STATUSES }
+  });
+};
+
+const autoCompletePastAppointments = async (query: Record<string, unknown> = {}) => {
+  const tunisNow = getTunisNow();
+
+  await Appointment.updateMany(
+    {
+      ...query,
+      status: { $in: ACTIVE_SLOT_STATUSES },
+      appointment_date: { $lt: tunisNow.dateKey }
+    },
+    {
+      $set: { status: 'Completed' }
+    }
+  );
+
+  const todaysActiveAppointments = await Appointment.find({
+    ...query,
+    status: { $in: ACTIVE_SLOT_STATUSES },
+    appointment_date: tunisNow.dateKey
+  })
+    .select('_id appointment_time')
+    .lean();
+
+  const completedTodayIds = todaysActiveAppointments
+    .filter((appointment) => {
+      const normalizedTime = String(appointment.appointment_time ?? '').slice(0, 5);
+      const minutes = parseTimeToMinutes(normalizedTime);
+      return minutes !== null && minutes <= tunisNow.nowMinutes;
+    })
+    .map((appointment) => appointment._id);
+
+  if (completedTodayIds.length > 0) {
+    await Appointment.updateMany(
+      { _id: { $in: completedTodayIds } },
+      { $set: { status: 'Completed' } }
+    );
+  }
+};
+
 const hasDuplicateBooking = async (input: {
   salonId: string;
   staffId: string;
@@ -134,6 +180,9 @@ const getManageableAppointment = async (input: {
   bookingCode: string;
   customerPhone: string;
 }) => {
+  await purgeCanceledAppointments({ salon_id: input.salonId });
+  await autoCompletePastAppointments({ salon_id: input.salonId });
+
   const bookingCode = normalizeBookingCode(input.bookingCode);
   const cleanPhone = normalizePhone(input.customerPhone);
 
@@ -582,6 +631,9 @@ appointmentsRouter.get('/', requireAuth, async (req: AuthRequest, res: Response)
   if (salonId) query.salon_id = salonId;
   if (staffId) query.staff_id = staffId;
 
+  await purgeCanceledAppointments(query);
+  await autoCompletePastAppointments(query);
+
   const appointments = await Appointment.find(query)
     .sort({ appointment_date: 1, appointment_time: 1 })
     .populate('service_id')
@@ -679,7 +731,10 @@ appointmentsRouter.delete('/:id', requireAuth, async (req: AuthRequest, res: Res
 
 appointmentsRouter.get('/stats/staff/:staffId', requireAuth, async (req: AuthRequest, res: Response) => {
   const staffId = req.params.staffId;
-  const today = new Date().toISOString().split('T')[0];
+  await purgeCanceledAppointments({ staff_id: staffId });
+  await autoCompletePastAppointments({ staff_id: staffId });
+
+  const today = getTunisNow().dateKey;
   const appointments = await Appointment.find({ staff_id: staffId });
 
   let today_appointments = 0;

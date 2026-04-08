@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
+  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
@@ -13,7 +14,7 @@ import ResponsiveGrid from './ResponsiveGrid';
 import DailyScheduleView from './DailyScheduleView';
 import { Barber, Appointment, Comment, ChartData } from '../types';
 import { deleteAppointment, fetchAppointments, createAppointment, updateAppointment } from '../services/appointmentService';
-import { formatPrice } from '../utils/format';
+import { formatPrice, formatDisplayDate } from '../utils/format';
 import { DashboardSkeleton } from './SkeletonLoader';
 import { fetchServices } from '../services/serviceService';
 import { Service } from '../types';
@@ -66,12 +67,28 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<'7d' | '30d' | '90d' | '1y'>('7d');
+  const [isCompactChartBars, setIsCompactChartBars] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 480 : false
+  );
 
   // Update state when props change
   useEffect(() => {
     if (propSalonId) setSalonId(propSalonId);
     if (propUserId) setUserId(propUserId);
   }, [propSalonId, propUserId]);
+
+  useEffect(() => {
+    const syncChartDensity = () => {
+      setIsCompactChartBars(window.innerWidth < 480);
+    };
+
+    syncChartDensity();
+    window.addEventListener('resize', syncChartDensity);
+
+    return () => {
+      window.removeEventListener('resize', syncChartDensity);
+    };
+  }, []);
 
   // Data states with default values
   const [chartData, setChartData] = useState<ChartData[]>(defaultChartData);
@@ -532,11 +549,9 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                 <option value="1y">Last Year</option>
               </select>
             </div>
-            <div className="w-full overflow-x-auto overflow-y-hidden pb-1">
-              <div className="min-w-[320px] w-[640px] sm:w-full h-[220px] sm:h-[260px] md:h-[320px]">
+            <div className="w-full h-[220px] sm:h-[260px] md:h-[320px] pb-1">
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  width={640}
-                  height={280}
                   data={chartData}
                   margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
                   onMouseMove={(state) => {
@@ -563,7 +578,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                       return null;
                     }}
                   />
-                  <Bar dataKey="value" radius={[16, 16, 16, 16]} barSize={32}>
+                  <Bar dataKey="value" radius={[16, 16, 16, 16]} barSize={isCompactChartBars ? 22 : 32}>
                     {chartData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
@@ -576,7 +591,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                     ))}
                   </Bar>
                 </BarChart>
-              </div>
+              </ResponsiveContainer>
             </div>
           </div>
 
@@ -713,7 +728,7 @@ const Dashboard: React.FC<DashboardProps> = ({ salonId: propSalonId, userId: pro
                       {apt.date && (
                         <div className="flex items-center justify-between">
                           <span className="text-gray-500 text-xs">Date</span>
-                          <span className="font-medium text-gray-900 dark:text-gray-100">{apt.date}</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{formatDisplayDate(apt.date)}</span>
                         </div>
                       )}
                     </div>
