@@ -37,8 +37,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/404" replace />;
   }
 
-  // Show loading only while fetching salon data (if needed)
-  if (normalizedSalonSlug && isSalonLoading) {
+  // Show blocking loading only when salon data is not ready yet
+  if (normalizedSalonSlug && isSalonLoading && !salon) {
     return <LoadingScreen />;
   }
 

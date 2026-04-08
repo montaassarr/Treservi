@@ -30,6 +30,17 @@ interface AppointmentsProps {
   onModalVisibilityChange?: (isOpen: boolean) => void;
 }
 
+const APPOINTMENTS_CACHE_TTL_MS = 45_000;
+const appointmentsDataCache = new Map<
+  string,
+  {
+    appointments: AppointmentData[];
+    services: Service[];
+    staff: StaffMember[];
+    updatedAt: number;
+  }
+>();
+
 const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityChange }) => {
   const [appointments, setAppointments] = useState<AppointmentData[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -81,7 +92,23 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityC
   });
 
   const loadData = async () => {
-    setLoading(true);
+    const cached = appointmentsDataCache.get(salonId);
+    const now = Date.now();
+    const hasFreshCache = Boolean(cached && now - cached.updatedAt < APPOINTMENTS_CACHE_TTL_MS);
+
+    if (cached) {
+      setAppointments(cached.appointments);
+      setServices(cached.services);
+      setStaff(cached.staff);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
+    if (hasFreshCache) {
+      return;
+    }
+
     try {
       const [appointmentsRes, servicesRes, staffRes] = await Promise.all([
         fetchAppointments(salonId),
@@ -99,11 +126,22 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityC
         return secondCreated - firstCreated;
       });
 
+      const loadedServices = servicesRes.data || [];
+      const loadedStaff = staffRes.data || [];
+
       setAppointments(loadedAppointments);
-      setServices(servicesRes.data || []);
-      setStaff(staffRes.data || []);
+      setServices(loadedServices);
+      setStaff(loadedStaff);
+      appointmentsDataCache.set(salonId, {
+        appointments: loadedAppointments,
+        services: loadedServices,
+        staff: loadedStaff,
+        updatedAt: Date.now()
+      });
     } catch (err: any) {
-      setError(err.message);
+      if (!cached) {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -171,7 +209,16 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityC
     if (deleteError) {
       setError(deleteError.message);
     } else {
-      setAppointments(prev => prev.filter(a => a.id !== id));
+      setAppointments((previous) => {
+        const nextAppointments = previous.filter((appointment) => appointment.id !== id);
+        appointmentsDataCache.set(salonId, {
+          appointments: nextAppointments,
+          services,
+          staff,
+          updatedAt: Date.now()
+        });
+        return nextAppointments;
+      });
       setSuccess('Appointment deleted successfully');
       setTimeout(() => setSuccess(null), 3000);
     }
@@ -209,9 +256,18 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityC
 
         if (updateError) throw updateError;
 
-        setAppointments(prev =>
-          prev.map(a => (a.id === editingId ? data! : a))
-        );
+        setAppointments((previous) => {
+          const nextAppointments = previous.map((appointment) =>
+            appointment.id === editingId ? data! : appointment
+          );
+          appointmentsDataCache.set(salonId, {
+            appointments: nextAppointments,
+            services,
+            staff,
+            updatedAt: Date.now()
+          });
+          return nextAppointments;
+        });
         setSuccess('Appointment updated successfully');
       } else {
         // Create new
@@ -233,7 +289,16 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityC
 
         if (createError) throw createError;
 
-        setAppointments(prev => [data!, ...prev]);
+        setAppointments((previous) => {
+          const nextAppointments = [data!, ...previous];
+          appointmentsDataCache.set(salonId, {
+            appointments: nextAppointments,
+            services,
+            staff,
+            updatedAt: Date.now()
+          });
+          return nextAppointments;
+        });
         setSuccess('Appointment created successfully');
       }
 
