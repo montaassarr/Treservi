@@ -22,6 +22,9 @@ interface ServicesProps {
   salonId: string;
 }
 
+const SERVICES_CACHE_TTL_MS = 60_000;
+const servicesCache = new Map<string, { data: Service[]; updatedAt: number }>();
+
 const Services: React.FC<ServicesProps> = ({ salonId }) => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,13 +41,31 @@ const Services: React.FC<ServicesProps> = ({ salonId }) => {
   });
 
   const loadServices = async () => {
-    setLoading(true);
+    const cached = servicesCache.get(salonId);
+    const now = Date.now();
+    const hasFreshCache = Boolean(cached && now - cached.updatedAt < SERVICES_CACHE_TTL_MS);
+
+    if (cached) {
+      setServices(cached.data);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
+    if (hasFreshCache) {
+      return;
+    }
+
     const { data, error: fetchError } = await fetchServices(salonId);
 
     if (fetchError) {
-      setError(fetchError.message);
+      if (!cached) {
+        setError(fetchError.message);
+      }
     } else {
-      setServices(data || []);
+      const nextServices = data || [];
+      setServices(nextServices);
+      servicesCache.set(salonId, { data: nextServices, updatedAt: Date.now() });
     }
     setLoading(false);
   };
@@ -87,7 +108,11 @@ const Services: React.FC<ServicesProps> = ({ salonId }) => {
     if (deleteError) {
       setError(deleteError.message);
     } else {
-      setServices(prev => prev.filter(s => s.id !== id));
+      setServices((previous) => {
+        const nextServices = previous.filter((service) => service.id !== id);
+        servicesCache.set(salonId, { data: nextServices, updatedAt: Date.now() });
+        return nextServices;
+      });
       setSuccess('Service deleted successfully');
       setTimeout(() => setSuccess(null), 3000);
     }
@@ -110,7 +135,11 @@ const Services: React.FC<ServicesProps> = ({ salonId }) => {
 
         if (updateError) throw updateError;
 
-        setServices(prev => prev.map(s => (s.id === editingId ? data! : s)));
+        setServices((previous) => {
+          const nextServices = previous.map((service) => (service.id === editingId ? data! : service));
+          servicesCache.set(salonId, { data: nextServices, updatedAt: Date.now() });
+          return nextServices;
+        });
         setSuccess('Service updated successfully');
       } else {
         // Create new
@@ -126,7 +155,11 @@ const Services: React.FC<ServicesProps> = ({ salonId }) => {
 
         if (createError) throw createError;
 
-        setServices(prev => [data!, ...prev]);
+        setServices((previous) => {
+          const nextServices = [data!, ...previous];
+          servicesCache.set(salonId, { data: nextServices, updatedAt: Date.now() });
+          return nextServices;
+        });
         setSuccess('Service created successfully');
       }
 

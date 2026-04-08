@@ -33,6 +33,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(['dashboard']));
 
   // Update page title with salon name
   useEffect(() => {
@@ -53,6 +54,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   // Close mobile menu on tab change
   useEffect(() => {
     setIsMobileMenuOpen(false);
+  }, [activeTab]);
+
+  useEffect(() => {
+    setVisitedTabs((previous) => {
+      if (previous.has(activeTab)) {
+        return previous;
+      }
+
+      const next = new Set(previous);
+      next.add(activeTab);
+      return next;
+    });
   }, [activeTab]);
 
   const bookingUrl = useMemo(() => {
@@ -80,8 +93,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     }
   }, [userRole, activeTab]);
 
-  const shouldShowOwnerDashboard = activeTab === 'dashboard' && userRole === 'owner';
-  const shouldShowStaffDashboard = activeTab === 'dashboard' && userRole === 'staff';
+  const shouldShowOwnerDashboard = userRole === 'owner' && visitedTabs.has('dashboard');
+  const shouldShowStaffDashboard = userRole === 'staff' && visitedTabs.has('dashboard');
 
   return (
     <div className={`flex min-h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-treservi-bg-dark' : 'bg-treservi-bg-light'}`}>
@@ -137,17 +150,44 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               </div>
             </div>
           )}
-          {shouldShowOwnerDashboard && <Dashboard salonId={salonId} userId={userId} />}
-          {shouldShowStaffDashboard && <StaffDashboard salonId={salonId} staffId={userId} staffName={staffName} />}
-          {activeTab === 'appointments' && userRole === 'owner' && (
-            <Appointments
-              salonId={salonId}
-              onModalVisibilityChange={setIsAppointmentModalOpen}
-            />
+          {shouldShowOwnerDashboard && (
+            <section className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
+              <Dashboard salonId={salonId} userId={userId} />
+            </section>
           )}
-          {activeTab === 'services' && userRole === 'owner' && <Services salonId={salonId} />}
-          {activeTab === 'staff' && userRole === 'owner' && <Staff salonId={salonId} />}
-          {activeTab === 'settings' && userRole === 'owner' && <Settings salonId={salonId} userId={userId} />}
+
+          {shouldShowStaffDashboard && (
+            <section className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
+              <StaffDashboard salonId={salonId} staffId={userId} staffName={staffName} />
+            </section>
+          )}
+
+          {userRole === 'owner' && visitedTabs.has('appointments') && (
+            <section className={activeTab === 'appointments' ? 'block' : 'hidden'}>
+              <Appointments
+                salonId={salonId}
+                onModalVisibilityChange={setIsAppointmentModalOpen}
+              />
+            </section>
+          )}
+
+          {userRole === 'owner' && visitedTabs.has('services') && (
+            <section className={activeTab === 'services' ? 'block' : 'hidden'}>
+              <Services salonId={salonId} />
+            </section>
+          )}
+
+          {userRole === 'owner' && visitedTabs.has('staff') && (
+            <section className={activeTab === 'staff' ? 'block' : 'hidden'}>
+              <Staff salonId={salonId} />
+            </section>
+          )}
+
+          {userRole === 'owner' && visitedTabs.has('settings') && (
+            <section className={activeTab === 'settings' ? 'block' : 'hidden'}>
+              <Settings salonId={salonId} userId={userId} />
+            </section>
+          )}
         </div>
       </div>
 
