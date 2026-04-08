@@ -2,6 +2,7 @@ import React from 'react';
 import { BookingState, Translations } from '../../types';
 import { Calendar, Clock, AlertCircle } from 'lucide-react';
 import { isValidTunisianPhone, getTunisianPhoneErrorMessage } from '../../utils/validationUtils';
+import { formatDisplayDate } from '../../utils/format';
 import Avatar from '../Avatar';
 
 interface Props {
@@ -43,7 +44,7 @@ export const Step4Contact: React.FC<Props> = ({ bookingData, onNameChange, onPho
                 <Calendar className="w-4 h-4" />
                 <span className="text-xs font-medium">{t.date}</span>
               </div>
-              <p className="font-semibold">{bookingData.selectedDate?.toLocaleDateString(locale)}</p>
+              <p className="font-semibold">{bookingData.selectedDate ? formatDisplayDate(bookingData.selectedDate, locale) : ''}</p>
             </div>
             <div className="bg-gray-800 p-3 rounded-2xl">
               <div className="flex items-center gap-2 mb-1 text-gray-400">

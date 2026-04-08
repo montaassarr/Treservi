@@ -5,11 +5,7 @@
 /**
  * Validates a Tunisian phone number
  * - Must be exactly 8 digits
- * - Must start with specific carrier prefixes:
- *   - Telecom Tunisia: 71, 72, 73, 74
- *   - Ooredoo: 50, 51, 52, 53
- *   - Orange: 20, 21, 22, 23
- *   - Other Carriers: 90-99
+ * - Must start with 2, 5 or 9
  * 
  * @param phone - The phone number to validate (can include spaces/hyphens)
  * @returns true if valid Tunisian number, false otherwise
@@ -20,27 +16,8 @@ export const isValidTunisianPhone = (phone: string): boolean => {
   
   // Must be exactly 8 digits
   if (cleaned.length !== 8) return false;
-  
-  // Check if starts with valid Tunisian carrier prefix
-  const prefix = cleaned.substring(0, 2);
-  const firstDigit = parseInt(prefix[0]);
-  const fullPrefix = parseInt(prefix);
-  
-  // Valid ranges:
-  // 71-74 (Telecom), 50-53 (Ooredoo), 20-23 (Orange), 90-99 (Other carriers)
-  const validPrefixes = [
-    // Telecom Tunisia
-    '71', '72', '73', '74',
-    // Ooredoo
-    '50', '51', '52', '53',
-    // Orange
-    '20', '21', '22', '23'
-  ];
-  
-  // Check standard carriers or 90-99 range
-  const isValidPrefix = validPrefixes.includes(prefix) || (fullPrefix >= 90 && fullPrefix <= 99);
-  
-  return isValidPrefix;
+
+  return /^[259]\d{7}$/.test(cleaned);
 };
 
 /**
@@ -71,17 +48,10 @@ export const getTunisianPhoneErrorMessage = (phone: string): string => {
     return `Phone must be exactly 8 digits (you entered ${cleaned.length})`;
   }
   
-  const prefix = cleaned.substring(0, 2);
-  const carrierMap: Record<string, string> = {
-    '71': 'Telecom', '72': 'Telecom', '73': 'Telecom', '74': 'Telecom',
-    '50': 'Ooredoo', '51': 'Ooredoo', '52': 'Ooredoo', '53': 'Ooredoo',
-    '20': 'Orange', '21': 'Orange', '22': 'Orange', '23': 'Orange'
-  };
-  
-  const carrier = Object.entries(carrierMap).find(([key]) => key === prefix)?.[1];
-  
-  if (!carrier && !(parseInt(prefix) >= 90 && parseInt(prefix) <= 99)) {
-    return `Invalid prefix "${prefix}". Must start with: 71-74 (Telecom), 50-53 (Ooredoo), 20-23 (Orange), or 90-99 (Other)`;
+  const firstDigit = cleaned[0];
+
+  if (!['2', '5', '9'].includes(firstDigit)) {
+    return `Invalid prefix "${firstDigit}". Phone must start with 2, 5, or 9`;
   }
   
   return 'Invalid phone number';

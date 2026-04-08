@@ -8,6 +8,7 @@ import {
 } from '../services/appointmentService';
 import { AppointmentData } from '../types';
 import { isValidTunisianPhone } from '../utils/validationUtils';
+import { formatDisplayDate } from '../utils/format';
 import { ArrowLeft, Calendar, Clock, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -272,7 +273,7 @@ export default function ManageBookingPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500 font-medium uppercase">Date</p>
-                    <p className="text-base font-bold mt-1">{appointment.appointment_date}</p>
+                    <p className="text-base font-bold mt-1">{formatDisplayDate(appointment.appointment_date)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium uppercase">Time</p>

@@ -20,7 +20,7 @@ import {
 } from '../services/appointmentService';
 import { fetchServices } from '../services/serviceService';
 import { fetchStaff } from '../services/staffService';
-import { formatPrice } from '../utils/format';
+import { formatPrice, formatDisplayDate } from '../utils/format';
 import DailyScheduleView from './DailyScheduleView';
 import Avatar from './Avatar';
 import AppointmentModal from './AppointmentModal';
@@ -413,7 +413,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityC
                     <td className="py-4 text-gray-500 whitespace-nowrap">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {apt.appointment_date}
+                        {formatDisplayDate(apt.appointment_date)}
                       </div>
                       <div className="flex items-center gap-1 text-xs mt-1">
                         <Clock className="w-3 h-3" />
@@ -521,7 +521,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ salonId, onModalVisibilityC
                   )}
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500 text-xs">Date</span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{apt.appointment_date}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{formatDisplayDate(apt.appointment_date)}</span>
                   </div>
                 </div>
 
