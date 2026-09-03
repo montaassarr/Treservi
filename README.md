@@ -256,15 +256,3 @@ graph TB
     style B2 fill:#232F3E,color:#fff
     style M1 fill:#00ED64,color:#000
 ```
-
-## 📦 Installation & Setup
-
-### Prerequisites
-- Node.js 18+
-- A MongoDB Atlas cluster
-- Python 3.12+ (for testing)
-- Git
-
----
-
-**Need Help?** Open an issue or contact support@reservi.com
