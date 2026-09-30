@@ -26,9 +26,8 @@ export const env = {
   jwtExpiresIn: '7d',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
   allowPublicRegistration: process.env.ALLOW_PUBLIC_REGISTRATION === 'true',
-  enableSeedRoutes:
-    process.env.ENABLE_SEED_ROUTES === 'true' ||
-    (process.env.NODE_ENV ?? 'development') !== 'production',
+  // Seed routes create/promote a super admin, so they must be opted into explicitly
+  enableSeedRoutes: process.env.ENABLE_SEED_ROUTES === 'true',
   authMaxAttempts: Number(process.env.AUTH_MAX_ATTEMPTS) || 5,
   authLockoutMinutes: Number(process.env.AUTH_LOCKOUT_MINUTES) || 15,
   superAdminApiBasePath: process.env.SUPERADMIN_API_BASE_PATH ?? '/api/sa-ops-8mK2r4',

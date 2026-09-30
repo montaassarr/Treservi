@@ -68,18 +68,19 @@ const activeLock = (key: string) => {
 };
 
 authRouter.post('/register', async (req: Request, res: Response) => {
-  if (env.nodeEnv === 'production' && !env.allowPublicRegistration) {
+  if (!env.allowPublicRegistration) {
     return res.status(403).json({ error: 'Self-registration is disabled' });
   }
 
-  const { email, password, salonId, fullName } = req.body as {
+  // salonId is intentionally not accepted here: a self-registered account must not be able
+  // to attach itself as owner of an existing salon. Salons and owners are created by super admins.
+  const { email, password, fullName } = req.body as {
     email?: string;
     password?: string;
-    salonId?: string;
     fullName?: string;
   };
 
-  if (!email || !password) {
+  if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
@@ -97,7 +98,6 @@ authRouter.post('/register', async (req: Request, res: Response) => {
     email: email.toLowerCase(),
     passwordHash,
     role: 'owner',
-    salonId,
     fullName,
     isSuperAdmin: false
   });
@@ -125,7 +125,7 @@ authRouter.post('/register', async (req: Request, res: Response) => {
 
 authRouter.post('/login', async (req: Request, res: Response) => {
   const { email, password } = req.body as { email?: string; password?: string };
-  if (!email || !password) {
+  if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
