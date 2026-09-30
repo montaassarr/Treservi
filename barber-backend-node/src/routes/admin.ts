@@ -2,22 +2,19 @@ import { Router, Response } from 'express';
 import { Salon } from '../models/Salon.js';
 import { User } from '../models/User.js';
 import { Appointment } from '../models/Appointment.js';
+import { Service } from '../models/Service.js';
 import { hashPassword } from '../utils/password.js';
-import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import { requireAuth, requireSuperAdmin, AuthRequest, isValidId, pickFields } from '../middleware/auth.js';
 
 export const adminRouter = Router();
 
-const requireSuperAdmin = (req: AuthRequest, res: Response) => {
-  if (!req.user?.isSuperAdmin) {
-    res.status(403).json({ error: 'Super admin access required' });
-    return false;
-  }
-  return true;
-};
+const SALON_STATUSES = ['active', 'suspended', 'cancelled'] as const;
+const ADMIN_SALON_UPDATABLE_FIELDS = ['name', 'slug', 'status'] as const;
 
-adminRouter.get('/overview', requireAuth, async (req: AuthRequest, res: Response) => {
-  if (!requireSuperAdmin(req, res)) return;
+// Every admin route requires an authenticated super admin
+adminRouter.use(requireAuth, requireSuperAdmin);
 
+adminRouter.get('/overview', async (req: AuthRequest, res: Response) => {
   const [totalSalons, activeSalons] = await Promise.all([
     Salon.countDocuments(),
     Salon.countDocuments({ status: 'active' })
@@ -29,9 +26,7 @@ adminRouter.get('/overview', requireAuth, async (req: AuthRequest, res: Response
   return res.json({ stats: { totalSalons, activeSalons, totalRevenue } });
 });
 
-adminRouter.get('/salons', requireAuth, async (req: AuthRequest, res: Response) => {
-  if (!requireSuperAdmin(req, res)) return;
-
+adminRouter.get('/salons', async (req: AuthRequest, res: Response) => {
   const salons = await Salon.find().sort({ created_at: -1 });
   const enriched = await Promise.all(
     salons.map(async (salon) => {
@@ -56,9 +51,7 @@ adminRouter.get('/salons', requireAuth, async (req: AuthRequest, res: Response) 
   return res.json({ salons: enriched });
 });
 
-adminRouter.post('/salons', requireAuth, async (req: AuthRequest, res: Response) => {
-  if (!requireSuperAdmin(req, res)) return;
-
+adminRouter.post('/salons', async (req: AuthRequest, res: Response) => {
   const { name, slug, ownerEmail, ownerPassword, ownerName } = req.body as {
     name?: string;
     slug?: string;
@@ -102,13 +95,27 @@ adminRouter.post('/salons', requireAuth, async (req: AuthRequest, res: Response)
   });
 });
 
-adminRouter.patch('/salons/:id', requireAuth, async (req: AuthRequest, res: Response) => {
-  if (!requireSuperAdmin(req, res)) return;
-
-  const updates = req.body as Partial<{ name: string; slug: string; status: 'active' | 'suspended' | 'cancelled' }>;
+adminRouter.patch('/salons/:id', async (req: AuthRequest, res: Response) => {
+  const updates = pickFields(req.body, ADMIN_SALON_UPDATABLE_FIELDS) as Partial<{
+    name: string;
+    slug: string;
+    status: (typeof SALON_STATUSES)[number];
+  }>;
 
   if (!updates.name && !updates.slug && !updates.status) {
     return res.status(400).json({ error: 'name, slug, or status is required' });
+  }
+
+  if (!isValidId(req.params.id)) {
+    return res.status(404).json({ error: 'Salon not found' });
+  }
+
+  if (updates.status && !SALON_STATUSES.includes(updates.status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  if (updates.slug !== undefined && typeof updates.slug !== 'string') {
+    return res.status(400).json({ error: 'Invalid slug' });
   }
 
   if (updates.slug) {
@@ -118,7 +125,7 @@ adminRouter.patch('/salons/:id', requireAuth, async (req: AuthRequest, res: Resp
     }
   }
 
-  const salon = await Salon.findByIdAndUpdate(req.params.id, updates, { new: true });
+  const salon = await Salon.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true, runValidators: true });
   if (!salon) {
     return res.status(404).json({ error: 'Salon not found' });
   }
@@ -132,12 +139,16 @@ adminRouter.patch('/salons/:id', requireAuth, async (req: AuthRequest, res: Resp
   });
 });
 
-adminRouter.patch('/salons/:id/status', requireAuth, async (req: AuthRequest, res: Response) => {
-  if (!requireSuperAdmin(req, res)) return;
-
-  const { status } = req.body as { status?: 'active' | 'suspended' | 'cancelled' };
+adminRouter.patch('/salons/:id/status', async (req: AuthRequest, res: Response) => {
+  const { status } = req.body as { status?: (typeof SALON_STATUSES)[number] };
   if (!status) {
     return res.status(400).json({ error: 'status is required' });
+  }
+  if (!SALON_STATUSES.includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+  if (!isValidId(req.params.id)) {
+    return res.status(404).json({ error: 'Salon not found' });
   }
 
   const salon = await Salon.findByIdAndUpdate(req.params.id, { status }, { new: true });
@@ -154,8 +165,10 @@ adminRouter.patch('/salons/:id/status', requireAuth, async (req: AuthRequest, re
   });
 });
 
-adminRouter.delete('/salons/:id', requireAuth, async (req: AuthRequest, res: Response) => {
-  if (!requireSuperAdmin(req, res)) return;
+adminRouter.delete('/salons/:id', async (req: AuthRequest, res: Response) => {
+  if (!isValidId(req.params.id)) {
+    return res.status(404).json({ error: 'Salon not found' });
+  }
 
   const salon = await Salon.findByIdAndDelete(req.params.id);
   if (!salon) {
@@ -164,16 +177,19 @@ adminRouter.delete('/salons/:id', requireAuth, async (req: AuthRequest, res: Res
 
   await User.deleteMany({ salonId: salon.id });
   await Appointment.deleteMany({ salon_id: salon.id });
+  await Service.deleteMany({ salon_id: salon.id });
 
   return res.json({ deleted: true });
 });
 
-adminRouter.post('/salons/:id/reset-owner-password', requireAuth, async (req: AuthRequest, res: Response) => {
-  if (!requireSuperAdmin(req, res)) return;
-
+adminRouter.post('/salons/:id/reset-owner-password', async (req: AuthRequest, res: Response) => {
   const { newPassword } = req.body as { newPassword?: string };
   if (!newPassword || newPassword.length < 6) {
     return res.status(400).json({ error: 'newPassword (min 6 chars) is required' });
+  }
+
+  if (!isValidId(req.params.id)) {
+    return res.status(404).json({ error: 'Owner not found' });
   }
 
   const owner = await User.findOne({ salonId: req.params.id, role: 'owner' });
