@@ -140,7 +140,7 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     return res.status(429).json({ error: 'Too many failed attempts. Try again later.' });
   }
 
-  const user = await User.findOne({ email: normalizedEmail });
+  const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash');
   if (!user) {
     registerFailure(loginKey);
     logger.warn('Failed login: unknown email', { email: normalizedEmail, ip: getClientIp(req) }, 'AUTH');
