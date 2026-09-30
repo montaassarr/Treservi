@@ -25,3 +25,9 @@ dist-ssr
 
 # Local MongoDB runtime data
 .mongo-data/
+
+# Environment files: never commit real secrets (templates are .env.example)
+.env
+**/.env
+.env.*.local
+!**/.env.example
