@@ -1,7 +1,18 @@
 import { Router, Request, Response } from 'express';
 import { Appointment } from '../models/Appointment.js';
 import { User } from '../models/User.js';
-import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import { Service } from '../models/Service.js';
+import {
+  requireAuth,
+  requireRole,
+  AuthRequest,
+  AuthUser,
+  canAccessSalon,
+  isSuperAdminUser,
+  isValidId,
+  pickFields,
+  resolveSalonId
+} from '../middleware/auth.js';
 import { sendPushToUsers } from '../services/pushNotifications.js';
 import { logger } from '../utils/logger.js';
 
@@ -13,6 +24,20 @@ const CANCELED_SLOT_STATUSES = ['Cancelled', 'Canceled', 'cancelled', 'canceled'
 const DEFAULT_SPAM_WINDOW_MINUTES = 60;
 const DEFAULT_SPAM_MAX_BOOKINGS = 3;
 const DEFAULT_CANCELLATION_CUTOFF_MINUTES = 30;
+
+const STAFF_APPOINTMENT_UPDATABLE_FIELDS = [
+  'service_id',
+  'customer_name',
+  'customer_email',
+  'customer_phone',
+  'appointment_date',
+  'appointment_time',
+  'status',
+  'amount',
+  'notes',
+  'is_read'
+] as const;
+const APPOINTMENT_UPDATABLE_FIELDS = [...STAFF_APPOINTMENT_UPDATABLE_FIELDS, 'staff_id'] as const;
 
 const BOOKING_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const BOOKING_CODE_LENGTH = 6;
@@ -206,6 +231,32 @@ const getManageableAppointment = async (input: {
   );
 };
 
+/** Salon filter applied to authenticated appointment queries; null if the user has no salon. */
+const appointmentScope = (user?: AuthUser): Record<string, unknown> | null => {
+  if (isSuperAdminUser(user)) return {};
+  if (!user?.salonId) return null;
+  return { salon_id: user.salonId };
+};
+
+/** Loads an appointment only if it belongs to a salon the caller can access. */
+const findAccessibleAppointment = async (req: AuthRequest, id: string) => {
+  if (!isValidId(id)) return null;
+  const appointment = await Appointment.findById(id);
+  if (!appointment || !canAccessSalon(req.user, appointment.salon_id)) return null;
+  return appointment;
+};
+
+const isSalonMember = async (salonId: string, userId: unknown) => {
+  if (!isValidId(userId)) return false;
+  const member = await User.exists({ _id: userId, salonId, role: { $in: ['owner', 'staff', 'super_admin'] } });
+  return Boolean(member);
+};
+
+const findSalonService = async (salonId: string, serviceId: unknown) => {
+  if (!isValidId(serviceId)) return null;
+  return Service.findOne({ _id: serviceId, salon_id: salonId }).select('_id price is_active').lean();
+};
+
 const getRecentBookingCountForPhone = async (input: {
   salonId: string;
   customerPhone: string;
@@ -316,7 +367,11 @@ appointmentsRouter.post('/public-spam-check', async (req: Request, res: Response
 
   const windowMinutesRaw = Number(body.window_minutes ?? DEFAULT_SPAM_WINDOW_MINUTES);
   const maxBookingsRaw = Number(body.max_bookings ?? DEFAULT_SPAM_MAX_BOOKINGS);
-  const windowMinutes = Number.isFinite(windowMinutesRaw) && windowMinutesRaw > 0 ? windowMinutesRaw : DEFAULT_SPAM_WINDOW_MINUTES;
+  // Capped so this public endpoint cannot be used to probe a phone number's booking history
+  const windowMinutes =
+    Number.isFinite(windowMinutesRaw) && windowMinutesRaw > 0
+      ? Math.min(windowMinutesRaw, DEFAULT_SPAM_WINDOW_MINUTES)
+      : DEFAULT_SPAM_WINDOW_MINUTES;
   const maxBookings = Number.isFinite(maxBookingsRaw) && maxBookingsRaw > 0 ? maxBookingsRaw : DEFAULT_SPAM_MAX_BOOKINGS;
 
   const recentCount = await getRecentBookingCountForPhone({
@@ -368,6 +423,19 @@ appointmentsRouter.post('/public', async (req: Request, res: Response) => {
 
   if (isPastSlotInTunis(appointmentDate, appointmentTime)) {
     return res.status(409).json({ error: 'Selected slot is in the past for Tunisia time' });
+  }
+
+  if (!isValidId(body.salon_id)) {
+    return res.status(400).json({ error: 'Invalid salon_id' });
+  }
+
+  if (!(await isSalonMember(body.salon_id, body.staff_id))) {
+    return res.status(400).json({ error: 'staff_id does not belong to this salon' });
+  }
+
+  const service = await findSalonService(body.salon_id, body.service_id);
+  if (!service || service.is_active === false) {
+    return res.status(400).json({ error: 'service_id does not belong to this salon' });
   }
 
   const existing = await Appointment.findOne({
@@ -422,8 +490,9 @@ appointmentsRouter.post('/public', async (req: Request, res: Response) => {
     booking_code: bookingCode,
     appointment_date: appointmentDate,
     appointment_time: appointmentTime,
-    status: body.status ?? 'Pending',
-    amount: body.amount ?? 0,
+    // Public bookings always start as Pending and are priced from the service
+    status: 'Pending',
+    amount: service.price ?? 0,
     notes: body.notes
   });
 
@@ -619,17 +688,30 @@ appointmentsRouter.post('/public-manage/reschedule', async (req: Request, res: R
   return res.json({ appointment: updatedAppointment });
 });
 
-appointmentsRouter.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
-  const salonId = req.query.salonId as string | undefined;
-  const staffId = req.query.staffId as string | undefined;
+appointmentsRouter.get('/', requireAuth, requireRole('owner', 'staff', 'super_admin'), async (req: AuthRequest, res: Response) => {
+  const salonId = req.query.salonId;
+  const staffId = req.query.staffId;
 
   if (!salonId && !staffId) {
     return res.status(400).json({ error: 'salonId or staffId is required' });
   }
 
+  if (staffId !== undefined && !isValidId(staffId)) {
+    return res.status(400).json({ error: 'Invalid staffId' });
+  }
+
   const query: Record<string, unknown> = {};
-  if (salonId) query.salon_id = salonId;
-  if (staffId) query.staff_id = staffId;
+  if (isSuperAdminUser(req.user) && !salonId) {
+    query.staff_id = staffId;
+  } else {
+    // Owners and staff are always pinned to their own salon
+    const resolved = resolveSalonId(req.user, salonId);
+    if (!resolved.ok) {
+      return res.status(resolved.status).json({ error: resolved.error });
+    }
+    query.salon_id = resolved.salonId;
+    if (staffId) query.staff_id = staffId;
+  }
 
   await purgeCanceledAppointments(query);
   await autoCompletePastAppointments(query);
@@ -643,7 +725,7 @@ appointmentsRouter.get('/', requireAuth, async (req: AuthRequest, res: Response)
 });
 
 
-appointmentsRouter.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
+appointmentsRouter.post('/', requireAuth, requireRole('owner', 'staff', 'super_admin'), async (req: AuthRequest, res: Response) => {
   const body = req.body as {
     salon_id?: string;
     staff_id?: string;
@@ -665,8 +747,27 @@ appointmentsRouter.post('/', requireAuth, async (req: AuthRequest, res: Response
     }
   }
 
+  const resolved = resolveSalonId(req.user, body.salon_id);
+  if (!resolved.ok) {
+    return res.status(resolved.status).json({ error: resolved.error });
+  }
+  const salonId = resolved.salonId;
+
+  // Staff can only book appointments for themselves
+  if (req.user?.role === 'staff' && String(body.staff_id) !== req.user.id) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  if (!(await isSalonMember(salonId, body.staff_id))) {
+    return res.status(400).json({ error: 'staff_id does not belong to this salon' });
+  }
+
+  if (!(await findSalonService(salonId, body.service_id))) {
+    return res.status(400).json({ error: 'service_id does not belong to this salon' });
+  }
+
   const appointment = await Appointment.create({
-    salon_id: body.salon_id,
+    salon_id: salonId,
     staff_id: body.staff_id,
     service_id: body.service_id,
     customer_name: body.customer_name,
@@ -699,43 +800,70 @@ appointmentsRouter.post('/', requireAuth, async (req: AuthRequest, res: Response
   return res.status(201).json({ appointment });
 });
 
-appointmentsRouter.patch('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
-  const updates = req.body as Partial<{
-    staff_id: string;
-    service_id: string;
-    customer_name: string;
-    customer_email: string;
-    customer_phone: string;
-    appointment_date: string;
-    appointment_time: string;
-    status: string;
-    amount: number;
-    notes: string;
-    is_read: boolean;
-  }>;
+appointmentsRouter.patch('/:id', requireAuth, requireRole('owner', 'staff', 'super_admin'), async (req: AuthRequest, res: Response) => {
+  const isStaff = req.user?.role === 'staff' && !isSuperAdminUser(req.user);
+  const updates = pickFields(
+    req.body,
+    isStaff ? STAFF_APPOINTMENT_UPDATABLE_FIELDS : APPOINTMENT_UPDATABLE_FIELDS
+  ) as Record<string, unknown>;
 
-  const appointment = await Appointment.findByIdAndUpdate(req.params.id, updates, { new: true });
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'No valid update fields provided' });
+  }
+
+  const existing = await findAccessibleAppointment(req, req.params.id);
+  // Staff may only update appointments assigned to them
+  if (!existing || (isStaff && String(existing.staff_id) !== req.user?.id)) {
+    return res.status(404).json({ error: 'Appointment not found' });
+  }
+
+  const salonId = String(existing.salon_id);
+  if (updates.staff_id !== undefined && !(await isSalonMember(salonId, updates.staff_id))) {
+    return res.status(400).json({ error: 'staff_id does not belong to this salon' });
+  }
+  if (updates.service_id !== undefined && !(await findSalonService(salonId, updates.service_id))) {
+    return res.status(400).json({ error: 'service_id does not belong to this salon' });
+  }
+
+  const appointment = await Appointment.findByIdAndUpdate(existing._id, { $set: updates }, { new: true, runValidators: true });
   if (!appointment) {
     return res.status(404).json({ error: 'Appointment not found' });
   }
   return res.json({ appointment });
 });
 
-appointmentsRouter.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
-  const appointment = await Appointment.findByIdAndDelete(req.params.id);
-  if (!appointment) {
+appointmentsRouter.delete('/:id', requireAuth, requireRole('owner', 'super_admin'), async (req: AuthRequest, res: Response) => {
+  const existing = await findAccessibleAppointment(req, req.params.id);
+  if (!existing) {
     return res.status(404).json({ error: 'Appointment not found' });
   }
+
+  await Appointment.deleteOne({ _id: existing._id });
   return res.json({ deleted: true });
 });
 
-appointmentsRouter.get('/stats/staff/:staffId', requireAuth, async (req: AuthRequest, res: Response) => {
+appointmentsRouter.get('/stats/staff/:staffId', requireAuth, requireRole('owner', 'staff', 'super_admin'), async (req: AuthRequest, res: Response) => {
   const staffId = req.params.staffId;
-  await purgeCanceledAppointments({ staff_id: staffId });
-  await autoCompletePastAppointments({ staff_id: staffId });
+  if (!isValidId(staffId)) {
+    return res.status(400).json({ error: 'Invalid staffId' });
+  }
+
+  // Staff can only see their own stats
+  if (req.user?.role === 'staff' && staffId !== req.user.id) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const scope = appointmentScope(req.user);
+  if (!scope) {
+    return res.status(403).json({ error: 'No salon associated with this account' });
+  }
+
+  const query = { ...scope, staff_id: staffId };
+  await purgeCanceledAppointments(query);
+  await autoCompletePastAppointments(query);
 
   const today = getTunisNow().dateKey;
-  const appointments = await Appointment.find({ staff_id: staffId });
+  const appointments = await Appointment.find(query);
 
   let today_appointments = 0;
   let today_earnings = 0;
@@ -763,8 +891,13 @@ appointmentsRouter.get('/stats/staff/:staffId', requireAuth, async (req: AuthReq
   });
 });
 
-appointmentsRouter.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
-  const appointment = await Appointment.findById(req.params.id)
+appointmentsRouter.get('/:id', requireAuth, requireRole('owner', 'staff', 'super_admin'), async (req: AuthRequest, res: Response) => {
+  const scope = appointmentScope(req.user);
+  if (!scope || !isValidId(req.params.id)) {
+    return res.status(404).json({ error: 'Appointment not found' });
+  }
+
+  const appointment = await Appointment.findOne({ ...scope, _id: req.params.id })
     .populate('service_id')
     .populate('staff_id', 'fullName email specialty');
   if (!appointment) {
